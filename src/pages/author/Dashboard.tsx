@@ -1,0 +1,245 @@
+import { 
+  FileText, 
+  CheckCircle2, 
+  AlertCircle, 
+  Plus, 
+  BookOpen, 
+  Clock, 
+  History, 
+  Bell, 
+  ArrowRight, 
+  ChevronRight,
+  TrendingUp,
+  FileEdit,
+  Inbox
+} from 'lucide-react';
+import { cn } from '../../utils/cn';
+import { NavLink } from 'react-router-dom';
+
+const Dashboard = () => {
+  // Dummy Data for the Overview
+  const stats = [
+    { label: 'Total Articles', value: '12', icon: FileText, color: 'text-zinc-600', bg: 'bg-zinc-100' },
+    { label: 'Under Review', value: '03', icon: History, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Needs Revision', value: '01', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: 'Approved', value: '08', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  ];
+
+  const activities = [
+    { title: 'Article Approved', detail: 'On the Classification of Finite Simple Groups...', time: '2 hours ago', icon: CheckCircle2, iconColor: 'text-emerald-500', bgColor: 'bg-emerald-50' },
+    { title: 'Comments Added', detail: 'New reviewer feedback on "Asymptotic Analysis..."', time: '5 hours ago', icon: History, iconColor: 'text-amber-500', bgColor: 'bg-amber-50' },
+    { title: 'Article Submitted', detail: 'Bayesian Hierarchical Modeling...', time: 'Yesterday', icon: SendIcon, iconColor: 'text-blue-500', bgColor: 'bg-blue-50' },
+  ];
+
+  const notifications = [
+    { message: 'Your manuscript KMA-2024-089 has entered peer review phase.', time: '10:30 AM' },
+    { message: 'New editorial guidelines for Volume 15 have been published.', time: 'Yesterday' },
+  ];
+
+  return (
+    <div className="animate-in fade-in duration-700 max-w-7xl mx-auto">
+      {/* Welcome Header */}
+      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tighter text-black">Author Overview</h1>
+          <p className="text-zinc-500 mt-2 text-sm max-w-md">Welcome back, <span className="font-bold text-black">Dr. Aris Thorne</span>. Here is the latest activity across your research portfolio.</p>
+        </div>
+        <div className="flex items-center gap-3 bg-white/70 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 shadow-sm">
+          <Clock size={16} className="text-zinc-400" />
+          <span className="text-[10px] font-black text-black tracking-widest uppercase">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+        </div>
+      </div>
+
+      {/* Alert Section - Revision Required */}
+      <div className="mb-8 p-4 bg-rose-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-rose-600/10 animate-pulse-slow border border-white/10">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+            <AlertCircle size={20} />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold tracking-tight">Revision Required</h4>
+            <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">KMA-2024-112 needs your attention</p>
+          </div>
+        </div>
+        <NavLink to="/author/articles" className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-rose-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20">
+          Review Comments
+        </NavLink>
+      </div>
+
+      {/* Stats Cards Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {stats.map((stat, i) => (
+          <div key={i} className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg group hover:border-black transition-all cursor-default">
+            <div className="flex justify-between items-start mb-4">
+              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", stat.bg, stat.color)}>
+                <stat.icon size={20} />
+              </div>
+              <TrendingUp size={16} className="text-zinc-200" />
+            </div>
+            <h3 className="text-3xl font-bold text-black tracking-tighter mb-1">{stat.value}</h3>
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Main Grid Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Recent Activity & Quick Actions */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Quick Actions */}
+          <div>
+            <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+               <NavLink to="/author/submit" className="flex items-center gap-4 p-4 bg-zinc-900/90 backdrop-blur-lg text-white rounded-2xl shadow-xl hover:bg-black transition-all active:scale-95 group border border-white/10 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full blur-xl -mr-10 -mt-10" />
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center relative z-10">
+                  <Plus size={20} />
+                </div>
+                <span className="text-xs font-bold tracking-widest relative z-10">SUBMIT NEW</span>
+              </NavLink>
+              <NavLink to="/author/articles" className="flex items-center gap-4 p-4 bg-white/70 backdrop-blur-md border border-white/20 rounded-2xl shadow-lg hover:border-black transition-all active:scale-95 group">
+                <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:text-black transition-all shadow-sm">
+                  <BookOpen size={20} />
+                </div>
+                <span className="text-xs font-bold tracking-widest text-black">MY ARTICLES</span>
+              </NavLink>
+              <NavLink to="/author/drafts" className="flex items-center gap-4 p-4 bg-white/70 backdrop-blur-md border border-white/20 rounded-2xl shadow-lg hover:border-black transition-all active:scale-95 group">
+                <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:text-black transition-all shadow-sm">
+                  <Inbox size={20} />
+                </div>
+                <span className="text-xs font-bold tracking-widest text-black">DRAFTS</span>
+              </NavLink>
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="bg-white/70 backdrop-blur-md rounded-3xl border border-white/20 shadow-xl p-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <History size={18} className="text-zinc-400" />
+                <h3 className="text-sm font-bold text-black uppercase tracking-widest">Recent Activity</h3>
+              </div>
+              <NavLink to="/author/articles" className="text-[10px] font-black text-zinc-400 hover:text-black transition-all uppercase tracking-widest flex items-center gap-1">
+                View Timeline <ChevronRight size={14} />
+              </NavLink>
+            </div>
+            
+            <div className="space-y-6">
+              {activities.map((act, i) => (
+                <div key={i} className="flex gap-4 relative">
+                  {i !== activities.length - 1 && (
+                    <div className="absolute left-6 top-10 bottom-0 w-[1px] bg-zinc-100" />
+                  )}
+                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm", act.bgColor, act.iconColor)}>
+                    <act.icon size={20} />
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <div className="flex justify-between items-start mb-1">
+                      <h4 className="text-sm font-bold text-black">{act.title}</h4>
+                      <span className="text-[10px] text-zinc-400 font-medium">{act.time}</span>
+                    </div>
+                    <p className="text-xs text-zinc-500 line-clamp-1">{act.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Notifications & Info */}
+        <div className="space-y-8">
+          {/* Notifications Preview */}
+          <div className="bg-zinc-900/90 backdrop-blur-lg text-white rounded-[2.5rem] p-8 shadow-2xl shadow-black/10 border border-white/10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32" />
+            <div className="flex items-center justify-between mb-8 relative z-10">
+              <div className="flex items-center gap-2">
+                <Bell size={18} className="text-zinc-500" />
+                <h3 className="text-xs font-bold uppercase tracking-widest">Notifications</h3>
+              </div>
+              <span className="bg-white/10 text-white text-[8px] font-black px-2 py-1 rounded">2 NEW</span>
+            </div>
+
+            <div className="space-y-6 mb-8">
+              {notifications.map((notif, i) => (
+                <div key={i} className="group cursor-pointer">
+                  <p className="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors leading-relaxed mb-1 italic">
+                    "{notif.message}"
+                  </p>
+                  <span className="text-[10px] text-zinc-600 font-bold tracking-widest">{notif.time}</span>
+                </div>
+              ))}
+            </div>
+
+            <button className="w-full py-3 bg-white/10 hover:bg-white text-zinc-300 hover:text-black rounded-xl text-[10px] font-black tracking-widest transition-all uppercase flex items-center justify-center gap-2 group">
+              View All Notifications
+              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          {/* Categories / Helpful Info */}
+          <div className="bg-white/70 backdrop-blur-md rounded-3xl border border-white/20 shadow-xl p-8">
+            <h3 className="text-xs font-bold text-black uppercase tracking-widest mb-6">Archive Focus</h3>
+            <div className="space-y-4">
+              <div className="p-4 bg-white/40 backdrop-blur-sm rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-white/60 transition-all border border-white/10 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-zinc-400 group-hover:text-black border border-white/50">
+                    <FileEdit size={16} />
+                  </div>
+                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Formatting Guide</span>
+                </div>
+                <ArrowRight size={14} className="text-zinc-300 group-hover:text-black" />
+              </div>
+              <div className="p-4 bg-white/40 backdrop-blur-sm rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-white/60 transition-all border border-white/10 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-zinc-400 group-hover:text-black border border-white/50">
+                    <ArchiveIcon size={16} />
+                  </div>
+                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Journal Ethics</span>
+                </div>
+                <ArrowRight size={14} className="text-zinc-300 group-hover:text-black" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Simple Send Icon helper
+const SendIcon = ({ size, className }: { size: number, className?: string }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <line x1="22" y1="2" x2="11" y2="13"></line>
+    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+  </svg>
+);
+
+const ArchiveIcon = ({ size, className }: { size: number, className?: string }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <polyline points="21 8 21 21 3 21 3 8"></polyline>
+    <rect x="1" y="3" width="22" height="5"></rect>
+    <line x1="10" y1="12" x2="14" y2="12"></line>
+  </svg>
+);
+
+export default Dashboard;

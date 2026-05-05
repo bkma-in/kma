@@ -1,6 +1,6 @@
 import logo from '../assets/logo.png';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Info, BookOpen, Users, BadgePercent } from 'lucide-react';
+import { Info, BookOpen, Users, BadgePercent } from 'lucide-react';
 
 const BrandingCard: React.FC = () => {
   return (
@@ -29,7 +29,7 @@ const BrandingCard: React.FC = () => {
         {/* Title */}
         <div>
           <Link to="/" className="group">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-[2.75rem] font-bold text-white tracking-tight leading-[1.15] text-center md:text-left group-hover:text-zinc-200 transition-colors">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-[3.25rem] font-black text-white tracking-[-0.03em] leading-[1.05] text-center md:text-left group-hover:text-zinc-200 transition-colors font-['Playfair_Display']">
               Kerala{' '}
               <br className="hidden md:block" />
               Mathematical{' '}

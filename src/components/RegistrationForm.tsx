@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { User, Mail, Lock, Eye, EyeOff, ChevronRight, Loader2, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, Mail, Lock, Eye, EyeOff, ChevronRight, Loader2, CheckCircle2, GraduationCap, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../utils/cn';
 import {
@@ -19,7 +19,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     email: '',
     role: 'user' as Role,
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    qualification: '',
+    experience: ''
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -37,7 +39,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     formData.name.length > 0 && 
     formData.email.length > 0 && 
     formData.password.length === 8 && 
-    passwordsMatch;
+    passwordsMatch &&
+    (formData.role !== 'reviewer' || (formData.qualification.length > 0 && formData.experience.length > 0));
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -148,6 +151,44 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                   ))}
                 </div>
               </div>
+
+              {/* Conditional Reviewer Fields */}
+              <AnimatePresence>
+                {formData.role === 'reviewer' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-5 overflow-hidden"
+                  >
+                    <div className="space-y-1.5">
+                      <label className="form-label">Academic Qualification</label>
+                      <div className="relative group">
+                        <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-black transition-colors" size={18} />
+                        <input
+                          type="text"
+                          className="input-field pl-11 !border-zinc-200"
+                          placeholder="e.g. Ph.D. in Mathematics"
+                          value={formData.qualification}
+                          onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="form-label">Professional Experience</label>
+                      <div className="relative group">
+                        <Briefcase className="absolute left-3.5 top-4 text-zinc-400 group-focus-within:text-black transition-colors" size={18} />
+                        <textarea
+                          className="input-field pl-11 py-3 min-h-[100px] !border-zinc-200 resize-none"
+                          placeholder="Briefly describe your research and editorial background..."
+                          value={formData.experience}
+                          onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Password */}
               <div className="space-y-1.5">

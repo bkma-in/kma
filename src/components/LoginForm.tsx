@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, Eye, EyeOff, LogIn, AlertTriangle } from 'lucide-react';
-import { cn } from '../utils/cn';
+import { useNavigate } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 
 interface LoginFormProps {
   prefilledEmail?: string;
@@ -11,6 +11,51 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
   const [email, setEmail] = useState(prefilledEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Check static credentials first
+    if (email === 'authour@gmail.com' && password === 'authour@123') {
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('role', 'author');
+      localStorage.setItem('is_temp_password', 'false');
+      navigate('/author/dashboard');
+    } else if (email === 'admin@gmail.com' && password === 'admin123') {
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('role', 'admin');
+      localStorage.setItem('is_temp_password', 'false');
+      navigate('/admin-dashboard');
+    } else if (email === 'reviewer@gmail.com' && password === 'reviewer123') {
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('role', 'reviewer');
+      localStorage.setItem('is_temp_password', 'false');
+      navigate('/reviewer-dashboard');
+    } else {
+      // Check simulated database for newly added reviewers
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const user = users.find((u: any) => u.email === email && u.password === password);
+      
+      if (user) {
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('role', user.role);
+        localStorage.setItem('userEmail', user.email);
+        localStorage.setItem('is_temp_password', user.is_temp_password ? 'true' : 'false');
+        
+        if (user.role === 'reviewer') {
+          navigate('/reviewer-dashboard');
+        } else if (user.role === 'admin') {
+          navigate('/admin-dashboard');
+        } else {
+          navigate('/author/dashboard');
+        }
+      } else {
+        setError('Invalid email or password');
+      }
+    }
+  };
 
   useEffect(() => {
     if (prefilledEmail) {
@@ -27,7 +72,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
           <p className="text-zinc-500 text-sm">Log in to your KMA account</p>
         </header>
 
-        <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-6" onSubmit={handleLogin}>
           {/* Email Address */}
           <div className="space-y-1.5">
             <label className="form-label" htmlFor="login-email">Email</label>
@@ -59,7 +104,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
                 type={showPassword ? "text" : "password"}
                 className="input-field pl-11 pr-11 !border-none !bg-zinc-50"
                 placeholder="Enter your password"
-                maxLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -71,56 +115,19 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {/* Password Strength Indicator */}
-            <div className="flex gap-1.5 mt-2 h-1">
-              {[1, 2, 3, 4].map((i) => {
-                const strength = password.length;
-                let color = "bg-zinc-100";
-                
-                if (strength > 0) {
-                  if (i === 1) {
-                    if (strength <= 3) color = "bg-red-500";
-                    else if (strength <= 5) color = "bg-amber-500";
-                    else color = "bg-green-500";
-                  } else if (i === 2 && strength >= 4) {
-                    if (strength <= 5) color = "bg-amber-500";
-                    else color = "bg-green-500";
-                  } else if (i === 3 && strength >= 6) {
-                    color = "bg-green-500";
-                  } else if (i === 4 && strength >= 8) {
-                    color = "bg-green-500";
-                  }
-                }
 
-                return (
-                  <div 
-                    key={i} 
-                    className={cn(
-                      "flex-1 rounded-full transition-all duration-500",
-                      color
-                    )} 
-                  />
-                );
-              })}
-            </div>
           </div>
 
-          {/* Development Notice */}
-          <div className="bg-zinc-50 border border-zinc-200 p-4 rounded-xl flex gap-3 text-amber-600 items-start">
-            <AlertTriangle className="shrink-0 mt-0.5" size={18} />
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider">Authentication Notice</p>
-              <p className="text-[12px] leading-snug text-zinc-600">
-                Login functionality is not active now. Please contact admin for details.
-              </p>
+          {error && (
+            <div className="text-red-500 text-sm font-medium text-center">
+              {error}
             </div>
-          </div>
+          )}
 
           {/* Login Button */}
           <button
-            type="button"
-            disabled={true}
-            className="btn-primary w-full flex items-center justify-center gap-2 opacity-50 cursor-not-allowed grayscale"
+            type="submit"
+            className="btn-primary w-full flex items-center justify-center gap-2"
           >
             <LogIn size={18} />
             Login
