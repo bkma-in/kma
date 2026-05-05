@@ -1,0 +1,46 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+@theme {
+  --font-sans: "Inter", "Outfit", sans-serif;
+  --radius-kma: 0.75rem;
+  --shadow-kma-card: 0 10px 40px -15px rgba(0, 0, 0, 0.1), 0 5px 15px -5px rgba(0, 0, 0, 0.04);
+}
+
+@layer base {
+  body {
+    @apply antialiased text-primary selection:bg-primary selection:text-white bg-accent;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', sans-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white py-3 px-6 rounded-kma font-semibold transition-all duration-300 hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95;
+  }
+
+  .input-field {
+    @apply w-full bg-white border border-zinc-200 rounded-kma py-3 px-4 outline-none transition-all duration-300 focus:border-black focus:ring-4 focus:ring-black/5 placeholder:text-zinc-400;
+  }
+
+  .form-label {
+    @apply block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-2;
+  }
+}
+
+/* Custom Scrollbar for premium feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-accent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-300 rounded-full border-2 border-accent hover:bg-zinc-400;
+}

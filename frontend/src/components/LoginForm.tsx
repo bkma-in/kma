@@ -1,0 +1,153 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
+
+interface LoginFormProps {
+  prefilledEmail?: string;
+  onSwitchToRegister: () => void;
+}
+
+const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRegister }) => {
+  const [email, setEmail] = useState(prefilledEmail);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Check static credentials first
+    if (email === 'authour@gmail.com' && password === 'authour@123') {
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('role', 'author');
+      localStorage.setItem('is_temp_password', 'false');
+      navigate('/author/dashboard');
+    } else if (email === 'admin@gmail.com' && password === 'admin123') {
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('role', 'admin');
+      localStorage.setItem('is_temp_password', 'false');
+      navigate('/admin-dashboard');
+    } else if (email === 'reviewer@gmail.com' && password === 'reviewer123') {
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('role', 'reviewer');
+      localStorage.setItem('is_temp_password', 'false');
+      navigate('/reviewer-dashboard');
+    } else {
+      // Check simulated database for newly added reviewers
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const user = users.find((u: any) => u.email === email && u.password === password);
+      
+      if (user) {
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('role', user.role);
+        localStorage.setItem('userEmail', user.email);
+        localStorage.setItem('is_temp_password', user.is_temp_password ? 'true' : 'false');
+        
+        if (user.role === 'reviewer') {
+          navigate('/reviewer-dashboard');
+        } else if (user.role === 'admin') {
+          navigate('/admin-dashboard');
+        } else {
+          navigate('/author/dashboard');
+        }
+      } else {
+        setError('Invalid email or password');
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (prefilledEmail) {
+      setEmail(prefilledEmail);
+    }
+  }, [prefilledEmail]);
+
+  return (
+    <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 lg:p-12 bg-white">
+      <div className="max-w-md mx-auto w-full">
+        {/* Header */}
+        <header className="mb-8 sm:mb-10 text-center md:text-left">
+          <h2 className="text-2xl sm:text-3xl font-bold text-black mb-1.5 font-['Outfit']">Welcome Back</h2>
+          <p className="text-zinc-500 text-sm">Log in to your KMA account</p>
+        </header>
+
+        <form className="space-y-6" onSubmit={handleLogin}>
+          {/* Email Address */}
+          <div className="space-y-1.5">
+            <label className="form-label" htmlFor="login-email">Email</label>
+            <div className="relative group">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-black transition-colors" size={18} />
+              <input
+                id="login-email"
+                type="email"
+                className="input-field pl-11 !border-zinc-200"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Password */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center">
+              <label className="form-label mb-0" htmlFor="login-password">Password</label>
+              <button type="button" className="text-[10px] font-bold text-zinc-400 hover:text-black uppercase tracking-wider transition-colors">
+                Forgot?
+              </button>
+            </div>
+            <div className="relative group">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-black transition-colors" size={18} />
+              <input
+                id="login-password"
+                type={showPassword ? "text" : "password"}
+                className="input-field pl-11 pr-11 !border-none !bg-zinc-50"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+
+          </div>
+
+          {error && (
+            <div className="text-red-500 text-sm font-medium text-center">
+              {error}
+            </div>
+          )}
+
+          {/* Login Button */}
+          <button
+            type="submit"
+            className="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            <LogIn size={18} />
+            Login
+          </button>
+
+          {/* Register Link */}
+          <p className="text-center text-zinc-500 text-sm pt-2">
+            Don't have an account?{' '}
+            <button
+              type="button"
+              onClick={onSwitchToRegister}
+              className="text-black font-bold hover:underline"
+            >
+              Register
+            </button>
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default LoginForm;
