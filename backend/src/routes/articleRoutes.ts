@@ -74,7 +74,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
 // Get Signed PDF URL (requires active subscription for reader)
 router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { role, uid } = req.user!;
 
     const articleDoc = await db.collection('articles').doc(id).get();
@@ -123,7 +123,7 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
 // Admin Assign Reviewer
 router.patch('/:id/assign', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { reviewerId } = req.body;
 
     // Use transaction for atomic update
@@ -154,7 +154,7 @@ router.patch('/:id/assign', requireAuth, requireRole(['admin']), async (req: Aut
 // Reviewer/Admin Update Status
 router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), async (req: AuthRequest, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { status } = req.body; // e.g. "accepted", "rejected", "revision_requested"
 
     const articleRef = db.collection('articles').doc(id);

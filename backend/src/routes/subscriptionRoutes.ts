@@ -4,9 +4,11 @@ import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
 import { Cashfree } from 'cashfree-pg';
 import { config } from '../config/env';
 
-Cashfree.XClientId = config.payments.cashfree.appId;
-Cashfree.XClientSecret = config.payments.cashfree.secretKey;
-Cashfree.XEnvironment = config.payments.cashfree.environment === 'PRODUCTION' ? Cashfree.Environment.PRODUCTION : Cashfree.Environment.SANDBOX;
+const cashfree = new Cashfree(
+  config.payments.cashfree.environment === 'PRODUCTION' ? Cashfree.Environment.PRODUCTION : Cashfree.Environment.SANDBOX,
+  config.payments.cashfree.appId,
+  config.payments.cashfree.secretKey
+);
 
 const router = Router();
 
@@ -52,7 +54,7 @@ router.post('/create-order', requireAuth, async (req: AuthRequest, res) => {
       order_id: orderId
     };
 
-    const response = await Cashfree.PGCreateOrder("2023-08-01", request);
+    const response = await cashfree.PGCreateOrder("2023-08-01", request);
 
     // Save pending subscription in Firestore
     const subRef = db.collection('subscriptions').doc();
