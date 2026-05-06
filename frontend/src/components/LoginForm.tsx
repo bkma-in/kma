@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 
+import { login } from '../services/auth.service';
+
 interface LoginFormProps {
   prefilledEmail?: string;
   onSwitchToRegister: () => void;
@@ -12,48 +14,34 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
     
-    // Check static credentials first
-    if (email === 'authour@gmail.com' && password === 'authour@123') {
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('role', 'author');
-      localStorage.setItem('is_temp_password', 'false');
-      navigate('/author/dashboard');
-    } else if (email === 'admin@gmail.com' && password === 'admin123') {
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('role', 'admin');
-      localStorage.setItem('is_temp_password', 'false');
-      navigate('/admin-dashboard');
-    } else if (email === 'reviewer@gmail.com' && password === 'reviewer123') {
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('role', 'reviewer');
-      localStorage.setItem('is_temp_password', 'false');
-      navigate('/reviewer-dashboard');
-    } else {
-      // Check simulated database for newly added reviewers
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find((u: any) => u.email === email && u.password === password);
-      
-      if (user) {
+    try {
+      const response = await login(email, password);
+      if (response.success) {
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('role', user.role);
-        localStorage.setItem('userEmail', user.email);
-        localStorage.setItem('is_temp_password', user.is_temp_password ? 'true' : 'false');
+        localStorage.setItem('role', response.user.role);
+        localStorage.setItem('userEmail', response.user.email);
+        localStorage.setItem('is_temp_password', 'false'); // Assuming real system handles this differently
         
-        if (user.role === 'reviewer') {
+        if (response.user.role === 'reviewer') {
           navigate('/reviewer-dashboard');
-        } else if (user.role === 'admin') {
+        } else if (response.user.role === 'admin') {
           navigate('/admin-dashboard');
         } else {
           navigate('/author/dashboard');
         }
-      } else {
-        setError('Invalid email or password');
       }
+    } catch (err: any) {
+      setError(err.message || 'Invalid email or password');
+    } finally {
+      setIsLoading(false);
     }
   };
 

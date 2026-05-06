@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '../../services/api';
 import { 
   Search, 
   Filter, 
@@ -42,43 +43,52 @@ const MyArticles = () => {
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Dummy Data
-  const articles: Article[] = [
-    {
-      id: 'KMA-2024-089',
-      title: 'Asymptotic Analysis of Non-linear Differential Equations in Fluid Dynamics',
-      category: 'Applied Mathematics',
-      dateSubmitted: '2024-03-12',
-      status: 'Under Review',
-      abstract: 'This research explores new asymptotic methods for solving non-linear differential equations specifically in the context of fluid dynamics and turbulence modeling.',
-      versions: [
-        { version: 1, uploadedBy: 'Author', timestamp: '2024-03-12 10:00 AM', fileName: 'manuscript_v1.docx' }
-      ]
-    },
-    {
-      id: 'KMA-2024-112',
-      title: 'On the Classification of Finite Simple Groups: A Re-evaluation',
-      category: 'Pure Mathematics',
-      dateSubmitted: '2024-02-28',
-      status: 'Needs Revision',
-      abstract: 'A deep dive into the historical proofs of finite simple group classification, proposing a more streamlined approach for the third generation proof.',
-      versions: [
-        { version: 2, uploadedBy: 'Reviewer', timestamp: '2024-03-05 02:30 PM', fileName: 'feedback_annotated.docx' },
-        { version: 1, uploadedBy: 'Author', timestamp: '2024-02-28 09:15 AM', fileName: 'manuscript_v1.docx' }
-      ]
-    },
-    {
-      id: 'KMA-2024-002',
-      title: 'Bayesian Hierarchical Modeling for Large-Scale Genomic Data Sets',
-      category: 'Statistics',
-      dateSubmitted: '2024-01-15',
-      status: 'Approved',
-      abstract: 'Implementing Bayesian frameworks to handle high-dimensional genomic data, focusing on error reduction and computational efficiency.',
-      versions: [
-        { version: 1, uploadedBy: 'Author', timestamp: '2024-01-15 11:45 AM', fileName: 'final_submission.docx' }
-      ]
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const response = await api.get('/articles');
+        if (response.data.success) {
+          const mappedArticles = response.data.articles.map((a: any) => ({
+            id: a.articleId,
+            title: a.title,
+            category: 'Mathematics', // Add to backend schema later if needed
+            dateSubmitted: new Date(a.createdAt._seconds * 1000).toISOString(),
+            status: mapStatus(a.status),
+            abstract: a.abstract,
+            versions: [
+              {
+                version: 1,
+                uploadedBy: 'Author',
+                timestamp: new Date(a.createdAt._seconds * 1000).toLocaleString(),
+                fileName: a.pdfUrl.split('/').pop() || 'manuscript.pdf'
+              }
+            ]
+          }));
+          setArticles(mappedArticles);
+        }
+      } catch (error) {
+        console.error('Failed to fetch articles', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchArticles();
+  }, []);
+
+  const mapStatus = (backendStatus: string): Status => {
+    switch(backendStatus) {
+      case 'submitted': return 'Submitted';
+      case 'under_review': return 'Under Review';
+      case 'revision_requested': return 'Needs Revision';
+      case 'accepted': return 'Approved';
+      case 'rejected': return 'Rejected';
+      default: return 'Submitted';
     }
-  ];
+  };
+
 
   const getStatusStyles = (status: Status) => {
     switch (status) {
@@ -157,6 +167,9 @@ const MyArticles = () => {
 
       {/* Articles List */}
       <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 text-center text-zinc-500 font-medium">Loading articles...</div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -222,6 +235,7 @@ const MyArticles = () => {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {/* Article Details Modal */}

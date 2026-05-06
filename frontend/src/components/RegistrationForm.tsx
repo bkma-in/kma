@@ -7,6 +7,7 @@ import {
   validateEmail,
   type Role
 } from '../utils/validation';
+import { register } from '../services/auth.service';
 
 interface RegistrationFormProps {
   onSuccess: (email: string) => void;
@@ -57,9 +58,16 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     e.preventDefault();
     if (!validateForm()) return;
     setIsLoading(true);
+    setErrors({});
 
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await register({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        role: formData.role
+      });
+      
       let msg = "Registration successful! Flipping to login...";
       if (formData.role === 'reviewer') {
         msg = "Your account is under admin approval. You can log in after approval.";
@@ -69,7 +77,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
       setTimeout(() => {
         onSuccess(formData.email);
       }, 2000);
-    }, 1500);
+    } catch (err: any) {
+      setErrors({ form: err.message || 'Registration failed' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -98,6 +110,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
             </motion.div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
+              {errors.form && (
+                <div className="text-red-500 text-sm font-medium text-center">
+                  {errors.form}
+                </div>
+              )}
               {/* Full Name */}
               <div className="space-y-1.5">
                 <label className="form-label" htmlFor="reg-name">Name</label>

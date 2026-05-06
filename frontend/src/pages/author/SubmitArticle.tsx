@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import api from '../../services/api';
 import { 
   FileText, 
   Upload, 
@@ -40,10 +41,10 @@ const SubmitArticle = () => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       const extension = selectedFile.name.split('.').pop()?.toLowerCase();
-      if (extension === 'doc' || extension === 'docx') {
+      if (extension === 'pdf') {
         setFile(selectedFile);
       } else {
-        alert('Please upload only .doc or .docx files.');
+        alert('Please upload only .pdf files.');
       }
     }
   };
@@ -62,21 +63,33 @@ const SubmitArticle = () => {
 
     setIsSubmitting(true);
     
-    // Simulate API call
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setIsSuccess(true);
-      // Reset form after success
-      setFormData({
-        title: '',
-        abstract: '',
-        keywords: '',
-        category: '',
-        allowComments: true
+      const payload = new FormData();
+      payload.append('title', formData.title);
+      payload.append('abstract', formData.abstract);
+      payload.append('category', formData.category);
+      payload.append('pdf', file); // Field name matching multer in backend
+
+      const response = await api.post('/articles', payload, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
-      setFile(null);
-    } catch (error) {
+
+      if (response.data.success) {
+        setIsSuccess(true);
+        setFormData({
+          title: '',
+          abstract: '',
+          keywords: '',
+          category: '',
+          allowComments: true
+        });
+        setFile(null);
+      }
+    } catch (error: any) {
       console.error('Submission failed:', error);
+      alert(error.response?.data?.error || 'Failed to submit article');
     } finally {
       setIsSubmitting(false);
     }
@@ -203,7 +216,7 @@ const SubmitArticle = () => {
                   <Upload size={24} className="text-zinc-400 group-hover:text-black transition-colors" />
                 </div>
                 <h4 className="text-sm font-bold text-black mb-1">Upload Manuscript</h4>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-4">Accepts .doc and .docx only</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest mb-4">Accepts .pdf only</p>
                 <div className="px-4 py-2 bg-black text-white text-[10px] font-bold rounded-lg tracking-widest">SELECT FILE</div>
                 
                 <div className="mt-8 flex items-start gap-2 max-w-sm text-center">
@@ -247,7 +260,7 @@ const SubmitArticle = () => {
               type="file" 
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept=".doc,.docx"
+              accept=".pdf"
               className="hidden"
             />
           </div>
