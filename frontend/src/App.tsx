@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Auth from './pages/Auth'
 import LandingPage from './pages/LandingPage'
+import ToastContainer from './components/notifications/ToastContainer'
+import ConfirmModal from './components/notifications/ConfirmModal'
 import AuthorLayout from './layouts/AuthorLayout'
 import Dashboard from './pages/author/Dashboard'
 import MyArticles from './pages/author/MyArticles'
@@ -15,10 +17,15 @@ import ReviewerLayout from './layouts/ReviewerLayout'
 import ReviewerDashboard from './pages/reviewer/ReviewerDashboard'
 import ReviewerArticles from './pages/reviewer/ReviewerArticles'
 import ReviewerNotifications from './pages/reviewer/ReviewerNotifications'
+import DeveloperLayout from './layouts/DeveloperLayout'
+import DeveloperDashboard from './pages/developer/DeveloperDashboard'
+import DeveloperIssues from './pages/developer/DeveloperIssues'
 
 function App() {
   return (
     <div className="w-full min-h-screen">
+      <ToastContainer />
+      <ConfirmModal />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<Auth />} />
@@ -45,6 +52,12 @@ function App() {
           <Route index element={<ReviewerDashboard />} />
           <Route path="articles" element={<ReviewerArticles />} />
           <Route path="notifications" element={<ReviewerNotifications />} />
+        </Route>
+
+        {/* Developer Portal Routes */}
+        <Route path="/developer-dashboard" element={<DeveloperLayout />}>
+          <Route index element={<DeveloperDashboard />} />
+          <Route path="issues" element={<DeveloperIssues />} />
         </Route>
       </Routes>
     </div>

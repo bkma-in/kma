@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Search, 
   Filter, 
@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import AddReviewerModal from '../../components/admin/AddReviewerModal';
-import { useEffect } from 'react';
+import { useNotification } from '../../utils/NotificationContext';
 
 // Types
 type ReviewerStatus = 'Pending' | 'Approved' | 'Rejected';
@@ -35,12 +35,12 @@ interface Reviewer {
 }
 
 const AdminAuthors = () => {
+  const { confirm, showToast } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReviewerStatus | 'All'>('All');
   const [selectedReviewer, setSelectedReviewer] = useState<Reviewer | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
 
   useEffect(() => {
@@ -100,11 +100,25 @@ const AdminAuthors = () => {
   }, []);
 
   const handleStatusUpdate = (id: string, newStatus: ReviewerStatus) => {
-    setReviewers(prev => prev.map(rev => 
-      rev.id === id ? { ...rev, status: newStatus } : rev
-    ));
-    if (selectedReviewer?.id === id) {
-      setSelectedReviewer(prev => prev ? { ...prev, status: newStatus } : null);
+    const update = () => {
+      setReviewers(prev => prev.map(rev => 
+        rev.id === id ? { ...rev, status: newStatus } : rev
+      ));
+      if (selectedReviewer?.id === id) {
+        setSelectedReviewer(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+      showToast(`Reviewer ${newStatus.toLowerCase()} successfully`, newStatus === 'Approved' ? 'success' : 'error');
+    };
+
+    if (newStatus === 'Rejected') {
+      confirm({
+        title: 'Reject Reviewer',
+        message: 'Are you sure you want to reject this reviewer? They will not be able to access the portal.',
+        confirmText: 'Reject',
+        onConfirm: update
+      });
+    } else {
+      update();
     }
   };
 
@@ -121,24 +135,24 @@ const AdminAuthors = () => {
   };
 
   return (
-    <div className="animate-in fade-in duration-500 max-w-7xl mx-auto">
+    <div className="animate-in fade-in duration-500 max-w-7xl mx-auto px-4">
       {/* Header section */}
       <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white">
+            <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
               <Users size={18} />
             </div>
-            <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase">System Governance</h2>
+            <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase font-['Outfit']">System Governance</h2>
           </div>
-          <h1 className="text-4xl font-bold tracking-tighter text-black">Reviewer Management</h1>
-          <p className="text-zinc-500 mt-2 text-sm">Verify expert credentials and manage portal access for peer reviewers.</p>
+          <h1 className="text-4xl font-bold tracking-tighter text-black font-['Outfit']">Reviewer Management</h1>
+          <p className="text-zinc-500 mt-2 text-sm max-w-xl leading-relaxed">Verify expert credentials, audit research backgrounds, and manage administrative portal access for peer reviewers.</p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <button 
             onClick={() => setIsAddModalOpen(true)}
-            className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl font-bold text-xs tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95 flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-6 py-3.5 bg-black text-white rounded-xl font-bold text-xs tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 active:scale-95 flex items-center justify-center gap-2"
           >
             <Plus size={18} />
             ADD REVIEWER
@@ -148,10 +162,10 @@ const AdminAuthors = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
               <input 
                 type="text" 
-                placeholder="Search by name or email..."
+                placeholder="Search by identity..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2.5 bg-white/70 backdrop-blur-md border border-white/20 rounded-xl text-xs font-medium w-full sm:w-64 focus:ring-2 focus:ring-black outline-none transition-all shadow-sm"
+                className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium w-full sm:w-64 focus:ring-2 focus:ring-black outline-none transition-all shadow-sm"
               />
             </div>
             <div className="relative">
@@ -159,7 +173,7 @@ const AdminAuthors = () => {
               <select 
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="pl-10 pr-8 py-2.5 bg-white/70 backdrop-blur-md border border-white/20 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm"
+                className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm"
               >
                 <option value="All">All Status</option>
                 <option value="Pending">Pending</option>
@@ -172,32 +186,32 @@ const AdminAuthors = () => {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl overflow-hidden">
+      <div className="bg-white rounded-3xl border border-zinc-100 shadow-xl shadow-black/[0.02] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-white/40 border-b border-white/10">
+              <tr className="bg-zinc-50/50 border-b border-zinc-100">
                 <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Reviewer Profile</th>
                 <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Qualification</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Reg. Date</th>
+                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Registered</th>
                 <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</th>
                 <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/10">
+            <tbody className="divide-y divide-zinc-50">
               {filteredReviewers.map((reviewer) => (
                 <tr key={reviewer.id} className={cn(
                   "group transition-colors",
-                  reviewer.status === 'Pending' ? "bg-amber-500/10" : "hover:bg-white/40"
+                  reviewer.status === 'Pending' ? "bg-amber-50/30" : "hover:bg-zinc-50/30"
                 )}>
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all">
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
                         <Users size={20} />
                       </div>
                       <div>
-                        <h3 className="text-sm font-bold text-black">{reviewer.name}</h3>
-                        <p className="text-[10px] text-zinc-400 font-medium">{reviewer.email}</p>
+                        <h3 className="text-sm font-bold text-black font-['Outfit']">{reviewer.name}</h3>
+                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{reviewer.email}</p>
                       </div>
                     </div>
                   </td>
@@ -206,15 +220,15 @@ const AdminAuthors = () => {
                       {reviewer.qualification}
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-xs text-zinc-500 font-medium">
+                  <td className="px-6 py-5 text-xs text-zinc-500 font-medium text-center">
                     {new Date(reviewer.regDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </td>
                   <td className="px-6 py-5">
                     <span className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border backdrop-blur-sm shadow-sm",
-                      reviewer.status === 'Approved' ? "bg-emerald-500/20 text-emerald-600 border-emerald-500/20" :
-                      reviewer.status === 'Rejected' ? "bg-rose-500/20 text-rose-600 border-rose-500/20" :
-                      "bg-amber-500/20 text-amber-600 border-amber-500/20 animate-pulse-slow"
+                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm",
+                      reviewer.status === 'Approved' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                      reviewer.status === 'Rejected' ? "bg-rose-50 text-rose-600 border-rose-100" :
+                      "bg-amber-50 text-amber-600 border-amber-100 animate-pulse"
                     )}>
                       {reviewer.status === 'Approved' ? <UserCheck size={12} /> : 
                        reviewer.status === 'Rejected' ? <UserX size={12} /> : 
@@ -227,7 +241,7 @@ const AdminAuthors = () => {
                       <button 
                         onClick={() => openDetails(reviewer)}
                         className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-black transition-all"
-                        title="View Details"
+                        title="View Detailed Profile"
                       >
                         <Eye size={18} />
                       </button>
@@ -236,15 +250,15 @@ const AdminAuthors = () => {
                         <>
                           <button 
                             onClick={() => handleStatusUpdate(reviewer.id, 'Approved')}
-                            className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all border border-emerald-100"
+                            className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all border border-emerald-100 shadow-sm"
                             title="Approve Reviewer"
                           >
                             <Check size={18} />
                           </button>
                           <button 
                             onClick={() => handleStatusUpdate(reviewer.id, 'Rejected')}
-                            className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-all border border-rose-100"
-                            title="Reject Reviewer"
+                            className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-all border border-rose-100 shadow-sm"
+                            title="Reject Access"
                           >
                             <X size={18} />
                           </button>
@@ -267,16 +281,16 @@ const AdminAuthors = () => {
       {isModalOpen && selectedReviewer && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <div className="relative bg-white/80 backdrop-blur-2xl w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300 border border-white/20">
+          <div className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300 border border-white/20">
             {/* Modal Header */}
-            <div className="px-8 py-8 border-b border-white/10 flex items-center justify-between bg-white/40">
+            <div className="px-8 py-8 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
               <div className="flex items-center gap-5">
-                <div className="w-16 h-16 rounded-2xl bg-black flex items-center justify-center text-white shadow-xl">
+                <div className="w-16 h-16 rounded-2xl bg-black flex items-center justify-center text-white shadow-xl shadow-black/20">
                   <Award size={32} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-black tracking-tight">{selectedReviewer.name}</h3>
-                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{selectedReviewer.id}</p>
+                  <h3 className="text-xl font-bold text-black tracking-tight font-['Outfit']">{selectedReviewer.name}</h3>
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">{selectedReviewer.id}</p>
                 </div>
               </div>
               <button 
@@ -293,14 +307,14 @@ const AdminAuthors = () => {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">
                     <Mail size={12} />
-                    Email Address
+                    Verified Email
                   </div>
                   <p className="text-sm font-bold text-black">{selectedReviewer.email}</p>
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">
                     <Calendar size={12} />
-                    Registered On
+                    Registration Timestamp
                   </div>
                   <p className="text-sm font-bold text-black">{new Date(selectedReviewer.regDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
                 </div>
@@ -309,9 +323,9 @@ const AdminAuthors = () => {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                   <GraduationCap size={14} />
-                  Academic Qualifications
+                  Academic Credentials
                 </div>
-                <div className="p-4 bg-white/40 backdrop-blur-sm rounded-2xl border border-white/10 text-sm font-medium text-zinc-700 shadow-sm">
+                <div className="p-5 bg-zinc-50 rounded-2xl border border-zinc-100 text-sm font-medium text-zinc-700">
                   {selectedReviewer.qualification}
                 </div>
               </div>
@@ -319,11 +333,13 @@ const AdminAuthors = () => {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                   <Briefcase size={14} />
-                  Professional Experience
+                  Research Domain & Experience
                 </div>
-                <p className="text-sm text-zinc-600 leading-relaxed italic">
-                  "{selectedReviewer.experience || 'No experience details provided.'}"
-                </p>
+                <div className="p-6 bg-zinc-50/50 rounded-2xl border border-zinc-100 border-dashed">
+                  <p className="text-sm text-zinc-600 leading-relaxed italic">
+                    "{selectedReviewer.experience || 'No detailed background provided.'}"
+                  </p>
+                </div>
               </div>
 
               {/* Status Specific Actions */}
@@ -331,26 +347,26 @@ const AdminAuthors = () => {
                 <div className="flex gap-4 pt-4">
                   <button 
                     onClick={() => handleStatusUpdate(selectedReviewer.id, 'Approved')}
-                    className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 active:scale-95 flex items-center justify-center gap-2"
+                    className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95 flex items-center justify-center gap-2"
                   >
                     <UserCheck size={18} />
-                    APPROVE REVIEWER
+                    GRANT ACCESS
                   </button>
                   <button 
                     onClick={() => handleStatusUpdate(selectedReviewer.id, 'Rejected')}
-                    className="flex-1 py-4 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl font-bold text-xs tracking-widest hover:bg-rose-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    className="flex-1 py-4 bg-white text-rose-600 border border-rose-100 rounded-2xl font-bold text-xs tracking-widest hover:bg-rose-50 transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
                     <UserX size={18} />
-                    REJECT ACCESS
+                    DENY ENTRY
                   </button>
                 </div>
               ) : (
                 <div className={cn(
-                  "p-4 rounded-2xl border flex items-center justify-center gap-3 font-bold text-xs uppercase tracking-[0.2em] backdrop-blur-sm shadow-sm",
-                  selectedReviewer.status === 'Approved' ? "bg-emerald-500/20 text-emerald-600 border-emerald-500/20" : "bg-rose-500/20 text-rose-600 border-rose-500/20"
+                  "p-5 rounded-2xl border flex items-center justify-center gap-3 font-bold text-[10px] uppercase tracking-[0.3em] shadow-sm",
+                  selectedReviewer.status === 'Approved' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"
                 )}>
                   {selectedReviewer.status === 'Approved' ? <UserCheck size={18} /> : <UserX size={18} />}
-                  Reviewer {selectedReviewer.status}
+                  Identity Token {selectedReviewer.status}
                 </div>
               )}
             </div>

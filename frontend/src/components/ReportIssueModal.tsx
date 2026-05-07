@@ -66,15 +66,23 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({ isOpen, onClose, us
     };
 
     try {
-      // Simulate API call
-      // const response = await fetch('/api/report-issue', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ issueType, description, metadata })
-      // });
-      
+      // Logic from HEAD (Placeholder for real API)
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
       console.log('Reporting Issue:', { issueType, description, screenshot: screenshot?.name, metadata });
+
+      // Logic from UPSTREAM (Integration with Developer Dashboard)
+      const newIssue: any = {
+        id: `ISS-${Date.now().toString().slice(-6)}`,
+        type: issueType,
+        description,
+        screenshot: screenshotPreview,
+        status: 'Open',
+        createdAt: new Date().toISOString(),
+        metadata
+      };
+      const existingIssues = JSON.parse(localStorage.getItem('kma_reported_issues') || '[]');
+      localStorage.setItem('kma_reported_issues', JSON.stringify([newIssue, ...existingIssues]));
+
       setIsSuccess(true);
       setTimeout(() => onClose(), 2000);
     } catch (error) {
@@ -103,19 +111,19 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({ isOpen, onClose, us
         isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4"
       )}>
         {isSuccess ? (
-          <div className="p-12 text-center flex flex-col items-center gap-4">
-            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
+          <div className="p-12 text-center flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-500">
+            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2 shadow-lg shadow-green-600/10">
               <CheckCircle2 size={32} />
             </div>
-            <h3 className="text-xl font-bold text-black">Issue Reported Successfully</h3>
-            <p className="text-zinc-500 text-sm">Thank you for your feedback. Our team will look into it.</p>
+            <h3 className="text-xl font-bold text-black font-['Outfit']">Issue Reported Successfully</h3>
+            <p className="text-zinc-500 text-sm leading-relaxed max-w-xs">Thank you for your feedback. Our development team has been notified.</p>
           </div>
         ) : (
           <>
             <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
               <div className="flex items-center gap-2">
                 <AlertCircle size={20} className="text-zinc-600" />
-                <h3 className="font-bold text-black tracking-tight uppercase text-sm">Report an Issue</h3>
+                <h3 className="font-bold text-black tracking-tight uppercase text-sm font-['Outfit']">Report an Issue</h3>
               </div>
               <button 
                 onClick={onClose}
@@ -195,7 +203,7 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({ isOpen, onClose, us
               <button 
                 type="submit"
                 disabled={!issueType || !description || isSubmitting}
-                className="w-full py-4 bg-black text-white rounded-xl font-bold text-sm tracking-widest hover:bg-zinc-800 disabled:bg-zinc-200 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-4"
+                className="w-full py-4 bg-black text-white rounded-xl font-bold text-sm tracking-widest hover:bg-zinc-800 disabled:bg-zinc-200 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-4 shadow-xl shadow-black/10"
               >
                 {isSubmitting ? (
                   <>

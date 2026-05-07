@@ -20,6 +20,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { useNotification } from '../../utils/NotificationContext';
 
 // Types
 type ArticleStatus = 
@@ -27,7 +28,8 @@ type ArticleStatus =
   | 'Needs Improvement' 
   | 'Approved' 
   | 'Published' 
-  | 'Rejected';
+  | 'Rejected'
+  | 'Sent to Reviewer';
 
 type ReviewerRecommendation = 'Approved' | 'Needs Improvement' | 'Rejected' | 'None';
 
@@ -57,6 +59,7 @@ interface Article {
 }
 
 const AdminArticles = () => {
+  const { confirm, showToast } = useNotification();
   const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ArticleStatus | 'All'>('All');
@@ -65,7 +68,7 @@ const AdminArticles = () => {
   useEffect(() => {
     const statusParam = searchParams.get('status');
     if (statusParam) {
-      const validStatuses = ['Submitted', 'Needs Improvement', 'Approved', 'Published', 'Rejected'];
+      const validStatuses = ['Submitted', 'Needs Improvement', 'Approved', 'Published', 'Rejected', 'Sent to Reviewer'];
       if (validStatuses.includes(statusParam)) {
         setStatusFilter(statusParam as ArticleStatus);
       } else if (statusParam === 'All') {
@@ -144,6 +147,7 @@ const AdminArticles = () => {
       case 'Rejected': return 'bg-rose-50 text-rose-600 border-rose-100';
       case 'Published': return 'bg-purple-50 text-purple-600 border-purple-100';
       case 'Submitted': return 'bg-blue-50 text-blue-600 border-blue-100';
+      case 'Sent to Reviewer': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
       default: return 'bg-zinc-100 text-zinc-600 border-zinc-200';
     }
   };
@@ -155,6 +159,7 @@ const AdminArticles = () => {
       case 'Rejected': return <XCircle size={12} />;
       case 'Published': return <UploadCloud size={12} />;
       case 'Submitted': return <FileText size={12} />;
+      case 'Sent to Reviewer': return <Send size={12} />;
       default: return <Clock size={12} />;
     }
   };
@@ -183,6 +188,7 @@ const AdminArticles = () => {
       setSelectedArticle(prev => prev ? { ...prev, assignedReviewer: reviewer, status: 'Sent to Reviewer' } : null);
     }
     setIsAssigning(false);
+    showToast(`Assigned to ${reviewer}`, 'success');
   };
 
   return (
@@ -219,7 +225,7 @@ const AdminArticles = () => {
               className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer"
             >
               <option value="All">All Workflow States</option>
-              {['Submitted', 'Needs Improvement', 'Approved', 'Published', 'Rejected'].map(s => (
+              {['Submitted', 'Needs Improvement', 'Approved', 'Published', 'Rejected', 'Sent to Reviewer'].map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -415,6 +421,42 @@ const AdminArticles = () => {
                   Admin Actions
                 </div>
 
+                {/* Assignment UI (Restored) */}
+                {selectedArticle.status === 'Submitted' && (
+                  <div className="space-y-4">
+                    {!isAssigning ? (
+                      <button 
+                        onClick={() => setIsAssigning(true)}
+                        className="w-full flex items-center justify-center gap-3 py-5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                      >
+                        <UserCheck size={18} />
+                        ASSIGN REVIEWER
+                      </button>
+                    ) : (
+                      <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-200 animate-in fade-in slide-in-from-top-2">
+                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Select Academic Reviewer</p>
+                        <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                          {availableReviewers.map(reviewer => (
+                            <button
+                              key={reviewer}
+                              onClick={() => assignReviewer(selectedArticle.id, reviewer)}
+                              className="w-full py-3 px-4 text-left text-xs font-bold text-zinc-600 hover:bg-black hover:text-white rounded-xl transition-all border border-zinc-100 hover:border-black"
+                            >
+                              {reviewer}
+                            </button>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => setIsAssigning(false)}
+                          className="w-full mt-4 py-2 text-[9px] font-black text-zinc-400 hover:text-rose-600 uppercase tracking-widest transition-colors"
+                        >
+                          Cancel Assignment
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {selectedArticle.reviewerFeedback?.recommendation === 'Needs Improvement' && (
                   <button 
                     onClick={() => setIsAdminNoteModalOpen(true)}
@@ -428,9 +470,15 @@ const AdminArticles = () => {
                 {selectedArticle.reviewerFeedback?.recommendation === 'Rejected' && (
                   <button 
                     onClick={() => {
-                      if(window.confirm('Are you sure you want to REJECT this article? This action cannot be undone.')) {
-                        updateStatus(selectedArticle.id, 'Rejected');
-                      }
+                      confirm({
+                        title: 'Reject Article',
+                        message: 'Are you sure you want to REJECT this article? This action cannot be undone.',
+                        confirmText: 'Reject',
+                        onConfirm: () => {
+                          updateStatus(selectedArticle.id, 'Rejected');
+                          showToast('Article rejected successfully', 'error');
+                        }
+                      });
                     }}
                     className="w-full flex items-center justify-center gap-3 py-5 bg-rose-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/20 active:scale-95"
                   >
@@ -442,9 +490,15 @@ const AdminArticles = () => {
                 {selectedArticle.reviewerFeedback?.recommendation === 'Approved' && (
                   <button 
                     onClick={() => {
-                      if(window.confirm('Are you sure you want to PUBLISH this article? It will appear on the main website.')) {
-                        updateStatus(selectedArticle.id, 'Published');
-                      }
+                      confirm({
+                        title: 'Publish Article',
+                        message: 'Are you sure you want to PUBLISH this article? It will appear on the main website.',
+                        confirmText: 'Publish',
+                        onConfirm: () => {
+                          updateStatus(selectedArticle.id, 'Published');
+                          showToast('Article published successfully', 'success');
+                        }
+                      });
                     }}
                     className="w-full flex items-center justify-center gap-3 py-5 bg-emerald-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95"
                   >
@@ -464,6 +518,13 @@ const AdminArticles = () => {
                   <div className="w-full py-5 bg-rose-50 text-rose-600 rounded-2xl text-xs font-black tracking-widest border border-rose-100 flex items-center justify-center gap-3">
                     <XCircle size={18} />
                     ARTICLE HAS BEEN REJECTED
+                  </div>
+                )}
+
+                {selectedArticle.status === 'Sent to Reviewer' && (
+                  <div className="w-full py-5 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-black tracking-widest border border-indigo-100 flex items-center justify-center gap-3">
+                    <Send size={18} />
+                    WAITING FOR REVIEWER FEEDBACK
                   </div>
                 )}
               </div>

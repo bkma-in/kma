@@ -7,8 +7,12 @@ import GlobalHeader from '../components/GlobalHeader';
 import GlobalFooter from '../components/GlobalFooter';
 import ReportIssueModal from '../components/ReportIssueModal';
 import ChangePasswordModal from '../components/reviewer/ChangePasswordModal';
+import { useNotification } from '../utils/NotificationContext';
+import { useProfile } from '../hooks/useProfile';
 
 const ReviewerLayout = () => {
+  const { confirm, showToast } = useNotification();
+  const { profile } = useProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [mustChangePassword, setMustChangePassword] = useState(localStorage.getItem('is_temp_password') === 'true');
@@ -17,19 +21,29 @@ const ReviewerLayout = () => {
   // Route protection & Dynamic User Data
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   const role = localStorage.getItem('role');
-  const userName = localStorage.getItem('userName') || 'Reviewer User';
-  const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'JD';
+  const userName = profile?.name || localStorage.getItem('userName') || 'Reviewer User';
+  const userInitials = profile?.name 
+    ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : (localStorage.getItem('userName') || 'JD').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
   if (!isLoggedIn || role !== 'reviewer') {
     return <Navigate to="/auth" replace />;
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('role');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
-    navigate('/auth');
+    confirm({
+      title: 'Confirm Logout',
+      message: 'Are you sure you want to log out of the Reviewer Portal?',
+      confirmText: 'Logout',
+      onConfirm: () => {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('role');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userEmail');
+        showToast('Logged out successfully', 'success');
+        navigate('/auth');
+      }
+    });
   };
 
   const navItems = [

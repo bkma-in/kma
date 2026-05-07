@@ -216,7 +216,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
 
               {/* Password */}
               <div className="space-y-1.5">
-                <label className="form-label" htmlFor="reg-password">Password</label>
+                <label className="form-label" htmlFor="reg-password">Password (8 characters)</label>
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-black transition-colors" size={18} />
                   <input

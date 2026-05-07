@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
-
 import { login } from '../services/auth.service';
 
 interface LoginFormProps {
@@ -29,12 +28,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
         localStorage.setItem('role', response.user.role);
         localStorage.setItem('userName', response.user.name);
         localStorage.setItem('userEmail', response.user.email);
-        localStorage.setItem('is_temp_password', 'false'); // Assuming real system handles this differently
+        localStorage.setItem('is_temp_password', 'false'); 
         
         if (response.user.role === 'reviewer') {
           navigate('/reviewer-dashboard');
         } else if (response.user.role === 'admin') {
           navigate('/admin-dashboard');
+        } else if (response.user.role === 'developer') {
+          navigate('/developer-dashboard');
         } else {
           navigate('/author/dashboard');
         }
@@ -74,6 +75,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
           </div>
@@ -95,6 +97,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
               />
               <button
                 type="button"
@@ -104,7 +107,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-
           </div>
 
           {error && (
@@ -119,10 +121,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
           {/* Login Button */}
           <button
             type="submit"
-            className="btn-primary w-full flex items-center justify-center gap-2"
+            disabled={isLoading}
+            className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <LogIn size={18} />
-            Login
+            {isLoading ? (
+              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <LogIn size={18} />
+            )}
+            {isLoading ? 'Logging in...' : 'Login'}
           </button>
 
           {/* Register Link */}

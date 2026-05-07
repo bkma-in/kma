@@ -16,8 +16,10 @@ import {
 import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
 import { getArticles } from '../../services/article.service';
+import { useProfile } from '../../hooks/useProfile';
 
 const ReviewerDashboard = () => {
+  const { profile } = useProfile();
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -70,7 +72,7 @@ const ReviewerDashboard = () => {
       <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl font-bold tracking-tighter text-black">Reviewer Overview</h1>
-          <p className="text-zinc-500 mt-2 text-sm max-w-md">Welcome back, <span className="font-bold text-black">Dr. John Doe</span>. You have <span className="font-bold text-amber-600">{pendingReviewsCount} pending reviews</span> that require your expertise.</p>
+          <p className="text-zinc-500 mt-2 text-sm max-w-md">Welcome back, <span className="font-bold text-black">{profile?.name || "Dr. John Doe"}</span>. You have <span className="font-bold text-amber-600">{pendingReviewsCount} pending reviews</span> that require your expertise.</p>
         </div>
         <div className="flex items-center gap-3 bg-white/70 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 shadow-sm">
           <Star size={16} className="text-zinc-400" />

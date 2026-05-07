@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Menu } from 'lucide-react';
 import logo from '../assets/logo.png';
+import ProfileModal from './ProfileModal';
+import { useProfile } from '../hooks/useProfile';
 
 interface GlobalHeaderProps {
   onMenuClick: () => void;
@@ -18,6 +20,15 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   portalName = 'USER PORTAL', 
   rightActions 
 }) => {
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const { profile, updateProfile } = useProfile();
+
+  // Use the profile data from hook if available, fallback to props
+  const displayName = profile?.name || userName || 'User';
+  const displayInitials = profile?.name 
+    ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : userInitials || 'U';
+
   return (
     <>
       <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 px-6 flex items-center justify-between border-b border-zinc-200 bg-white/80 backdrop-blur-md z-20 shadow-sm overflow-hidden">
@@ -48,17 +59,33 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           </div>
           
           {/* User Profile - Compact */}
-          <button className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-full bg-zinc-50 border border-zinc-100 hover:bg-zinc-100 transition-all group">
+          <button 
+            onClick={() => setIsProfileOpen(true)}
+            className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-full bg-zinc-50 border border-zinc-100 hover:bg-zinc-100 transition-all group"
+          >
             <div className="hidden md:block text-right">
-              <p className="text-[10px] font-bold text-black leading-none">{userName || 'User'}</p>
-              <p className="text-[7px] text-zinc-400 font-bold tracking-wider mt-0.5">{portalName}</p>
+              <p className="text-[10px] font-bold text-black leading-none">{displayName}</p>
+              <p className="text-[7px] text-zinc-400 font-bold tracking-wider mt-0.5 uppercase">
+                {portalName}
+              </p>
             </div>
-            <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-[10px] shadow-sm group-hover:scale-105 transition-transform">
-              {userInitials || 'U'}
+            <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-[10px] shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
+              {profile?.profileImage ? (
+                <img src={profile.profileImage} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                displayInitials
+              )}
             </div>
           </button>
         </div>
       </header>
+
+      <ProfileModal 
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        profile={profile}
+        onSave={updateProfile}
+      />
     </>
   );
 };
