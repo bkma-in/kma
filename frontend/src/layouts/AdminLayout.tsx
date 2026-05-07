@@ -12,9 +12,11 @@ const AdminLayout = () => {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Route protection
+  // Route protection & Dynamic User Data
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   const role = localStorage.getItem('role');
+  const userName = localStorage.getItem('userName') || 'Admin Manager';
+  const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'AM';
 
   if (!isLoggedIn || role !== 'admin') {
     return <Navigate to="/auth" replace />;
@@ -23,6 +25,8 @@ const AdminLayout = () => {
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('role');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
     navigate('/auth');
   };
 
@@ -110,8 +114,9 @@ const AdminLayout = () => {
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName="Admin Manager"
-          userInitials="AM"
+          userName={userName}
+          userInitials={userInitials}
+          portalName="ADMIN PORTAL"
           rightActions={
             <div className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />

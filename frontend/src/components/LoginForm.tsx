@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 
 import { login } from '../services/auth.service';
 
@@ -27,6 +27,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
       if (response.success) {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('role', response.user.role);
+        localStorage.setItem('userName', response.user.name);
         localStorage.setItem('userEmail', response.user.email);
         localStorage.setItem('is_temp_password', 'false'); // Assuming real system handles this differently
         
@@ -107,8 +108,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
           </div>
 
           {error && (
-            <div className="text-red-500 text-sm font-medium text-center">
-              {error}
+            <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 shadow-sm">
+              <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                <AlertCircle size={16} />
+              </div>
+              <p className="text-xs font-bold tracking-tight">{error}</p>
             </div>
           )}
 
