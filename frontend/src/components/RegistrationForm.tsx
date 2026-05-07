@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Mail, Lock, Eye, EyeOff, ChevronRight, Loader2, CheckCircle2, GraduationCap, Briefcase } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ChevronRight, Loader2, CheckCircle2, GraduationCap, Briefcase, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../utils/cn';
 import {
@@ -111,9 +111,16 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               {errors.form && (
-                <div className="text-red-500 text-sm font-medium text-center">
-                  {errors.form}
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 shadow-sm"
+                >
+                  <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                    <AlertCircle size={16} />
+                  </div>
+                  <p className="text-xs font-bold tracking-tight">{errors.form}</p>
+                </motion.div>
               )}
               {/* Full Name */}
               <div className="space-y-1.5">

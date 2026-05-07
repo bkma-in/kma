@@ -5,7 +5,7 @@ import { Cashfree } from 'cashfree-pg';
 import { config } from '../config/env';
 
 const cashfree = new Cashfree(
-  config.payments.cashfree.environment === 'PRODUCTION' ? Cashfree.PRODUCTION : Cashfree.SANDBOX,
+  config.payments.cashfree.environment === 'PRODUCTION' ? (Cashfree as any).PRODUCTION : (Cashfree as any).SANDBOX,
   config.payments.cashfree.appId,
   config.payments.cashfree.secretKey
 );

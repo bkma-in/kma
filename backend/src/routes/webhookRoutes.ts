@@ -1,12 +1,19 @@
 import { Router } from 'express';
 import { db } from '../config/firebase';
 import { Cashfree } from 'cashfree-pg';
+import { config } from '../config/env';
 
 const router = Router();
 
 router.post('/cashfree', async (req, res) => {
   try {
-    Cashfree.PGVerifyWebhookSignature(req.headers["x-webhook-signature"] as string, req.body.toString(), req.headers["x-webhook-timestamp"] as string);
+    const cashfree = new Cashfree(
+      config.payments.cashfree.environment === 'PRODUCTION' ? (Cashfree as any).PRODUCTION : (Cashfree as any).SANDBOX,
+      config.payments.cashfree.appId,
+      config.payments.cashfree.secretKey
+    );
+
+    cashfree.PGVerifyWebhookSignature(req.headers["x-webhook-signature"] as string, req.body.toString(), req.headers["x-webhook-timestamp"] as string);
     
     // Parse body after verifying signature
     const payload = JSON.parse(req.body.toString());
