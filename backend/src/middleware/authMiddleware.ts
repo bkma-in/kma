@@ -12,6 +12,7 @@ export interface AuthRequest extends Request {
 export const requireAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
+    console.log('Auth Middleware: No token provided');
     return res.status(401).json({ error: 'Unauthorized: No token provided' });
   }
 
@@ -29,9 +30,13 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
       role: role
     };
     next();
-  } catch (error) {
-    console.error('Auth verification failed:', error);
-    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  } catch (error: any) {
+    console.error('--- AUTH VERIFICATION FAILED ---');
+    console.error('Error Code:', error.code);
+    console.error('Error Message:', error.message);
+    console.error('Full Error:', JSON.stringify(error, null, 2));
+    console.error('--------------------------------');
+    return res.status(401).json({ error: `Unauthorized: Invalid token - ${error.message}` });
   }
 };
 

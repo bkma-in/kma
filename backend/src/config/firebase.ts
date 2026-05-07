@@ -4,9 +4,17 @@ import { config } from './env';
 if (!admin.apps.length) {
   try {
     if (!config.firebase.serviceAccount || config.firebase.serviceAccount === '{}') {
-       throw new Error('FIREBASE_SERVICE_ACCOUNT is not set in .env');
+      throw new Error('FIREBASE_SERVICE_ACCOUNT is not set in .env');
     }
-    const serviceAccount = JSON.parse(config.firebase.serviceAccount);
+
+    // Fix: Strip potential single quotes that can cause JSON.parse to fail
+    const rawJson = config.firebase.serviceAccount.trim().replace(/^'|'$/g, '');
+    const serviceAccount = JSON.parse(rawJson);
+
+    // Debug: Check if project IDs match
+    console.log('Backend Config Project ID:', config.firebase.projectId);
+    console.log('Service Account Project ID:', serviceAccount.project_id);
+
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       projectId: config.firebase.projectId
@@ -14,10 +22,9 @@ if (!admin.apps.length) {
     console.log('Firebase Admin SDK initialized successfully');
   } catch (error: any) {
     console.error('Firebase init failed:', error.message);
-    // If it fails, we still initialize with default credentials (if available in environment)
-    // or just let it fail later when DB is accessed.
+    // Fallback initialization
     admin.initializeApp({
-       projectId: config.firebase.projectId
+      projectId: config.firebase.projectId
     });
   }
 }
