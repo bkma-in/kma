@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, 
   Clock, 
@@ -9,26 +10,59 @@ import {
   TrendingUp,
   FileText,
   Bell,
-  Star
+  Star,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
+import { getArticles } from '../../services/article.service';
 
 const ReviewerDashboard = () => {
-  // Dummy Data
-  const pendingReviewsCount = 5;
-  
+  const [articles, setArticles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const response = await getArticles();
+        if (response.success) {
+          setArticles(response.articles);
+        }
+      } catch (error) {
+        console.error('Failed to fetch articles:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchArticles();
+  }, []);
+
+  const pendingReviewsCount = articles.filter(a => a.status === 'under_review').length;
+  const completedReviewsCount = articles.filter(a => ['accepted', 'rejected', 'revision_requested'].includes(a.status)).length;
+
   const stats = [
-    { label: 'Assigned Articles', value: '18', icon: BookOpen, color: 'text-zinc-600', bg: 'bg-zinc-100' },
-    { label: 'Pending Reviews', value: '05', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Completed Reviews', value: '13', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Assigned Articles', value: articles.length.toString(), icon: BookOpen, color: 'text-zinc-600', bg: 'bg-zinc-100' },
+    { label: 'Pending Reviews', value: pendingReviewsCount.toString().padStart(2, '0'), icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Completed Reviews', value: completedReviewsCount.toString().padStart(2, '0'), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
-  const activities = [
-    { title: 'New Article Assigned', detail: 'On the Convergence of Neural Networks in Stochastic Systems', time: '1 hour ago', icon: FileText, iconColor: 'text-blue-500', bgColor: 'bg-blue-50' },
-    { title: 'Review Submitted', detail: 'Feedback provided for "Advanced Topology v2"', time: 'Yesterday', icon: CheckCircle2, iconColor: 'text-emerald-500', bgColor: 'bg-emerald-50' },
-    { title: 'System Notification', detail: 'Reminder: Review for KMA-2024-006 is due in 24 hours', time: '2 days ago', icon: Bell, iconColor: 'text-rose-500', bgColor: 'bg-rose-50' },
-  ];
+  const activities = articles.slice(0, 3).map(a => ({
+    title: a.status === 'under_review' ? 'New Article Assigned' :
+           a.status === 'accepted' ? 'Review Submitted' : 'Status Updated',
+    detail: a.title,
+    time: new Date(a.createdAt).toLocaleDateString(),
+    icon: a.status === 'accepted' ? CheckCircle2 : FileText,
+    iconColor: a.status === 'accepted' ? 'text-emerald-500' : 'text-blue-500',
+    bgColor: a.status === 'accepted' ? 'bg-emerald-50' : 'bg-blue-50'
+  }));
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="animate-spin text-zinc-300" size={48} />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-in fade-in duration-700 max-w-7xl mx-auto">

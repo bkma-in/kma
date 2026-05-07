@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
   CheckCircle2, 
@@ -11,30 +12,92 @@ import {
   ChevronRight,
   TrendingUp,
   FileEdit,
-  Inbox
+  Inbox,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
+import { getArticles } from '../../services/article.service';
 
 const Dashboard = () => {
-  // Dummy Data for the Overview
+  const [articles, setArticles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const response = await getArticles();
+        if (response.success) {
+          setArticles(response.articles);
+        }
+      } catch (error) {
+        console.error('Failed to fetch articles:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchArticles();
+  }, []);
+
+  // Calculate dynamic stats
   const stats = [
-    { label: 'Total Articles', value: '12', icon: FileText, color: 'text-zinc-600', bg: 'bg-zinc-100' },
-    { label: 'Under Review', value: '03', icon: History, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Needs Revision', value: '01', icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
-    { label: 'Approved', value: '08', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { 
+      label: 'Total Articles', 
+      value: articles.length.toString().padStart(2, '0'), 
+      icon: FileText, 
+      color: 'text-zinc-600', 
+      bg: 'bg-zinc-100' 
+    },
+    { 
+      label: 'Under Review', 
+      value: articles.filter(a => a.status === 'under_review' || a.status === 'submitted').length.toString().padStart(2, '0'), 
+      icon: History, 
+      color: 'text-amber-600', 
+      bg: 'bg-amber-50' 
+    },
+    { 
+      label: 'Needs Revision', 
+      value: articles.filter(a => a.status === 'revision_requested').length.toString().padStart(2, '0'), 
+      icon: AlertCircle, 
+      color: 'text-rose-600', 
+      bg: 'bg-rose-50' 
+    },
+    { 
+      label: 'Approved', 
+      value: articles.filter(a => a.status === 'accepted').length.toString().padStart(2, '0'), 
+      icon: CheckCircle2, 
+      color: 'text-emerald-600', 
+      bg: 'bg-emerald-50' 
+    },
   ];
 
-  const activities = [
-    { title: 'Article Approved', detail: 'On the Classification of Finite Simple Groups...', time: '2 hours ago', icon: CheckCircle2, iconColor: 'text-emerald-500', bgColor: 'bg-emerald-50' },
-    { title: 'Comments Added', detail: 'New reviewer feedback on "Asymptotic Analysis..."', time: '5 hours ago', icon: History, iconColor: 'text-amber-500', bgColor: 'bg-amber-50' },
-    { title: 'Article Submitted', detail: 'Bayesian Hierarchical Modeling...', time: 'Yesterday', icon: SendIcon, iconColor: 'text-blue-500', bgColor: 'bg-blue-50' },
-  ];
+  const revisionArticle = articles.find(a => a.status === 'revision_requested');
+
+  const activities = articles.slice(0, 3).map(a => ({
+    title: a.status === 'accepted' ? 'Article Approved' : 
+           a.status === 'rejected' ? 'Article Rejected' :
+           a.status === 'revision_requested' ? 'Revision Requested' : 'Article Submitted',
+    detail: a.title,
+    time: new Date(a.createdAt).toLocaleDateString(),
+    icon: a.status === 'accepted' ? CheckCircle2 : 
+          a.status === 'revision_requested' ? AlertCircle : SendIcon,
+    iconColor: a.status === 'accepted' ? 'text-emerald-500' : 
+               a.status === 'revision_requested' ? 'text-rose-500' : 'text-blue-500',
+    bgColor: a.status === 'accepted' ? 'bg-emerald-50' : 
+             a.status === 'revision_requested' ? 'bg-rose-50' : 'bg-blue-50'
+  }));
 
   const notifications = [
-    { message: 'Your manuscript KMA-2024-089 has entered peer review phase.', time: '10:30 AM' },
-    { message: 'New editorial guidelines for Volume 15 have been published.', time: 'Yesterday' },
+    { message: 'Welcome to the KMA Author Portal!', time: 'Now' },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="animate-spin text-zinc-300" size={48} />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-in fade-in duration-700 max-w-7xl mx-auto">
@@ -42,7 +105,7 @@ const Dashboard = () => {
       <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl font-bold tracking-tighter text-black">Author Overview</h1>
-          <p className="text-zinc-500 mt-2 text-sm max-w-md">Welcome back, <span className="font-bold text-black">Dr. Aris Thorne</span>. Here is the latest activity across your research portfolio.</p>
+          <p className="text-zinc-500 mt-2 text-sm max-w-md">Welcome back, <span className="font-bold text-black">{localStorage.getItem('userName') || 'Author User'}</span>. Here is the latest activity across your research portfolio.</p>
         </div>
         <div className="flex items-center gap-3 bg-white/70 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 shadow-sm">
           <Clock size={16} className="text-zinc-400" />
@@ -51,20 +114,22 @@ const Dashboard = () => {
       </div>
 
       {/* Alert Section - Revision Required */}
-      <div className="mb-8 p-4 bg-rose-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-rose-600/10 animate-pulse-slow border border-white/10">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-            <AlertCircle size={20} />
+      {revisionArticle && (
+        <div className="mb-8 p-4 bg-rose-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-rose-600/10 animate-pulse-slow border border-white/10">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+              <AlertCircle size={20} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold tracking-tight">Revision Required</h4>
+              <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">{revisionArticle.title} needs your attention</p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-sm font-bold tracking-tight">Revision Required</h4>
-            <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">KMA-2024-112 needs your attention</p>
-          </div>
+          <NavLink to="/author/articles" className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-rose-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20">
+            Review Comments
+          </NavLink>
         </div>
-        <NavLink to="/author/articles" className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-rose-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20">
-          Review Comments
-        </NavLink>
-      </div>
+      )}
 
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

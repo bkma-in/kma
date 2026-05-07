@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   FileText, 
@@ -12,30 +13,61 @@ import {
   UserPlus,
   ShieldCheck,
   Settings,
-  Bell
+  Bell,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
+import { getArticles } from '../../services/article.service';
 
 const AdminDashboard = () => {
-  // Dummy Data
-  const pendingAdminCount = 12;
-  const reviewerRequestsCount = 4;
+  const [articles, setArticles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const response = await getArticles();
+        if (response.success) {
+          setArticles(response.articles);
+        }
+      } catch (error) {
+        console.error('Failed to fetch articles:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchArticles();
+  }, []);
+
+  const pendingAdminCount = articles.filter(a => a.status === 'submitted').length;
+  const reviewerRequestsCount = articles.filter(a => a.status === 'under_review').length;
 
   const stats = [
-    { label: 'Total Articles', value: '284', icon: FileText, color: 'text-zinc-600', bg: 'bg-zinc-100', path: '/admin-dashboard/articles?status=All' },
-    { label: 'Decision Required', value: '12', icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50', path: '/admin-dashboard/articles?status=Submitted' },
-    { label: 'Under Review', value: '45', icon: History, color: 'text-amber-600', bg: 'bg-amber-50', path: '/admin-dashboard/articles?status=All' }, // Note: Under Review isn't a primary filter in current AdminArticles but maps to All/Submitted
-    { label: 'Approved', value: '198', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/admin-dashboard/articles?status=Approved' },
-    { label: 'Rejected', value: '29', icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50', path: '/admin-dashboard/articles?status=Rejected' },
+    { label: 'Total Articles', value: articles.length.toString(), icon: FileText, color: 'text-zinc-600', bg: 'bg-zinc-100', path: '/admin-dashboard/articles?status=All' },
+    { label: 'Decision Required', value: pendingAdminCount.toString(), icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50', path: '/admin-dashboard/articles?status=Submitted' },
+    { label: 'Under Review', value: reviewerRequestsCount.toString(), icon: History, color: 'text-amber-600', bg: 'bg-amber-50', path: '/admin-dashboard/articles?status=All' },
+    { label: 'Approved', value: articles.filter(a => a.status === 'accepted').length.toString(), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/admin-dashboard/articles?status=Approved' },
+    { label: 'Rejected', value: articles.filter(a => a.status === 'rejected').length.toString(), icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50', path: '/admin-dashboard/articles?status=Rejected' },
   ];
 
-  const activities = [
-    { title: 'New Article Submitted', detail: 'On the Convergence of Neural Networks...', time: '45 mins ago', type: 'submission' },
-    { title: 'Reviewer Assigned', detail: 'Dr. John Doe assigned to "Quantum Systems v2"', time: '2 hours ago', type: 'assignment' },
-    { title: 'Revision Requested', detail: 'Editorial feedback sent for "Lattice Cryptography"', time: 'Yesterday', type: 'revision' },
-    { title: 'Article Published', detail: 'Volume 14 Issue 3 is now live in the Archive', time: '2 days ago', type: 'published' },
-  ];
+  const activities = articles.slice(0, 4).map(a => ({
+    title: a.status === 'submitted' ? 'New Article Submitted' :
+           a.status === 'under_review' ? 'Reviewer Assigned' :
+           a.status === 'revision_requested' ? 'Revision Requested' :
+           a.status === 'accepted' ? 'Article Published' : 'Status Updated',
+    detail: a.title,
+    time: new Date(a.createdAt).toLocaleDateString(),
+    type: a.status
+  }));
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="animate-spin text-zinc-300" size={48} />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-in fade-in duration-700 max-w-7xl mx-auto">
@@ -43,7 +75,7 @@ const AdminDashboard = () => {
       <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl font-bold tracking-tighter text-black">System Overview</h1>
-          <p className="text-zinc-500 mt-2 text-sm max-w-md">Welcome back, <span className="font-bold text-black">Head Administrator</span>. Global system activity is stable with <span className="font-bold text-blue-600">{pendingAdminCount} items</span> requiring your final decision.</p>
+          <p className="text-zinc-500 mt-2 text-sm max-w-md">Welcome back, <span className="font-bold text-black">{localStorage.getItem('userName') || 'Admin Manager'}</span>. Global system activity is stable with <span className="font-bold text-blue-600">{pendingAdminCount} items</span> requiring your final decision.</p>
         </div>
         <div className="flex items-center gap-3 bg-white/70 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 shadow-sm">
           <ShieldCheck size={16} className="text-zinc-400" />
