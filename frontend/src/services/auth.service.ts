@@ -1,4 +1,9 @@
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  setPersistence,
+  browserSessionPersistence 
+} from 'firebase/auth';
 import { auth } from '../config/firebase';
 import api from './api';
 
@@ -16,6 +21,9 @@ const getFriendlyErrorMessage = (error: any): string => {
 
 export const login = async (email: string, password: string) => {
   try {
+    // 0. Set Persistence to Session (Clears on browser close)
+    await setPersistence(auth, browserSessionPersistence);
+
     // 1. Authenticate with Firebase Client
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     

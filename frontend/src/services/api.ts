@@ -7,12 +7,21 @@ const api = axios.create({
 
 // Add a request interceptor to automatically add the Firebase token
 api.interceptors.request.use(async (config) => {
-  const currentUser = auth.currentUser;
-  if (currentUser) {
-    const token = await currentUser.getIdToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+  let user = auth.currentUser;
+  
+  // If user is not yet available, wait for Firebase to initialize
+  if (!user) {
+    user = await new Promise((resolve) => {
+      const unsubscribe = auth.onAuthStateChanged((u) => {
+        unsubscribe();
+        resolve(u);
+      });
+    });
+  }
+
+  if (user) {
+    const token = await user.getIdToken();
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 }, (error) => {

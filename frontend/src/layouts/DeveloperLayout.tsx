@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { auth } from '../config/firebase';
+import { Outlet, NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Bug, 
@@ -18,18 +19,21 @@ const DeveloperLayout = () => {
   const { profile, updateProfile } = useProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const navigate = useNavigate();
 
   const handleLogout = () => {
     confirm({
       title: 'Confirm Logout',
       message: 'Are you sure you want to log out of the Developer Portal?',
       confirmText: 'Logout',
-      onConfirm: () => {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('role');
-        showToast('Logged out successfully', 'success');
-        navigate('/auth');
+      onConfirm: async () => {
+        try {
+          await auth.signOut();
+          localStorage.clear();
+          sessionStorage.clear();
+          window.location.replace('/auth?mode=login');
+        } catch (error) {
+          showToast('Logout failed', 'error');
+        }
       }
     });
   };

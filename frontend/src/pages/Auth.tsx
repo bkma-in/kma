@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import BrandingCard from '../components/BrandingCard';
 import RegistrationForm from '../components/RegistrationForm';
 import LoginForm from '../components/LoginForm';
 
 const Auth: React.FC = () => {
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [searchParams] = useSearchParams();
+  // If ?mode=login, flip to login form. Otherwise show registration (default).
+  const [isFlipped, setIsFlipped] = useState(searchParams.get('mode') === 'login');
   const [prefilledEmail, setPrefilledEmail] = useState('');
 
   const handleRegistrationSuccess = (email: string) => {

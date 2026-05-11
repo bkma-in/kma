@@ -108,7 +108,7 @@ const ReviewerArticles = () => {
       articleId: article.id,
       status: article.selectedStatus,
       fileName: article.uploadedFile.name,
-      reviewer: 'Dr. John Doe'
+      reviewer: localStorage.getItem('userName') || 'Portal Reviewer'
     });
 
     await new Promise(resolve => setTimeout(resolve, 1500));

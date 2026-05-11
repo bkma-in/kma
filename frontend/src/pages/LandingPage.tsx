@@ -18,6 +18,7 @@ import {
 import logo from '../assets/logo.png';
 import { cn } from '../utils/cn';
 import GlobalFooter from '../components/GlobalFooter';
+import { auth } from '../config/firebase';
 
 // --- Types ---
 interface Article {
@@ -84,15 +85,19 @@ const LandingPage: React.FC = () => {
     };
     window.addEventListener('scroll', handleScroll);
     
-    // Check login status
-    const loginStatus = localStorage.getItem('isLoggedIn') === 'true';
-    setIsLoggedIn(loginStatus);
+    // Check login status via Firebase
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setIsLoggedIn(!!user);
+    });
 
     // Check purchases
     const purchases = JSON.parse(localStorage.getItem('purchased_articles') || '[]');
     setPurchasedArticles(purchases);
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      unsubscribe();
+    };
   }, []);
 
   const handleReadFull = (article: Article) => {
@@ -127,11 +132,16 @@ const LandingPage: React.FC = () => {
     }, 2000);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('role');
-    setIsLoggedIn(false);
-    setViewState('landing');
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      localStorage.clear();
+      sessionStorage.clear();
+      setViewState('landing');
+      window.location.replace('/auth?mode=login');
+    } catch (error) {
+      console.error('Logout failed', error);
+    }
   };
 
   // --- Render Components ---
@@ -320,13 +330,13 @@ const LandingPage: React.FC = () => {
             ) : (
               <>
                 <button 
-                  onClick={() => navigate('/auth')}
+                  onClick={() => navigate('/auth?mode=login')}
                   className="text-sm sm:text-base font-bold hover:text-zinc-600 transition-colors shrink-0 uppercase tracking-widest"
                 >
                   Login
                 </button>
                 <button 
-                  onClick={() => navigate('/auth')}
+                  onClick={() => navigate('/auth?mode=register')}
                   className="bg-black text-white text-sm sm:text-base font-black py-3 px-5 sm:py-4 sm:px-10 rounded-xl shadow-2xl shadow-black/20 hover:bg-zinc-800 transition-all active:scale-95 text-center leading-tight sm:leading-normal uppercase tracking-[0.1em]"
                 >
                   <span className="hidden sm:inline">Get Started</span>

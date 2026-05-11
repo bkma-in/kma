@@ -237,10 +237,13 @@ const Dashboard = () => {
               ))}
             </div>
 
-            <button className="w-full py-3 bg-white/10 hover:bg-white text-zinc-300 hover:text-black rounded-xl text-[10px] font-black tracking-widest transition-all uppercase flex items-center justify-center gap-2 group">
+            <NavLink 
+              to="/author/notifications"
+              className="w-full py-3 bg-white/10 hover:bg-white text-zinc-300 hover:text-black rounded-xl text-[10px] font-black tracking-widest transition-all uppercase flex items-center justify-center gap-2 group"
+            >
               View All Notifications
               <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-            </button>
+            </NavLink>
           </div>
 
           {/* Categories / Helpful Info */}

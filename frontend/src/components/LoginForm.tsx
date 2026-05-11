@@ -31,13 +31,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
         localStorage.setItem('is_temp_password', 'false'); 
         
         if (response.user.role === 'reviewer') {
-          navigate('/reviewer-dashboard');
+          window.location.replace('/reviewer-dashboard');
         } else if (response.user.role === 'admin') {
-          navigate('/admin-dashboard');
+          window.location.replace('/admin-dashboard');
         } else if (response.user.role === 'developer') {
-          navigate('/developer-dashboard');
+          window.location.replace('/developer-dashboard');
         } else {
-          navigate('/author/dashboard');
+          window.location.replace('/author/dashboard');
         }
       }
     } catch (err: any) {

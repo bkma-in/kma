@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
+import { auth } from '../config/firebase';
+import { Outlet, NavLink } from 'react-router-dom';
 import { LayoutDashboard, FileText, Bell, LogOut, X, Search, HelpCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
@@ -16,32 +17,29 @@ const ReviewerLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [mustChangePassword, setMustChangePassword] = useState(localStorage.getItem('is_temp_password') === 'true');
-  const navigate = useNavigate();
 
   // Route protection & Dynamic User Data
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  // App.tsx handles the primary Firebase auth check — no localStorage redirect here
   const role = localStorage.getItem('role');
   const userName = profile?.name || localStorage.getItem('userName') || 'Reviewer User';
   const userInitials = profile?.name 
     ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : (localStorage.getItem('userName') || 'JD').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
-  if (!isLoggedIn || role !== 'reviewer') {
-    return <Navigate to="/auth" replace />;
-  }
-
   const handleLogout = () => {
     confirm({
       title: 'Confirm Logout',
       message: 'Are you sure you want to log out of the Reviewer Portal?',
       confirmText: 'Logout',
-      onConfirm: () => {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('role');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('userEmail');
-        showToast('Logged out successfully', 'success');
-        navigate('/auth');
+      onConfirm: async () => {
+        try {
+          await auth.signOut();
+          localStorage.clear();
+          sessionStorage.clear();
+          window.location.replace('/auth?mode=login');
+        } catch (error) {
+          showToast('Logout failed', 'error');
+        }
       }
     });
   };

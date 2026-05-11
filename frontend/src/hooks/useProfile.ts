@@ -13,7 +13,7 @@ export const useProfile = () => {
 
   const loadProfile = useCallback(() => {
     const role = localStorage.getItem('role') || 'User';
-    const email = localStorage.getItem('userEmail') || (role === 'admin' ? 'admin@gmail.com' : role === 'author' ? 'authour@gmail.com' : 'reviewer@gmail.com');
+    const email = localStorage.getItem('userEmail') || '';
     
     // Try to get stored profile data
     const storedProfile = localStorage.getItem(`profile_${email}`);
@@ -23,7 +23,7 @@ export const useProfile = () => {
     } else {
       // Default profile based on role/localStorage
       const defaultProfile: UserProfile = {
-        name: role === 'admin' ? 'Admin Manager' : role === 'author' ? 'Dr. Aris Thorne' : 'Dr. John Doe',
+        name: localStorage.getItem('userName') || (role === 'admin' ? 'Admin Manager' : 'Portal User'),
         email: email,
         role: role.charAt(0).toUpperCase() + role.slice(1),
         phone: '',

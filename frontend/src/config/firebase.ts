@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -12,3 +12,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+
+// Enforce session-only persistence globally.
+// We don't await here because auth instance is already created,
+// but it will apply to the next sign-in/check.
+setPersistence(auth, browserSessionPersistence)
+  .catch(err => console.error("Persistence error:", err));

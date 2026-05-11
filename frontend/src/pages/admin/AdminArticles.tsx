@@ -89,7 +89,7 @@ const AdminArticles = () => {
       category: 'Biomathematics',
       abstract: 'A longitudinal study on the efficacy of CNNs in detecting early-stage retinal deterioration through automated scan analysis...',
       status: 'Submitted',
-      assignedReviewer: 'Dr. John Doe',
+      assignedReviewer: 'Dr. James Wilson',
       lastUpdated: '2024-03-20',
       versions: [{ version: 1, uploadedBy: 'Author', timestamp: '2024-03-20', fileName: 'manuscript_v1.docx' }],
       reviewerFeedback: {
@@ -134,7 +134,7 @@ const AdminArticles = () => {
 
   const availableReviewers = [
     'Prof. Alan Turing',
-    'Dr. John Doe',
+    'Dr. James Wilson',
     'Dr. Jane Smith',
     'Prof. Gauss',
     'Dr. Emmy Noether'
