@@ -1,90 +1,187 @@
 
-import { CheckCircle2, FileEdit, MessageSquare, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, FileEdit, MessageSquare, Info, Clock, AlertCircle, Loader2, Archive, Trash2, RotateCcw } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { getArticles } from '../../services/article.service';
+import { useNavigate } from 'react-router-dom';
 
 const Notifications = () => {
-  const notifications = [
-    {
-      id: 1,
-      type: 'approved',
-      title: 'Article Approved',
-      time: '2H AGO',
-      unread: true,
-      icon: CheckCircle2,
-      iconBg: 'bg-green-50',
-      iconColor: 'text-green-600',
-      content: 'Your submission "Topological Manifolds in Higher-Order Dimensions" has been formally approved by the Editorial Board for publication in Volume 12, Issue 4.',
-      action: 'VIEW STATUS'
-    },
-    {
-      id: 2,
-      type: 'revision',
-      title: 'Revision Requested',
-      time: 'YESTERDAY',
-      unread: true,
-      icon: FileEdit,
-      iconBg: 'bg-amber-50',
-      iconColor: 'text-amber-600',
-      content: 'Reviewer #3 has submitted feedback regarding Section 4.2 of your draft. Minor structural adjustments are required before final typesetting can begin.',
-      action: 'EDIT DRAFT',
-      secondaryAction: 'READ COMMENTS'
-    },
-    {
-      id: 3,
-      type: 'review',
-      title: 'Peer Review Completed',
-      time: 'OCT 24',
-      unread: false,
-      icon: MessageSquare,
-      iconBg: 'bg-blue-50',
-      iconColor: 'text-blue-500',
-      content: 'The double-blind peer review for "Stochastic Modeling in Neural Networks" is now complete. Summary reports are available in your author dashboard.',
-      action: 'DOWNLOAD REPORT'
-    },
-    {
-      id: 4,
-      type: 'info',
-      title: 'Volume 12 Guidelines Updated',
-      time: 'OCT 20',
-      unread: false,
-      icon: Info,
-      iconBg: 'bg-zinc-100',
-      iconColor: 'text-zinc-500',
-      content: 'The KMA Archive has updated its citation formatting guidelines for the upcoming annual print edition. Please review the updated TeX template.',
-      action: 'VIEW GUIDELINES'
+  const navigate = useNavigate();
+  const [articles, setArticles] = useState<any[]>([]);
+  const [archivedIds, setArchivedIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('archivedNotifications');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('ALL');
+
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const response = await getArticles();
+        if (response.success) {
+          setArticles(response.articles);
+        }
+      } catch (error) {
+        console.error('Failed to fetch articles for notifications:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchArticles();
+  }, []);
+
+  const formatTime = (createdAt: any) => {
+    if (!createdAt) return 'RECENTLY';
+    const seconds = createdAt._seconds || (typeof createdAt === 'number' ? createdAt / 1000 : null);
+    if (!seconds) return 'RECENTLY';
+    
+    const date = new Date(seconds * 1000);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'JUST NOW';
+    if (diffInHours < 24) return `${diffInHours}H AGO`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+  };
+
+  const getDynamicNotifications = () => {
+    return articles.map((article, index) => {
+      const status = article.status;
+      let config = {
+        title: 'Article Submitted',
+        icon: Clock,
+        iconBg: 'bg-blue-50',
+        iconColor: 'text-blue-600',
+        content: `Your manuscript "${article.title}" has been successfully received and is entering initial screening.`,
+        action: 'TRACK PROGRESS'
+      };
+
+      if (status === 'revision_requested') {
+        config = {
+          title: 'Revision Requested',
+          icon: FileEdit,
+          iconBg: 'bg-amber-50',
+          iconColor: 'text-amber-600',
+          content: `The Editorial Board has requested minor adjustments to "${article.title}" to align with Volume 12 standards.`,
+          action: 'EDIT MANUSCRIPT'
+        };
+      } else if (status === 'accepted') {
+        config = {
+          title: 'Article Approved',
+          icon: CheckCircle2,
+          iconBg: 'bg-emerald-50',
+          iconColor: 'text-emerald-600',
+          content: `Congratulations! "${article.title}" has been formally approved for publication.`,
+          action: 'VIEW PUBLICATION'
+        };
+      } else if (status === 'rejected') {
+        config = {
+          title: 'Review Decision',
+          icon: AlertCircle,
+          iconBg: 'bg-rose-50',
+          iconColor: 'text-rose-600',
+          content: `The review process for "${article.title}" has concluded. Please see detailed feedback in the portal.`,
+          action: 'VIEW FEEDBACK'
+        };
+      } else if (status === 'under_review') {
+        config = {
+          title: 'Peer Review Started',
+          icon: MessageSquare,
+          iconBg: 'bg-zinc-100',
+          iconColor: 'text-zinc-600',
+          content: `Your article "${article.title}" has been assigned to peer reviewers for assessment.`,
+          action: 'VIEW DETAILS'
+        };
+      }
+
+      return {
+        id: article.articleId || index,
+        ...config,
+        time: formatTime(article.createdAt),
+        unread: index === 0, // Mock unread for the latest one
+      };
+    }).sort((a, b) => {
+      const timeA = a.time === 'JUST NOW' ? Infinity : parseInt(a.time) || 0;
+      const timeB = b.time === 'JUST NOW' ? Infinity : parseInt(b.time) || 0;
+      return timeB - timeA;
+    });
+  };
+
+  const handleArchive = (id: string) => {
+    const newArchived = [...archivedIds, id];
+    setArchivedIds(newArchived);
+    localStorage.setItem('archivedNotifications', JSON.stringify(newArchived));
+  };
+
+  const handleUnarchive = (id: string) => {
+    const newArchived = archivedIds.filter(i => i !== id);
+    setArchivedIds(newArchived);
+    localStorage.setItem('archivedNotifications', JSON.stringify(newArchived));
+  };
+
+  const handleAction = (notification: any) => {
+    switch (notification.title) {
+      case 'Article Submitted':
+      case 'Peer Review Started':
+      case 'Article Approved':
+      case 'Review Decision':
+        navigate('/author/articles');
+        break;
+      case 'Revision Requested':
+        navigate('/author/submit', { state: { draft: articles.find(a => a.articleId === notification.id) } });
+        break;
+      default:
+        navigate('/author/dashboard');
     }
-  ];
+  };
+
+  const notifications = getDynamicNotifications();
+  const filteredNotifications = notifications.filter(n => {
+    if (activeTab === 'ARCHIVED') return archivedIds.includes(n.id);
+    if (activeTab === 'UNREAD') return n.unread && !archivedIds.includes(n.id);
+    return !archivedIds.includes(n.id);
+  });
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="animate-spin text-zinc-300" size={48} />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-in fade-in duration-500 max-w-4xl">
       <div className="mb-8">
         <h1 className="text-4xl font-bold tracking-tight text-black mb-2">NOTIFICATIONS</h1>
         <p className="text-zinc-500 text-sm uppercase tracking-wider font-medium">
-          STATUS UPDATES AND PORTAL ACTIVITY FOR VOLUME 12
+          STATUS UPDATES AND PORTAL ACTIVITY FOR YOUR RESEARCH
         </p>
       </div>
 
       <div className="flex items-center gap-8 border-b border-zinc-200 mb-8">
-        {['ALL', 'UNREAD', 'ARCHIVED'].map((tab, i) => (
+        {['ALL', 'UNREAD', 'ARCHIVED'].map((tab) => (
           <button 
             key={tab}
+            onClick={() => setActiveTab(tab)}
             className={cn(
-              "pb-4 text-xs font-bold uppercase tracking-wider relative",
-              i === 0 ? "text-black" : "text-zinc-400 hover:text-black transition-colors"
+              "pb-4 text-xs font-bold uppercase tracking-wider relative transition-all",
+              activeTab === tab ? "text-black" : "text-zinc-400 hover:text-black"
             )}
           >
             {tab}
-            {i === 0 && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black"></div>
+            {activeTab === tab && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black animate-in slide-in-from-left-2 duration-300"></div>
             )}
           </button>
         ))}
       </div>
 
       <div className="space-y-6">
-        {notifications.map((notification) => (
-          <div key={notification.id} className="bg-white p-8 rounded-2xl border border-zinc-100 shadow-sm relative group">
-            {notification.unread && (
+        {filteredNotifications.length > 0 ? filteredNotifications.map((notification) => (
+          <div key={notification.id} className="bg-white p-8 rounded-2xl border border-zinc-100 shadow-sm relative group hover:border-black transition-all cursor-default overflow-hidden">
+            {notification.unread && activeTab !== 'ARCHIVED' && (
               <div className="absolute right-8 top-10 w-2 h-2 rounded-full bg-black"></div>
             )}
             
@@ -95,37 +192,62 @@ const Notifications = () => {
               
               <div className="flex-1 pr-12">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-bold text-black">{notification.title}</h3>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider bg-zinc-100 px-3 py-1 rounded-full">
-                    {notification.time}
-                  </span>
+                  <h3 className="text-lg font-bold text-black font-['Outfit']">{notification.title}</h3>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest bg-zinc-50 px-3 py-1 rounded-full">
+                      {notification.time}
+                    </span>
+                    {activeTab === 'ARCHIVED' ? (
+                      <button 
+                        onClick={() => handleUnarchive(notification.id)}
+                        className="p-1.5 text-zinc-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 flex items-center gap-1.5 px-2"
+                        title="Restore Notification"
+                      >
+                        <RotateCcw size={14} />
+                        <span className="text-[8px] font-black uppercase">Restore</span>
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => handleArchive(notification.id)}
+                        className="p-1.5 text-zinc-300 hover:text-black hover:bg-zinc-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                        title="Archive Notification"
+                      >
+                        <Archive size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 
-                <p className="text-sm text-zinc-600 leading-relaxed mb-6">
+                <p className="text-sm text-zinc-500 leading-relaxed mb-6 font-medium">
                   {notification.content}
                 </p>
                 
                 <div className="flex items-center gap-6">
-                  <button className="text-[10px] font-bold text-black uppercase tracking-wider hover:underline underline-offset-4">
+                  <button 
+                    onClick={() => handleAction(notification)}
+                    className="text-[10px] font-black text-black uppercase tracking-widest hover:underline underline-offset-8 transition-all"
+                  >
                     {notification.action}
                   </button>
-                  {notification.secondaryAction && (
-                    <button className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider hover:text-black transition-colors">
-                      {notification.secondaryAction}
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
           </div>
-        ))}
+        )) : (
+          <div className="py-20 text-center bg-zinc-50 rounded-3xl border border-dashed border-zinc-200">
+            <Info className="mx-auto text-zinc-300 mb-4" size={48} />
+            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">No notifications to display</p>
+          </div>
+        )}
       </div>
 
-      <div className="mt-12 flex justify-center">
-        <button className="bg-black text-white text-xs font-bold px-8 py-4 rounded-md uppercase tracking-wider hover:bg-zinc-800 transition-colors">
-          LOAD PREVIOUS ALERTS
-        </button>
-      </div>
+      {notifications.length > 0 && (
+        <div className="mt-12 flex justify-center">
+          <button className="bg-black text-white text-[10px] font-black px-10 py-5 rounded-xl uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all active:scale-95 shadow-xl shadow-black/10">
+            LOAD ARCHIVED ALERTS
+          </button>
+        </div>
+      )}
     </div>
   );
 };

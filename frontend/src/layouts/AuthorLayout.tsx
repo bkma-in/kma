@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { auth } from '../config/firebase';
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FileEdit, BookOpen, Inbox, Bell, Search, LogOut, X, HelpCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
@@ -8,38 +9,82 @@ import GlobalFooter from '../components/GlobalFooter';
 import ReportIssueModal from '../components/ReportIssueModal';
 import { useNotification } from '../utils/NotificationContext';
 import { useProfile } from '../hooks/useProfile';
+import { getArticles } from '../services/article.service';
 
 const AuthorLayout = () => {
   const { confirm, showToast } = useNotification();
   const { profile } = useProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const navigate = useNavigate();
+  const location = useLocation();
+  const [counts, setCounts] = useState({
+    drafts: 0,
+    articles: 0,
+    notifications: 0
+  });
 
-  // Route protection & Dynamic User Data
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  // Track last viewed timestamps
+  useEffect(() => {
+    const now = Date.now();
+    if (location.pathname === '/author/articles') localStorage.setItem('lastViewed_articles', now.toString());
+    if (location.pathname === '/author/drafts') localStorage.setItem('lastViewed_drafts', now.toString());
+    if (location.pathname === '/author/notifications') localStorage.setItem('lastViewed_notifications', now.toString());
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const response = await getArticles();
+        if (response.success) {
+          const lastViewedArticles = parseInt(localStorage.getItem('lastViewed_articles') || '0');
+          const lastViewedDrafts = parseInt(localStorage.getItem('lastViewed_drafts') || '0');
+          const lastViewedNotifications = parseInt(localStorage.getItem('lastViewed_notifications') || '0');
+
+          const drafts = response.articles.filter((a: any) => {
+            const time = (a.updatedAt?._seconds || a.createdAt?._seconds || 0) * 1000;
+            return a.status === 'draft' && time > lastViewedDrafts;
+          }).length;
+
+          const articles = response.articles.filter((a: any) => {
+            const time = (a.updatedAt?._seconds || a.createdAt?._seconds || 0) * 1000;
+            return a.status !== 'draft' && time > lastViewedArticles;
+          }).length;
+
+          const notifications = response.articles.filter((a: any) => {
+            const time = (a.updatedAt?._seconds || a.createdAt?._seconds || 0) * 1000;
+            const isActionRequired = a.status === 'revision_requested' || a.status === 'accepted' || a.status === 'rejected';
+            return isActionRequired && time > lastViewedNotifications;
+          }).length;
+          
+          setCounts({ drafts, articles, notifications });
+        }
+      } catch (error) {
+        console.error('Failed to fetch sidebar counts:', error);
+      }
+    };
+    fetchCounts();
+  }, [location.pathname]);
+
   const role = localStorage.getItem('role');
   const userName = profile?.name || localStorage.getItem('userName') || 'Author User';
   const userInitials = profile?.name 
     ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : (localStorage.getItem('userName') || 'AU').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
-  if (!isLoggedIn || (role !== 'author' && role !== 'reader')) {
-    return <Navigate to="/auth" replace />;
-  }
-
   const handleLogout = () => {
     confirm({
       title: 'Confirm Logout',
       message: 'Are you sure you want to log out of the Author Portal?',
       confirmText: 'Logout',
-      onConfirm: () => {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('role');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('userEmail');
-        showToast('Logged out successfully', 'success');
-        navigate('/auth');
+      onConfirm: async () => {
+        try {
+          await auth.signOut();
+          localStorage.clear();
+          sessionStorage.clear();
+          window.location.replace('/auth?mode=login');
+        } catch (error) {
+          showToast('Logout failed', 'error');
+        }
       }
     });
   };
@@ -47,9 +92,9 @@ const AuthorLayout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/author/dashboard', end: true, icon: LayoutDashboard },
     { name: 'Submit Article', path: '/author/submit', icon: FileEdit },
-    { name: 'My Articles', path: '/author/articles', icon: BookOpen },
-    { name: 'Drafts', path: '/author/drafts', icon: Inbox },
-    { name: 'Notifications', path: '/author/notifications', icon: Bell, badge: 3 },
+    { name: 'My Articles', path: '/author/articles', icon: BookOpen, badge: counts.articles > 0 ? counts.articles : null },
+    { name: 'Drafts', path: '/author/drafts', icon: Inbox, badge: counts.drafts > 0 ? counts.drafts : null },
+    { name: 'Notifications', path: '/author/notifications', icon: Bell, badge: counts.notifications > 0 ? counts.notifications : null },
   ];
 
   return (
