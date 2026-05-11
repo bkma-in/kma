@@ -1,4 +1,7 @@
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { auth } from './config/firebase';
+import { Loader2 } from 'lucide-react';
 import Auth from './pages/Auth'
 import LandingPage from './pages/LandingPage'
 import ToastContainer from './components/notifications/ToastContainer'
@@ -22,16 +25,80 @@ import DeveloperDashboard from './pages/developer/DeveloperDashboard'
 import DeveloperIssues from './pages/developer/DeveloperIssues'
 
 function App() {
+  const [initializing, setInitializing] = useState(true);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((u) => {
+      setUser(u);
+      setInitializing(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  // EXTREME back-button paralysis: only active on main dashboard landing paths
+  useEffect(() => {
+    if (!user) return;
+    
+    const dashboardPaths = [
+      '/author', 
+      '/author/dashboard',
+      '/admin-dashboard', 
+      '/reviewer-dashboard', 
+      '/developer-dashboard'
+    ];
+    
+    const currentPath = window.location.pathname;
+    const isDashboard = dashboardPaths.some(p => currentPath === p);
+
+    if (!isDashboard) return;
+
+    // Overwrite history immediately to make the current page the "forward" state
+    window.history.pushState(null, '', window.location.href);
+
+    const handlePopState = () => {
+      // Force the browser 'forward' again
+      window.history.forward();
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.history.forward();
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [user, location.pathname]);
+
+  if (initializing) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin text-zinc-300" size={48} />
+          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Initializing KMA Portal</p>
+        </div>
+      </div>
+    );
+  }
+
+  const getDashboardRedirect = () => {
+    const role = localStorage.getItem('role');
+    if (role === 'admin') return '/admin-dashboard';
+    if (role === 'reviewer') return '/reviewer-dashboard';
+    if (role === 'developer') return '/developer-dashboard';
+    return '/author';
+  };
+
   return (
     <div className="w-full min-h-screen">
       <ToastContainer />
       <ConfirmModal />
       <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/auth" element={<Auth />} />
+        <Route path="/" element={user ? <Navigate to={getDashboardRedirect()} replace /> : <LandingPage />} />
+        <Route path="/auth" element={user ? <Navigate to={getDashboardRedirect()} replace /> : <Auth />} />
         
         {/* Author Portal Routes */}
-        <Route path="/author" element={<AuthorLayout />}>
+        <Route path="/author" element={user ? <AuthorLayout /> : <Navigate to="/auth" replace />}>
           <Route index element={<Navigate to="/author/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="articles" element={<MyArticles />} />
@@ -41,21 +108,21 @@ function App() {
         </Route>
 
         {/* Admin Portal Routes */}
-        <Route path="/admin-dashboard" element={<AdminLayout />}>
+        <Route path="/admin-dashboard" element={user ? <AdminLayout /> : <Navigate to="/auth" replace />}>
           <Route index element={<AdminDashboard />} />
           <Route path="authors" element={<AdminAuthors />} />
           <Route path="articles" element={<AdminArticles />} />
         </Route>
 
         {/* Reviewer Portal Routes */}
-        <Route path="/reviewer-dashboard" element={<ReviewerLayout />}>
+        <Route path="/reviewer-dashboard" element={user ? <ReviewerLayout /> : <Navigate to="/auth" replace />}>
           <Route index element={<ReviewerDashboard />} />
           <Route path="articles" element={<ReviewerArticles />} />
           <Route path="notifications" element={<ReviewerNotifications />} />
         </Route>
 
         {/* Developer Portal Routes */}
-        <Route path="/developer-dashboard" element={<DeveloperLayout />}>
+        <Route path="/developer-dashboard" element={user ? <DeveloperLayout /> : <Navigate to="/auth" replace />}>
           <Route index element={<DeveloperDashboard />} />
           <Route path="issues" element={<DeveloperIssues />} />
         </Route>
@@ -64,4 +131,4 @@ function App() {
   )
 }
 
-export default App
+export default App;
