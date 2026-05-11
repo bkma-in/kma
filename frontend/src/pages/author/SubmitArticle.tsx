@@ -13,31 +13,69 @@ import {
   Mail,
   AlertCircle,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  ChevronDown,
+  Filter,
+  Send,
+  Eye
 } from 'lucide-react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
 import { useNotification } from '../../utils/NotificationContext';
+import { useEffect } from 'react';
 
 const SubmitArticle = () => {
   const { showToast } = useNotification();
+  
+  // Stepper State
+  const location = useLocation();
+  const prefillData = location.state?.draft;
   
   // Stepper State
   const [currentStep, setCurrentStep] = useState(1);
   
   // Form State
   const [formData, setFormData] = useState({
-    title: '',
-    abstract: '',
-    keywords: '',
-    category: '',
-    allowComments: true
+    title: prefillData?.title || '',
+    abstract: prefillData?.abstract || '',
+    keywords: prefillData?.keywords || '',
+    category: prefillData?.category || '',
+    allowComments: true,
+    pdfName: prefillData?.pdfName || ''
   });
   
   const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [savedDraftId, setSavedDraftId] = useState<string | null>(prefillData?.id || prefillData?.articleId || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (prefillData) {
+      setFormData({
+        title: prefillData.title || '',
+        abstract: prefillData.abstract || '',
+        keywords: prefillData.keywords || '',
+        category: prefillData.category || '',
+        allowComments: true,
+        pdfName: prefillData.pdfName || ''
+      });
+      showToast('Draft loaded successfully', 'success');
+    }
+  }, [prefillData]);
+
+  useEffect(() => {
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [file]);
 
   const steps = [
     { id: 1, title: 'Details', icon: <FileEdit size={18} /> },
@@ -57,6 +95,7 @@ const SubmitArticle = () => {
       const extension = selectedFile.name.split('.').pop()?.toLowerCase();
       if (extension === 'pdf') {
         setFile(selectedFile);
+        setFormData(prev => ({ ...prev, pdfName: selectedFile.name }));
       } else {
         showToast('Please upload only .pdf files.', 'error');
       }
@@ -65,6 +104,7 @@ const SubmitArticle = () => {
 
   const removeFile = () => {
     setFile(null);
+    setFormData(prev => ({ ...prev, pdfName: '' }));
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -76,7 +116,7 @@ const SubmitArticle = () => {
       }
     }
     if (currentStep === 2) {
-      if (!file) {
+      if (!file && !formData.pdfName) {
         showToast('Please upload your manuscript', 'info');
         return;
       }
@@ -86,9 +126,56 @@ const SubmitArticle = () => {
 
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
+  const handleSaveDraft = async () => {
+    if (!formData.title) {
+      showToast('At least a title is required to save a draft', 'info');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = new FormData();
+      payload.append('title', formData.title);
+      payload.append('abstract', formData.abstract);
+      payload.append('category', formData.category);
+      payload.append('status', 'draft');
+      if (file) {
+        payload.append('pdf', file);
+      } else if (formData.pdfName) {
+        payload.append('pdfName', formData.pdfName);
+      }
+
+      let response;
+      if (savedDraftId) {
+        // Update existing draft
+        response = await api.put(`/articles/${savedDraftId}`, payload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else {
+        // Create new draft
+        response = await api.post('/articles', payload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
+
+      if (response.data.success) {
+        showToast(savedDraftId ? 'Draft version updated' : 'Draft version synchronized', 'success');
+        if (response.data.article?.articleId) {
+          setSavedDraftId(response.data.article.articleId);
+        }
+        // Don't show success screen for simple draft save, just show toast
+      }
+    } catch (error: any) {
+      console.error('Draft save failed:', error);
+      showToast('Failed to save draft', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.abstract || !formData.category || !file) {
+    if (!formData.title || !formData.abstract || !formData.category || (!file && !formData.pdfName)) {
       showToast('Form incomplete. Please check all steps.', 'error');
       return;
     }
@@ -100,7 +187,7 @@ const SubmitArticle = () => {
       payload.append('title', formData.title);
       payload.append('abstract', formData.abstract);
       payload.append('category', formData.category);
-      payload.append('pdf', file);
+      if (file) payload.append('pdf', file);
 
       const response = await api.post('/articles', payload, {
         headers: {
@@ -116,7 +203,8 @@ const SubmitArticle = () => {
           abstract: '',
           keywords: '',
           category: '',
-          allowComments: true
+          allowComments: true,
+          pdfName: ''
         });
         setFile(null);
       }
@@ -148,11 +236,12 @@ const SubmitArticle = () => {
           >
             SUBMIT ANOTHER
           </button>
-          <button 
-            className="px-8 py-4 bg-white text-black border border-zinc-200 rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-50 transition-all active:scale-95"
+          <NavLink 
+            to="/author/dashboard"
+            className="px-8 py-4 bg-white text-black border border-zinc-200 rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-50 transition-all active:scale-95 flex items-center justify-center shadow-sm"
           >
             VIEW DASHBOARD
-          </button>
+          </NavLink>
         </div>
       </div>
     );
@@ -230,19 +319,46 @@ const SubmitArticle = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Category *</label>
-                      <select 
-                        name="category"
-                        required
-                        value={formData.category}
-                        onChange={handleInputChange}
-                        className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer"
-                      >
-                        <option value="">Select Category</option>
-                        <option value="Pure Mathematics">Pure Mathematics</option>
-                        <option value="Applied Mathematics">Applied Mathematics</option>
-                        <option value="Statistics">Statistics</option>
-                        <option value="Mathematical Physics">Mathematical Physics</option>
-                      </select>
+                      <div className="relative">
+                        <button 
+                          type="button"
+                          onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                          className="w-full flex items-center justify-between px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:ring-2 focus:ring-black outline-none cursor-pointer transition-all hover:border-black"
+                        >
+                          <span className={cn(formData.category ? "text-black font-bold" : "text-zinc-400")}>
+                            {formData.category || 'Select Category'}
+                          </span>
+                          <ChevronDown size={18} className={cn("text-zinc-400 transition-transform duration-200", isCategoryOpen && "rotate-180")} />
+                        </button>
+
+                        {isCategoryOpen && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setIsCategoryOpen(false)} />
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl z-20 py-2 animate-in slide-in-from-top-2 duration-200 overflow-hidden">
+                              {['Pure Mathematics', 'Applied Mathematics', 'Statistics', 'Mathematical Physics'].map((cat) => (
+                                <button
+                                  key={cat}
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData(prev => ({ ...prev, category: cat }));
+                                    setIsCategoryOpen(false);
+                                  }}
+                                  className={cn(
+                                    "w-full px-5 py-3 text-left text-xs font-bold transition-all flex items-center gap-3",
+                                    formData.category === cat ? "bg-zinc-50 text-black" : "text-zinc-500 hover:bg-zinc-50 hover:text-black"
+                                  )}
+                                >
+                                  <div className={cn(
+                                    "w-1.5 h-1.5 rounded-full",
+                                    formData.category === cat ? "bg-black" : "bg-zinc-200"
+                                  )} />
+                                  {cat}
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Keywords</label>
@@ -284,55 +400,93 @@ const SubmitArticle = () => {
                   <h3 className="font-bold text-black tracking-tight font-['Outfit'] uppercase">STEP 2: MANUSCRIPT UPLOAD</h3>
                 </div>
 
-                {!file ? (
-                  <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="group border-2 border-dashed border-zinc-200 hover:border-black rounded-[2.5rem] p-16 transition-all flex flex-col items-center justify-center cursor-pointer bg-zinc-50/50 hover:bg-zinc-50"
-                  >
-                    <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
-                      <Upload size={28} className="text-zinc-400 group-hover:text-black transition-colors" />
-                    </div>
-                    <h4 className="text-lg font-bold text-black mb-2 font-['Outfit']">Select Research Paper</h4>
-                    <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-[0.2em] mb-6">PDF Document Only (Max 25MB)</p>
-                    <div className="px-10 py-3.5 bg-black text-white text-[10px] font-black rounded-xl tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-black/10">CHOOSE FILE</div>
-                    
-                    <div className="mt-10 flex items-start gap-3 max-w-xs text-center">
-                      <Info size={16} className="text-zinc-400 shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-zinc-500 leading-relaxed italic">
-                        Please ensure your manuscript is properly formatted according to KMA guidelines.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-8 bg-zinc-900 text-white rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-500 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700" />
-                    <div className="flex items-center gap-6 relative z-10">
-                      <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center shrink-0">
-                        <FileText size={32} className="text-white" />
+                <div className="bg-zinc-50/50 border border-zinc-100 rounded-[2.5rem] p-8">
+                  {!file && !formData.pdfName ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center space-y-6">
+                      <div className="w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center mx-auto border border-zinc-50">
+                        <Upload size={32} className="text-zinc-200" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-lg font-bold truncate font-['Outfit']">{file.name}</p>
-                        <p className="text-[10px] text-zinc-400 font-bold tracking-widest uppercase">{(file.size / (1024 * 1024)).toFixed(2)} MB • READY FOR TRANSMISSION</p>
+                      <div className="space-y-2">
+                        <h4 className="text-xl font-bold text-black font-['Outfit'] tracking-tight">Select Research Paper</h4>
+                        <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-[0.3em]">PDF Document Only (Max 25MB)</p>
                       </div>
-                      <div className="flex gap-2">
-                        <button 
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-zinc-400 hover:text-white shadow-inner"
-                        >
-                          <Upload size={20} />
-                        </button>
+                      <button 
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-12 py-5 bg-black text-white text-[10px] font-black rounded-2xl tracking-[0.3em] hover:bg-zinc-800 transition-all shadow-2xl shadow-black/10 active:scale-95 uppercase mt-4"
+                      >
+                        CHOOSE FILE
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Document Card */}
+                      <div className="w-full p-6 bg-white border border-zinc-100 rounded-3xl shadow-xl shadow-black/[0.02] flex items-center gap-6 animate-in zoom-in duration-500">
+                        <div className="w-16 h-16 bg-black text-white rounded-2xl flex items-center justify-center shadow-lg shadow-black/20 shrink-0">
+                          <FileText size={28} />
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <h4 className="text-lg font-bold text-black truncate font-['Outfit']">
+                            {file?.name || formData.pdfName}
+                          </h4>
+                          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                            {file ? `${(file.size / (1024 * 1024)).toFixed(2)} MB • READY` : "PREVIOUSLY UPLOADED • ARCHIVED"}
+                          </p>
+                        </div>
                         <button 
                           type="button"
                           onClick={removeFile}
-                          className="p-3 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl transition-colors text-rose-400/80 hover:text-rose-400 shadow-inner"
+                          className="p-3 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm"
                         >
-                          <X size={20} />
+                          <X size={18} />
                         </button>
                       </div>
+
+                      {/* Preview Area */}
+                      <div className="w-full aspect-[4/3] bg-zinc-100 rounded-[2rem] border border-dashed border-zinc-200 overflow-hidden relative group">
+                        {previewUrl ? (
+                          <iframe src={`${previewUrl}#toolbar=0`} className="w-full h-full border-none" title="PDF Preview" />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 gap-3 bg-zinc-50">
+                            {formData.pdfName ? (
+                              <>
+                                <FileText size={48} className="opacity-20" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Archived document preview locked</p>
+                              </>
+                            ) : (
+                              <>
+                                <Eye size={48} className="opacity-20" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Generating secure preview...</p>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons Below */}
+                      <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                        <button 
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex-1 px-8 py-4 bg-zinc-900 text-white text-[10px] font-black rounded-2xl tracking-widest hover:bg-black transition-all shadow-xl active:scale-95 uppercase"
+                        >
+                          REPLACE DOCUMENT
+                        </button>
+                        {previewUrl && (
+                          <a 
+                            href={previewUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 px-8 py-4 bg-white border border-zinc-200 text-black text-[10px] font-black rounded-2xl tracking-widest hover:bg-zinc-50 transition-all shadow-sm active:scale-95 uppercase"
+                          >
+                            <Eye size={16} />
+                            OPEN FULL PREVIEW
+                          </a>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
                 
                 <input 
                   type="file" 
@@ -392,20 +546,30 @@ const SubmitArticle = () => {
               </div>
             )}
 
-            {/* Stepper Controls */}
             <div className="flex items-center justify-between pt-6">
-              <button 
-                type="button"
-                onClick={prevStep}
-                disabled={currentStep === 1 || isSubmitting}
-                className={cn(
-                  "flex items-center gap-2 px-6 py-4 rounded-xl text-xs font-black tracking-widest transition-all",
-                  currentStep === 1 ? "opacity-0" : "bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50"
-                )}
-              >
-                <ChevronLeft size={18} />
-                BACK
-              </button>
+              <div className="flex gap-4">
+                <button 
+                  type="button"
+                  onClick={prevStep}
+                  disabled={currentStep === 1 || isSubmitting}
+                  className={cn(
+                    "flex items-center gap-2 px-6 py-4 rounded-xl text-xs font-black tracking-widest transition-all",
+                    currentStep === 1 ? "opacity-0" : "bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50"
+                  )}
+                >
+                  <ChevronLeft size={18} />
+                  BACK
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={handleSaveDraft}
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-6 py-4 bg-zinc-100 text-zinc-600 rounded-xl font-bold text-xs tracking-widest hover:bg-zinc-200 transition-all active:scale-95 disabled:bg-zinc-50"
+                >
+                  {savedDraftId ? 'UPDATE DRAFT' : 'SAVE DRAFT'}
+                </button>
+              </div>
 
               {currentStep < 3 ? (
                 <button 

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   FileText, 
   Clock, 
@@ -9,9 +10,13 @@ import {
   X, 
   FileEdit,
   Upload,
-  Info
+  Info,
+  Inbox,
+  Eye
 } from 'lucide-react';
 import { useNotification } from '../../utils/NotificationContext';
+import { getArticles, deleteArticle } from '../../services/article.service';
+import { cn } from '../../utils/cn';
 
 interface Draft {
   id: string;
@@ -19,39 +24,75 @@ interface Draft {
   lastEdited: string;
   category: string;
   abstract: string;
+  pdfName?: string;
 }
 
 const Drafts = () => {
   const { confirm, showToast } = useNotification();
-  const [drafts, setDrafts] = useState<Draft[]>([
-    {
-      id: 'D-102',
-      title: 'Topological Data Analysis in Machine Learning',
-      lastEdited: '2024-03-20',
-      category: 'Topology',
-      abstract: 'An investigation into how TDA can be used to improve feature extraction...'
-    },
-    {
-      id: 'D-105',
-      title: 'A New Approach to Prime Number Distribution',
-      lastEdited: '2024-03-18',
-      category: 'Pure Mathematics',
-      abstract: 'Proposed methods for approximating the density of primes in large intervals...'
-    }
-  ]);
-
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedDraft, setSelectedDraft] = useState<Draft | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
+  const fetchDrafts = async () => {
+    try {
+      setIsLoading(true);
+      const response = await getArticles();
+      if (response.success) {
+        const backendDrafts = response.articles
+          .filter((a: any) => a.status === 'draft')
+          .map((a: any) => ({
+            id: a.articleId,
+            title: a.title,
+            category: 'Mathematics', // Could be dynamic if saved in backend
+            lastEdited: new Date(a.updatedAt._seconds * 1000).toISOString(),
+            abstract: a.abstract,
+            pdfName: a.pdfName
+          }));
+        setDrafts(backendDrafts);
+      }
+    } catch (error) {
+      console.error('Failed to fetch drafts', error);
+      showToast('Failed to load drafts', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDrafts();
+  }, []);
+
+  useEffect(() => {
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [selectedFile]);
 
   const deleteDraft = (id: string) => {
     confirm({
       title: 'Delete Draft',
       message: 'Are you sure you want to permanently remove this manuscript draft from your workspace?',
       confirmText: 'Delete Draft',
-      onConfirm: () => {
-        setDrafts(drafts.filter(d => d.id !== id));
-        showToast('Draft successfully removed from workspace', 'success');
+      onConfirm: async () => {
+        try {
+          const response = await deleteArticle(id);
+          if (response.success) {
+            setDrafts(prev => prev.filter(d => d.id !== id));
+            showToast('Draft successfully removed', 'success');
+          }
+        } catch (error) {
+          console.error('Delete failed', error);
+          showToast('Failed to delete draft', 'error');
+        }
       }
     });
   };
@@ -59,6 +100,34 @@ const Drafts = () => {
   const handleEdit = (draft: Draft) => {
     setSelectedDraft(draft);
     setIsEditModalOpen(true);
+  };
+
+  const handleUpdateVersion = async () => {
+    if (!selectedDraft) return;
+    
+    try {
+      const payload = new FormData();
+      payload.append('title', selectedDraft.title);
+      payload.append('abstract', selectedDraft.abstract);
+      payload.append('category', selectedDraft.category);
+      payload.append('status', 'draft');
+      if (selectedFile) {
+        payload.append('pdf', selectedFile);
+      }
+
+      const response = await api.put(`/articles/${selectedDraft.id}`, payload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (response.data.success) {
+        showToast('Draft version updated successfully', 'success');
+        setIsEditModalOpen(false);
+        fetchDrafts(); // Refresh list
+      }
+    } catch (error) {
+      console.error('Update failed', error);
+      showToast('Failed to update draft', 'error');
+    }
   };
 
   return (
@@ -76,13 +145,21 @@ const Drafts = () => {
           <p className="text-zinc-500 mt-2 text-sm leading-relaxed max-w-xl">Review and complete your pending manuscripts before final submission to the KMA Archive.</p>
         </div>
 
-        <button className="flex items-center gap-3 px-8 py-3.5 bg-black text-white rounded-xl text-[10px] font-black tracking-[0.2em] hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 active:scale-95 uppercase">
+        <NavLink 
+          to="/author/submit"
+          className="flex items-center gap-3 px-8 py-3.5 bg-black text-white rounded-xl text-[10px] font-black tracking-[0.2em] hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 active:scale-95 uppercase"
+        >
           <Plus size={16} />
           START NEW ARTICLE
-        </button>
+        </NavLink>
       </div>
 
-      {drafts.length > 0 ? (
+      {isLoading ? (
+        <div className="p-20 text-center flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-zinc-100 border-t-black rounded-full animate-spin" />
+          <p className="text-zinc-500 font-medium text-sm">Syncing workspace...</p>
+        </div>
+      ) : drafts.length > 0 ? (
         <div className="bg-white rounded-3xl border border-zinc-100 shadow-xl shadow-black/[0.02] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -127,7 +204,8 @@ const Drafts = () => {
                           <Edit3 size={18} />
                         </button>
                         <button 
-                          className="p-2.5 bg-black text-white rounded-xl shadow-lg shadow-black/10 hover:bg-zinc-800 transition-all active:scale-95"
+                          onClick={() => navigate('/author/submit', { state: { draft: draft } })}
+                          className="p-2.5 bg-black text-white rounded-xl shadow-lg shadow-black/10 hover:bg-zinc-800 transition-all active:scale-95 flex items-center justify-center"
                           title="Submit Final"
                         >
                           <Send size={18} />
@@ -156,10 +234,13 @@ const Drafts = () => {
           <p className="text-zinc-500 text-sm max-w-sm mb-12 leading-relaxed italic">
             "Your research workspace is currently empty. Start a new manuscript to begin your contribution to the archive."
           </p>
-          <button className="flex items-center gap-3 px-10 py-4 bg-black text-white rounded-2xl text-[10px] font-black tracking-[0.3em] hover:bg-zinc-800 transition-all shadow-2xl shadow-black/10 active:scale-95">
+          <NavLink 
+            to="/author/submit"
+            className="flex items-center gap-3 px-10 py-4 bg-black text-white rounded-2xl text-[10px] font-black tracking-[0.3em] hover:bg-zinc-800 transition-all shadow-2xl shadow-black/10 active:scale-95"
+          >
             <Plus size={20} />
             INITIATE SUBMISSION
-          </button>
+          </NavLink>
         </div>
       )}
 
@@ -200,22 +281,27 @@ const Drafts = () => {
                     
                     <div className="space-y-6">
                       <div>
-                        <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-1">Research Title</label>
+                        <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-1">Manuscript Title</label>
                         <input 
                           type="text" 
-                          defaultValue={selectedDraft.title}
-                          className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-black outline-none transition-all shadow-inner"
+                          value={selectedDraft.title}
+                          onChange={(e) => setSelectedDraft({...selectedDraft, title: e.target.value})}
+                          className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-black outline-none transition-all shadow-inner"
                         />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-1">Domain</label>
                           <select 
-                            defaultValue={selectedDraft.category}
+                            value={selectedDraft.category}
+                            onChange={(e) => setSelectedDraft({...selectedDraft, category: e.target.value})}
                             className="w-full px-6 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm"
                           >
                             <option value="Topology">Topology</option>
                             <option value="Pure Mathematics">Pure Mathematics</option>
+                            <option value="Applied Mathematics">Applied Mathematics</option>
+                            <option value="Statistics">Statistics</option>
+                            <option value="Mathematical Physics">Mathematical Physics</option>
                           </select>
                         </div>
                         <div>
@@ -230,7 +316,8 @@ const Drafts = () => {
                       <div>
                         <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 px-1">Abstract Preview</label>
                         <textarea 
-                          defaultValue={selectedDraft.abstract}
+                          value={selectedDraft.abstract}
+                          onChange={(e) => setSelectedDraft({...selectedDraft, abstract: e.target.value})}
                           rows={6}
                           className="w-full px-6 py-5 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-black outline-none transition-all resize-none shadow-inner"
                         ></textarea>
@@ -244,12 +331,89 @@ const Drafts = () => {
                       <div className="w-1.5 h-6 bg-black rounded-full" />
                       <h3 className="font-bold text-black tracking-tight uppercase text-sm">Revised Manuscript</h3>
                     </div>
-                    <div className="border-2 border-dashed border-zinc-100 hover:border-black rounded-[2.5rem] p-16 flex flex-col items-center justify-center text-center bg-zinc-50/50 hover:bg-zinc-50 transition-all cursor-pointer group">
-                      <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
-                        <Upload size={28} className="text-zinc-300 group-hover:text-black" />
-                      </div>
-                      <h4 className="text-lg font-bold text-black mb-1 font-['Outfit']">Replace Current Draft</h4>
-                      <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em]">PDF, DOC, DOCX (Max 20MB)</p>
+                    <div className="bg-zinc-50/50 border border-zinc-100 rounded-[2.5rem] p-8">
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept=".pdf,.doc,.docx"
+                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      />
+                      
+                      {(selectedFile || selectedDraft.pdfName) ? (
+                        <div className="space-y-6">
+                          {/* Document Card */}
+                          <div className="w-full p-6 bg-white border border-zinc-100 rounded-3xl shadow-xl shadow-black/[0.02] flex items-center gap-6 animate-in zoom-in duration-500">
+                            <div className="w-16 h-16 bg-black text-white rounded-2xl flex items-center justify-center shadow-lg shadow-black/20 shrink-0">
+                              <FileText size={28} />
+                            </div>
+                            <div className="flex-1 min-w-0 text-left">
+                              <h4 className="text-lg font-bold text-black truncate font-['Outfit']">
+                                {selectedFile ? selectedFile.name : selectedDraft.pdfName}
+                              </h4>
+                              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                                {selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • READY` : "CURRENT MANUSCRIPT • ENCRYPTED"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Preview Area */}
+                          <div className="w-full aspect-[4/3] bg-zinc-100 rounded-[2rem] border border-dashed border-zinc-200 overflow-hidden relative group">
+                            {previewUrl ? (
+                              selectedFile?.type === 'application/pdf' ? (
+                                <iframe src={`${previewUrl}#toolbar=0`} className="w-full h-full border-none" title="PDF Preview" />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 gap-3 bg-zinc-50">
+                                  <FileText size={48} className="opacity-20" />
+                                  <p className="text-[10px] font-black uppercase tracking-widest">Preview not available for this format</p>
+                                </div>
+                              )
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 gap-3 bg-zinc-50">
+                                <Eye size={48} className="opacity-20" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Loading secure preview...</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action Buttons Below */}
+                          <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                            <button 
+                              onClick={() => fileInputRef.current?.click()}
+                              className="flex-1 px-8 py-4 bg-zinc-900 text-white text-[10px] font-black rounded-2xl tracking-widest hover:bg-black transition-all shadow-xl active:scale-95 uppercase"
+                            >
+                              REPLACE DOCUMENT
+                            </button>
+                            {previewUrl && (
+                              <a 
+                                href={previewUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 px-8 py-4 bg-white border border-zinc-200 text-black text-[10px] font-black rounded-2xl tracking-widest hover:bg-zinc-50 transition-all shadow-sm active:scale-95 uppercase"
+                              >
+                                <Eye size={16} />
+                                OPEN FULL PREVIEW
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-10 text-center space-y-6">
+                          <div className="w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center mx-auto border border-zinc-50">
+                            <Upload size={32} className="text-zinc-200" />
+                          </div>
+                          <div className="space-y-2">
+                            <h4 className="text-xl font-bold text-black font-['Outfit'] tracking-tight">No Manuscript Attached</h4>
+                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.3em]">PDF, DOC, DOCX (MAX 20MB)</p>
+                          </div>
+                          <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="px-12 py-5 bg-black text-white text-[10px] font-black rounded-2xl tracking-[0.3em] hover:bg-zinc-800 transition-all shadow-2xl shadow-black/10 active:scale-95 uppercase mt-4"
+                          >
+                            Select Document
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -270,13 +434,10 @@ const Drafts = () => {
                         SUBMIT FINAL
                       </button>
                       <button 
-                        onClick={() => {
-                          setIsEditModalOpen(false);
-                          showToast('Draft version synchronized', 'info');
-                        }}
+                        onClick={handleUpdateVersion}
                         className="w-full py-5 bg-white text-black border border-zinc-200 rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-50 transition-all flex items-center justify-center gap-3 shadow-sm active:scale-95"
                       >
-                        SAVE VERSION
+                        UPDATE VERSION
                       </button>
                     </div>
                   </div>
