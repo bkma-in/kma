@@ -6,17 +6,20 @@ import { uploadPdfToR2, getSignedPdfUrl } from '../services/storageService';
 
 const router = Router();
 
-// Submit Article (Author only)
+// Submit Article or Save Draft (Author only)
 router.post('/', requireAuth, requireRole(['author']), upload.single('pdf'), async (req: AuthRequest, res) => {
   try {
-    const { title, abstract } = req.body;
+    const { title, abstract, status = 'submitted' } = req.body;
     const authorId = req.user!.uid;
 
-    if (!req.file) {
-      return res.status(400).json({ error: 'PDF file is required' });
+    let objectKey = null;
+    let pdfName = null;
+    if (req.file) {
+      objectKey = await uploadPdfToR2(req.file.buffer, req.file.originalname, authorId);
+      pdfName = req.file.originalname;
+    } else if (status !== 'draft') {
+      return res.status(400).json({ error: 'PDF file is required for final submission' });
     }
-
-    const objectKey = await uploadPdfToR2(req.file.buffer, req.file.originalname, authorId);
 
     const articleRef = db.collection('articles').doc();
     const newArticle = {
@@ -25,8 +28,9 @@ router.post('/', requireAuth, requireRole(['author']), upload.single('pdf'), asy
       abstract,
       authorId,
       reviewerId: null,
-      status: 'submitted',
-      pdfUrl: objectKey, // Storing object key, not full URL
+      status, // 'draft' or 'submitted'
+      pdfUrl: objectKey, 
+      pdfName,
       issueId: null,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -34,12 +38,10 @@ router.post('/', requireAuth, requireRole(['author']), upload.single('pdf'), asy
 
     await articleRef.set(newArticle);
 
-    // Optional: trigger email to author
-
     res.json({ success: true, article: newArticle });
   } catch (error) {
-    console.error('Submit article error:', error);
-    res.status(500).json({ error: 'Failed to submit article' });
+    console.error('Save article error:', error);
+    res.status(500).json({ error: 'Failed to save article' });
   }
 });
 
@@ -54,10 +56,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     } else if (role === 'reviewer') {
       query = query.where('reviewerId', '==', uid);
     }
-    // admin sees all, reader shouldn't access this (or maybe only accepted ones via issues)
     
     if (role === 'reader') {
-      // Reader might only need to see accepted articles that are published, but usually they view via issues
       query = query.where('status', '==', 'accepted');
     }
 
@@ -71,8 +71,42 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// Delete Article (Author only, and only if draft or submitted)
+router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const id = req.params.id as string;
+    const { uid, role } = req.user!;
+
+    const articleRef = db.collection('articles').doc(id);
+    const doc = await articleRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    const article = doc.data()!;
+
+    // Security check: Only author can delete, and only if not yet under review/accepted
+    if (role !== 'admin' && article.authorId !== uid) {
+      return res.status(403).json({ error: 'Unauthorized to delete this article' });
+    }
+
+    if (role !== 'admin' && !['draft', 'submitted'].includes(article.status)) {
+       return res.status(400).json({ error: 'Cannot delete article that is already under review or published' });
+    }
+
+    await articleRef.delete();
+    res.json({ success: true, message: 'Article deleted successfully' });
+
+  } catch (error) {
+    console.error('Delete article error:', error);
+    res.status(500).json({ error: 'Failed to delete article' });
+  }
+});
+
 // Get Signed PDF URL (requires active subscription for reader)
 router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
+// ... (rest of the file remains the same)
   try {
     const id = req.params.id as string;
     const { role, uid } = req.user!;
@@ -117,6 +151,47 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Get PDF URL error:', error);
     res.status(500).json({ error: 'Failed to generate signed URL' });
+  }
+});
+
+// Update Article (Author only)
+router.put('/:id', requireAuth, requireRole(['author']), upload.single('pdf'), async (req: AuthRequest, res) => {
+  try {
+    const id = req.params.id as string;
+    const { title, abstract, status = 'draft' } = req.body;
+    const authorId = req.user!.uid;
+
+    const articleRef = db.collection('articles').doc(id);
+    const doc = await articleRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    const article = doc.data()!;
+    if (article.authorId !== authorId) {
+      return res.status(403).json({ error: 'Unauthorized to update this article' });
+    }
+
+    const updateData: any = {
+      title,
+      abstract,
+      status,
+      updatedAt: new Date()
+    };
+
+    if (req.file) {
+      const objectKey = await uploadPdfToR2(req.file.buffer, req.file.originalname, authorId);
+      updateData.pdfUrl = objectKey;
+      updateData.pdfName = req.file.originalname;
+    }
+
+    await articleRef.update(updateData);
+
+    res.json({ success: true, message: 'Article updated successfully' });
+  } catch (error) {
+    console.error('Update article error:', error);
+    res.status(500).json({ error: 'Failed to update article' });
   }
 });
 
