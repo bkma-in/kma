@@ -12,10 +12,13 @@ import {
   Ban,
   Upload,
   RefreshCw,
-  X
+  X,
+  ChevronDown,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
+import { getPdfUrl } from '../../services/article.service';
 
 // Types
 type Status = 'Submitted' | 'Under Review' | 'Needs Revision' | 'Approved' | 'Rejected';
@@ -37,35 +40,43 @@ interface Article {
   versions: Version[];
 }
 
+import { useNotification } from '../../utils/NotificationContext';
+
 const MyArticles = () => {
+  const { showToast } = useNotification();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<Status | 'All'>('All');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   useEffect(() => {
     const fetchArticles = async () => {
       try {
         const response = await api.get('/articles');
         if (response.data.success) {
-          const mappedArticles = response.data.articles.map((a: any) => ({
-            id: a.articleId,
-            title: a.title,
-            category: 'Mathematics', // Default for now
-            dateSubmitted: new Date(a.createdAt._seconds * 1000).toISOString(),
-            status: mapStatus(a.status),
-            abstract: a.abstract,
-            versions: [
-              {
-                version: 1,
-                uploadedBy: 'Author',
-                timestamp: new Date(a.createdAt._seconds * 1000).toLocaleString(),
-                fileName: a.pdfUrl?.split('/').pop() || 'manuscript.pdf'
-              }
-            ]
-          }));
+          const mappedArticles = response.data.articles
+            .filter((a: any) => a.status !== 'draft')
+            .map((a: any) => ({
+              id: a.articleId,
+              title: a.title,
+              category: 'Mathematics', // Default for now
+              dateSubmitted: new Date(a.createdAt._seconds * 1000).toISOString(),
+              status: mapStatus(a.status),
+              abstract: a.abstract,
+              versions: [
+                {
+                  version: 1,
+                  uploadedBy: 'Author',
+                  timestamp: new Date(a.createdAt._seconds * 1000).toLocaleString(),
+                  fileName: a.pdfUrl?.split('/').pop() || 'manuscript.pdf'
+                }
+              ]
+            }));
           setArticles(mappedArticles);
         }
       } catch (error) {
@@ -114,9 +125,21 @@ const MyArticles = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const openDetails = (article: Article) => {
+  const openDetails = async (article: Article) => {
     setSelectedArticle(article);
     setIsModalOpen(true);
+    setIsPreviewLoading(true);
+    setPreviewUrl(null);
+    try {
+      const response = await getPdfUrl(article.id);
+      if (response.success) {
+        setPreviewUrl(response.url);
+      }
+    } catch (error) {
+      console.error('Failed to load preview', error);
+    } finally {
+      setIsPreviewLoading(false);
+    }
   };
 
   return (
@@ -134,31 +157,72 @@ const MyArticles = () => {
           <p className="text-zinc-500 mt-2 text-sm leading-relaxed max-w-xl">Track your submissions, respond to revisions, and manage your published research with real-time workflow status.</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
             <input 
               type="text" 
               placeholder="Search by title..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium w-64 focus:ring-2 focus:ring-black outline-none transition-all shadow-sm"
+              className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium w-full sm:w-64 focus:ring-2 focus:ring-black outline-none transition-all shadow-sm"
             />
           </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm"
+          <div className="relative flex-1 sm:flex-initial">
+            <button 
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="flex items-center justify-between px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-black outline-none cursor-pointer shadow-sm w-full sm:w-48 text-left transition-all hover:border-black"
             >
-              <option value="All">All Status</option>
-              <option value="Submitted">Submitted</option>
-              <option value="Under Review">Under Review</option>
-              <option value="Needs Revision">Needs Revision</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-            </select>
+              <div className="flex items-center gap-2">
+                <Filter size={14} className="text-zinc-400" />
+                <span>{statusFilter === 'All' ? 'All Status' : statusFilter}</span>
+              </div>
+              <ChevronDown size={14} className={cn("text-zinc-400 transition-transform duration-200", isFilterOpen && "rotate-180")} />
+            </button>
+
+            {isFilterOpen && (
+              <>
+                {/* Backdrop to close on click outside */}
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setIsFilterOpen(false)}
+                />
+                
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl z-20 py-2 animate-in slide-in-from-top-2 duration-200 overflow-hidden">
+                  <button
+                    onClick={() => { setStatusFilter('All'); setIsFilterOpen(false); }}
+                    className={cn(
+                      "w-full px-4 py-2.5 text-left text-xs font-bold transition-all flex items-center gap-2",
+                      statusFilter === 'All' ? "bg-zinc-50 text-black" : "text-zinc-500 hover:bg-zinc-50 hover:text-black"
+                    )}
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                    All Status
+                  </button>
+                  
+                  {(['Submitted', 'Under Review', 'Needs Revision', 'Approved', 'Rejected'] as Status[]).map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => { setStatusFilter(status); setIsFilterOpen(false); }}
+                      className={cn(
+                        "w-full px-4 py-2.5 text-left text-xs font-bold transition-all flex items-center gap-2",
+                        statusFilter === status ? "bg-zinc-50 text-black" : "text-zinc-500 hover:bg-zinc-50 hover:text-black"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        status === 'Submitted' && "bg-blue-500",
+                        status === 'Under Review' && "bg-amber-500",
+                        status === 'Needs Revision' && "bg-rose-500",
+                        status === 'Approved' && "bg-emerald-500",
+                        status === 'Rejected' && "bg-zinc-500"
+                      )} />
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -217,7 +281,18 @@ const MyArticles = () => {
                         >
                           <Eye size={18} />
                         </button>
-                        <button className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-black transition-all" title="Download">
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const res = await getPdfUrl(article.id);
+                              if (res.success) window.open(res.url, '_blank');
+                            } catch (err) {
+                              showToast('Failed to download manuscript', 'error');
+                            }
+                          }}
+                          className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-black transition-all" 
+                          title="Download"
+                        >
                           <Download size={18} />
                         </button>
                         {article.status === 'Needs Revision' && (
@@ -277,126 +352,88 @@ const MyArticles = () => {
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-8">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                <div className="lg:col-span-2 space-y-8">
-                  {/* Title & Abstract */}
-                  <div className="space-y-6">
-                    <h2 className="text-3xl font-bold text-black leading-tight font-['Outfit']">{selectedArticle.title}</h2>
-                    <div className="flex gap-2">
-                      <span className="text-[10px] font-bold text-zinc-500 bg-zinc-100 px-3 py-1 rounded-full uppercase tracking-wider">{selectedArticle.category}</span>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                        <FileText size={14} />
-                        Executive Abstract
-                      </div>
-                      <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-100 italic text-sm text-zinc-600 leading-relaxed">
-                        "{selectedArticle.abstract}"
-                      </div>
-                    </div>
+            <div className="flex-1 overflow-y-auto p-10 bg-white">
+              <div className="max-w-4xl mx-auto space-y-10">
+                {/* Title & Category */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-[10px] font-black text-white bg-black px-3 py-1 rounded-full uppercase tracking-widest">
+                      {selectedArticle.category}
+                    </span>
+                    <div className="h-[1px] flex-1 bg-zinc-100" />
                   </div>
+                  <h2 className="text-4xl font-bold text-black leading-[1.1] tracking-tighter font-['Outfit']">
+                    {selectedArticle.title}
+                  </h2>
+                </div>
 
-                  {/* Version History */}
-                  <div className="space-y-4 pt-4">
-                    <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                      <History size={14} />
-                      Submission History
-                    </div>
-                    <div className="bg-white border border-zinc-100 rounded-2xl overflow-hidden shadow-sm">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-zinc-50 font-bold text-zinc-500 border-b border-zinc-100">
-                          <tr>
-                            <th className="px-4 py-3">Ver</th>
-                            <th className="px-4 py-3">Uploaded By</th>
-                            <th className="px-4 py-3">Date & Time</th>
-                            <th className="px-4 py-3 text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-50">
-                          {selectedArticle.versions.map((v, i) => (
-                            <tr key={i} className="hover:bg-zinc-50/50 transition-colors">
-                              <td className="px-4 py-3 font-bold text-black">v{v.version}</td>
-                              <td className="px-4 py-3">
-                                <span className={cn(
-                                  "px-2 py-0.5 rounded text-[10px] font-bold",
-                                  v.uploadedBy === 'Author' ? "bg-black text-white" : "bg-zinc-200 text-black"
-                                )}>
-                                  {v.uploadedBy.toUpperCase()}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-zinc-500">{v.timestamp}</td>
-                              <td className="px-4 py-3 text-right">
-                                <button className="text-black hover:underline font-bold transition-all">Download</button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                {/* Abstract Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                    <FileText size={14} />
+                    Executive Abstract
+                  </div>
+                  <div className="bg-zinc-50/50 p-8 rounded-[2rem] border border-zinc-100 text-sm text-zinc-600 leading-relaxed font-medium italic shadow-inner">
+                    "{selectedArticle.abstract}"
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  {/* Status Info */}
-                  <div className="bg-zinc-50 rounded-2xl p-6 border border-zinc-100 shadow-sm">
-                    <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-6 border-b border-zinc-200 pb-2">Tracking Intel</h4>
-                    <div className="space-y-5">
-                      <div>
-                        <p className="text-[9px] text-zinc-400 uppercase font-bold mb-1 tracking-wider">Current Workflow State</p>
-                        <div className={cn(
-                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                          getStatusStyles(selectedArticle.status)
-                        )}>
-                          {getStatusIcon(selectedArticle.status)}
-                          {selectedArticle.status}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-[9px] text-zinc-400 uppercase font-bold mb-1 tracking-wider">Last Activity Detected</p>
-                        <p className="text-sm font-bold text-black">{selectedArticle.versions[0].timestamp}</p>
-                      </div>
-                    </div>
+                {/* Manuscript Preview */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                    <Eye size={14} />
+                    Full Manuscript Preview
                   </div>
-
-                  {/* Resubmission Section */}
-                  {selectedArticle.status === 'Needs Revision' && (
-                    <div className="bg-rose-50 rounded-2xl p-6 border border-rose-100 shadow-xl shadow-rose-500/5">
-                      <h4 className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <RefreshCw size={14} className="animate-spin-slow" />
-                        Revision Required
-                      </h4>
-                      <p className="text-xs text-rose-700/80 mb-6 leading-relaxed">
-                        Peer reviewers have provided feedback. Please upload your revised manuscript to proceed.
-                      </p>
-                      <div className="space-y-3">
-                        <button className="w-full py-4 bg-rose-600 text-white rounded-xl font-bold text-[10px] tracking-widest hover:bg-rose-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-600/20 active:scale-95">
-                          <Upload size={14} />
-                          UPLOAD REVISED VERSION
-                        </button>
-                        <p className="text-[8px] text-rose-400 text-center uppercase tracking-widest font-black italic">
-                          Accepts PDF, DOCX (Max 15MB)
-                        </p>
+                  <div className="w-full aspect-[3/4] sm:aspect-[4/5] md:aspect-[3/4] bg-zinc-100 rounded-[2.5rem] border border-dashed border-zinc-200 overflow-hidden relative group shadow-2xl shadow-black/[0.03]">
+                    {previewUrl ? (
+                      <iframe 
+                        src={`${previewUrl}#toolbar=0`} 
+                        className="w-full h-full border-none" 
+                        title="PDF Preview" 
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 gap-4 bg-zinc-50/50">
+                        {isPreviewLoading ? (
+                          <>
+                            <div className="w-12 h-12 border-4 border-zinc-100 border-t-black rounded-full animate-spin" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Establishing Secure Connection...</p>
+                          </>
+                        ) : (
+                          <>
+                            <Ban size={48} className="opacity-10" />
+                            <p className="text-[10px] font-black uppercase tracking-widest">Manuscript Link Expired</p>
+                            <button 
+                              onClick={() => openDetails(selectedArticle)}
+                              className="px-6 py-3 bg-black text-white text-[9px] font-black rounded-xl tracking-widest uppercase mt-2"
+                            >
+                              REFRESH SESSION
+                            </button>
+                          </>
+                        )}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Latest File Card */}
-                  <div className="bg-white border border-zinc-100 rounded-2xl p-5 shadow-sm">
-                    <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Latest Manuscript</h4>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center text-white shadow-lg shadow-black/10">
-                        <FileText size={20} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-black truncate">{selectedArticle.versions[0].fileName}</p>
-                        <p className="text-[8px] text-zinc-400 font-bold uppercase tracking-wider">v{selectedArticle.versions[0].version} • ACTIVE</p>
-                      </div>
-                      <button className="p-2 hover:bg-zinc-100 rounded-lg text-black transition-all">
-                        <Download size={16} />
-                      </button>
-                    </div>
+                    )}
                   </div>
+                </div>
+
+                {/* Action Footer */}
+                <div className="pt-6 border-t border-zinc-50 flex items-center justify-between">
+                  <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                    Access recorded on {new Date().toLocaleDateString()}
+                  </p>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const res = await getPdfUrl(selectedArticle.id);
+                        if (res.success) window.open(res.url, '_blank');
+                      } catch (err) {
+                        showToast('Failed to generate secure download', 'error');
+                      }
+                    }}
+                    className="flex items-center gap-3 px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold text-[10px] tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-black/10 active:scale-95 uppercase"
+                  >
+                    <Download size={16} />
+                    Download Manuscript
+                  </button>
                 </div>
               </div>
             </div>
