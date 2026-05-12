@@ -6,6 +6,7 @@ export interface AuthRequest extends Request {
     uid: string;
     email: string;
     role: string;
+    name: string;
   };
 }
 
@@ -22,12 +23,15 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     
     // Fetch user role from Firestore
     const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-    const role = userDoc.exists ? userDoc.data()?.role : 'reader'; // Default role
+    const userData = userDoc.exists ? userDoc.data() : null;
+    const role = userData?.role || 'reader';
+    const name = userData?.name || decodedToken.name || decodedToken.email?.split('@')[0] || 'User';
 
     req.user = {
       uid: decodedToken.uid,
       email: decodedToken.email || '',
-      role: role
+      role: role,
+      name: name
     };
     next();
   } catch (error: any) {

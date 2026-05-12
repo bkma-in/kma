@@ -7,8 +7,8 @@ const router = (0, express_1.Router)();
 // Endpoint for frontend to send token and get their role/profile back
 router.post('/verify', authMiddleware_1.requireAuth, async (req, res) => {
     try {
-        const { uid, email, role } = req.user;
-        res.json({ success: true, user: { uid, email, role } });
+        const { uid, email, role, name } = req.user;
+        res.json({ success: true, user: { uid, email, role, name } });
     }
     catch (error) {
         res.status(500).json({ error: 'Server error' });

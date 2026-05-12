@@ -13,11 +13,14 @@ const requireAuth = async (req, res, next) => {
         const decodedToken = await firebase_1.auth.verifyIdToken(token);
         // Fetch user role from Firestore
         const userDoc = await firebase_1.db.collection('users').doc(decodedToken.uid).get();
-        const role = userDoc.exists ? userDoc.data()?.role : 'reader'; // Default role
+        const userData = userDoc.exists ? userDoc.data() : null;
+        const role = userData?.role || 'reader';
+        const name = userData?.name || decodedToken.name || decodedToken.email?.split('@')[0] || 'User';
         req.user = {
             uid: decodedToken.uid,
             email: decodedToken.email || '',
-            role: role
+            role: role,
+            name: name
         };
         next();
     }
