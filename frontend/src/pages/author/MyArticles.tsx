@@ -14,11 +14,14 @@ import {
   RefreshCw,
   X,
   ChevronDown,
-  Loader2
+  Loader2,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
 import { getPdfUrl } from '../../services/article.service';
+import { useNavigate } from 'react-router-dom';
 
 // Types
 type Status = 'Submitted' | 'Under Review' | 'Needs Revision' | 'Approved' | 'Rejected';
@@ -44,6 +47,7 @@ import { useNotification } from '../../utils/NotificationContext';
 
 const MyArticles = () => {
   const { showToast } = useNotification();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<Status | 'All'>('All');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
@@ -139,6 +143,30 @@ const MyArticles = () => {
       console.error('Failed to load preview', error);
     } finally {
       setIsPreviewLoading(false);
+    }
+  };
+
+  const handleEdit = (article: Article) => {
+    if (article.status !== 'Submitted') return;
+    navigate('/author/submit', { state: { draft: article } });
+  };
+
+  const handleDelete = async (article: Article) => {
+    if (article.status !== 'Submitted') return;
+    
+    const confirmed = window.confirm('Are you sure you want to delete this article? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      const response = await api.delete(`/articles/${article.id}`);
+      if (response.data.success) {
+        showToast('Article deleted successfully', 'success');
+        setArticles(prev => prev.filter(a => a.id !== article.id));
+        setIsModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Delete failed:', error);
+      showToast('Failed to delete article', 'error');
     }
   };
 
@@ -304,6 +332,32 @@ const MyArticles = () => {
                             <RefreshCw size={18} />
                           </button>
                         )}
+                        <button 
+                          onClick={() => handleEdit(article)}
+                          disabled={article.status !== 'Submitted'}
+                          className={cn(
+                            "p-2 rounded-lg transition-all",
+                            article.status === 'Submitted' 
+                              ? "text-zinc-400 hover:text-black hover:bg-zinc-100" 
+                              : "text-zinc-200 cursor-not-allowed"
+                          )}
+                          title="Edit Manuscript"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(article)}
+                          disabled={article.status !== 'Submitted'}
+                          className={cn(
+                            "p-2 rounded-lg transition-all",
+                            article.status === 'Submitted' 
+                              ? "text-zinc-400 hover:text-rose-600 hover:bg-rose-50" 
+                              : "text-zinc-200 cursor-not-allowed"
+                          )}
+                          title="Delete Manuscript"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -420,20 +474,48 @@ const MyArticles = () => {
                   <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
                     Access recorded on {new Date().toLocaleDateString()}
                   </p>
-                  <button 
-                    onClick={async () => {
-                      try {
-                        const res = await getPdfUrl(selectedArticle.id);
-                        if (res.success) window.open(res.url, '_blank');
-                      } catch (err) {
-                        showToast('Failed to generate secure download', 'error');
-                      }
-                    }}
-                    className="flex items-center gap-3 px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold text-[10px] tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-black/10 active:scale-95 uppercase"
-                  >
-                    <Download size={16} />
-                    Download Manuscript
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => handleEdit(selectedArticle)}
+                      disabled={selectedArticle.status !== 'Submitted'}
+                      className={cn(
+                        "flex items-center gap-2 px-6 py-4 rounded-2xl font-bold text-[10px] tracking-[0.2em] transition-all uppercase shadow-xl shadow-black/5",
+                        selectedArticle.status === 'Submitted'
+                          ? "bg-white border border-zinc-200 text-black hover:bg-zinc-50"
+                          : "bg-zinc-50 border border-zinc-100 text-zinc-300 cursor-not-allowed"
+                      )}
+                    >
+                      <Edit2 size={16} />
+                      Edit Details
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(selectedArticle)}
+                      disabled={selectedArticle.status !== 'Submitted'}
+                      className={cn(
+                        "flex items-center gap-2 px-6 py-4 rounded-2xl font-bold text-[10px] tracking-[0.2em] transition-all uppercase shadow-xl shadow-black/5",
+                        selectedArticle.status === 'Submitted'
+                          ? "bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
+                          : "bg-zinc-50 text-zinc-300 cursor-not-allowed"
+                      )}
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        try {
+                          const res = await getPdfUrl(selectedArticle.id);
+                          if (res.success) window.open(res.url, '_blank');
+                        } catch (err) {
+                          showToast('Failed to generate secure download', 'error');
+                        }
+                      }}
+                      className="flex items-center gap-3 px-8 py-4 bg-zinc-900 text-white rounded-2xl font-bold text-[10px] tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-black/10 active:scale-95 uppercase"
+                    >
+                      <Download size={16} />
+                      Download Manuscript
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

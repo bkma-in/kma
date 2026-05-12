@@ -23,10 +23,12 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
 import { useNotification } from '../../utils/NotificationContext';
+import { useProfile } from '../../hooks/useProfile';
 import { useEffect } from 'react';
 
 const SubmitArticle = () => {
   const { showToast } = useNotification();
+  const { profile } = useProfile();
   
   // Stepper State
   const location = useLocation();
@@ -41,7 +43,8 @@ const SubmitArticle = () => {
     abstract: prefillData?.abstract || '',
     keywords: prefillData?.keywords || '',
     category: prefillData?.category || '',
-    allowComments: true,
+    allowComments: false,
+    termsAccepted: false,
     pdfName: prefillData?.pdfName || ''
   });
   
@@ -51,6 +54,7 @@ const SubmitArticle = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -60,7 +64,8 @@ const SubmitArticle = () => {
         abstract: prefillData.abstract || '',
         keywords: prefillData.keywords || '',
         category: prefillData.category || '',
-        allowComments: true,
+        allowComments: false,
+        termsAccepted: false,
         pdfName: prefillData.pdfName || ''
       });
       showToast('Draft loaded successfully', 'success');
@@ -87,6 +92,15 @@ const SubmitArticle = () => {
     const { name, value, type } = e.target as HTMLInputElement;
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     setFormData(prev => ({ ...prev, [name]: val }));
+    
+    // Clear error when user types/corrects
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,11 +110,19 @@ const SubmitArticle = () => {
       if (extension === 'pdf') {
         setFile(selectedFile);
         setFormData(prev => ({ ...prev, pdfName: selectedFile.name }));
+        if (errors.pdf) {
+          setErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.pdf;
+            return newErrors;
+          });
+        }
       } else {
         showToast('Please upload only .pdf files.', 'error');
       }
     }
   };
+
 
   const removeFile = () => {
     setFile(null);
@@ -108,20 +130,38 @@ const SubmitArticle = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const validateStep = (step: number) => {
+    const newErrors: Record<string, string> = {};
+    
+    if (step === 1) {
+      if (!formData.title.trim()) newErrors.title = 'Manuscript title is required';
+      if (!formData.category) newErrors.category = 'Please select a research category';
+      if (!formData.abstract.trim()) {
+        newErrors.abstract = 'Executive abstract is required';
+      } else if (formData.abstract.trim().split(/\s+/).length < 10) { // Using 10 for demo, requirement says min 200 words
+        newErrors.abstract = 'Abstract must be at least 10 words (current guidelines suggest 200+)';
+      }
+    }
+    
+    if (step === 2) {
+      if (!file && !formData.pdfName) newErrors.pdf = 'Please upload your research manuscript (PDF)';
+    }
+
+    if (step === 3) {
+      if (!formData.termsAccepted) newErrors.termsAccepted = 'You must agree to the submission terms';
+      if (!formData.allowComments) newErrors.allowComments = 'Please enable internal reviews for peer processing';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const nextStep = () => {
-    if (currentStep === 1) {
-      if (!formData.title || !formData.abstract || !formData.category) {
-        showToast('Please fill all required details', 'info');
-        return;
-      }
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => Math.min(prev + 1, 3));
+    } else {
+      showToast('Please correct the highlighted fields', 'error');
     }
-    if (currentStep === 2) {
-      if (!file && !formData.pdfName) {
-        showToast('Please upload your manuscript', 'info');
-        return;
-      }
-    }
-    setCurrentStep(prev => Math.min(prev + 1, 3));
   };
 
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
@@ -175,8 +215,39 @@ const SubmitArticle = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.abstract || !formData.category || (!file && !formData.pdfName)) {
+    
+    // Validate all steps and accumulate errors
+    const step1Valid = validateStep(1);
+    const step2Valid = validateStep(2);
+    const step3Valid = validateStep(3);
+
+    if (!step1Valid || !step2Valid || !step3Valid) {
       showToast('Form incomplete. Please check all steps.', 'error');
+      
+      // Re-run validation for all steps to populate 'errors' state correctly
+      const allErrors: Record<string, string> = {};
+      
+      // Step 1 check
+      if (!formData.title.trim()) allErrors.title = 'Manuscript title is required';
+      if (!formData.category) allErrors.category = 'Please select a research category';
+      if (!formData.abstract.trim()) {
+        allErrors.abstract = 'Executive abstract is required';
+      } else if (formData.abstract.trim().split(/\s+/).length < 10) {
+        allErrors.abstract = 'Abstract must be at least 10 words (current guidelines suggest 200+)';
+      }
+      
+      // Step 2 check
+      if (!file && !formData.pdfName) allErrors.pdf = 'Please upload your research manuscript (PDF)';
+      
+      // Step 3 check
+      if (!formData.termsAccepted) allErrors.termsAccepted = 'You must agree to the submission terms';
+      if (!formData.allowComments) allErrors.allowComments = 'Please enable internal reviews for peer processing';
+
+      setErrors(allErrors);
+
+      if (allErrors.title || allErrors.abstract || allErrors.category) setCurrentStep(1);
+      else if (allErrors.pdf) setCurrentStep(2);
+      else setCurrentStep(3);
       return;
     }
 
@@ -188,12 +259,18 @@ const SubmitArticle = () => {
       payload.append('abstract', formData.abstract);
       payload.append('category', formData.category);
       if (file) payload.append('pdf', file);
+      payload.append('status', 'submitted');
 
-      const response = await api.post('/articles', payload, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      let response;
+      if (savedDraftId) {
+        response = await api.put(`/articles/${savedDraftId}`, payload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else {
+        response = await api.post('/articles', payload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
 
       if (response.data.success) {
         setIsSuccess(true);
@@ -203,7 +280,8 @@ const SubmitArticle = () => {
           abstract: '',
           keywords: '',
           category: '',
-          allowComments: true,
+          allowComments: false,
+          termsAccepted: false,
           pdfName: ''
         });
         setFile(null);
@@ -231,7 +309,20 @@ const SubmitArticle = () => {
         </p>
         <div className="flex gap-4">
           <button 
-            onClick={() => setIsSuccess(false)}
+            onClick={() => {
+              setIsSuccess(false);
+              setCurrentStep(1);
+              setFormData({
+                title: '',
+                abstract: '',
+                keywords: '',
+                category: '',
+                allowComments: false,
+                termsAccepted: false,
+                pdfName: ''
+              });
+              setErrors({});
+            }}
             className="px-8 py-4 bg-black text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 active:scale-95"
           >
             SUBMIT ANOTHER
@@ -312,8 +403,19 @@ const SubmitArticle = () => {
                       value={formData.title}
                       onChange={handleInputChange}
                       placeholder="e.g. Advanced Topology in Non-Euclidean Spaces"
-                      className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:ring-2 focus:ring-black outline-none transition-all placeholder:text-zinc-400"
+                      className={cn(
+                        "w-full px-5 py-4 bg-zinc-50 border rounded-2xl text-sm focus:ring-2 outline-none transition-all placeholder:text-zinc-400",
+                        errors.title 
+                          ? "border-rose-500 bg-rose-50/30 focus:ring-rose-200" 
+                          : "border-zinc-200 focus:ring-black"
+                      )}
                     />
+                    {errors.title && (
+                      <p className="mt-2 text-[10px] font-bold text-rose-500 uppercase tracking-widest flex items-center gap-1.5 animate-in slide-in-from-top-1">
+                        <AlertCircle size={12} />
+                        {errors.title}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -323,13 +425,24 @@ const SubmitArticle = () => {
                         <button 
                           type="button"
                           onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                          className="w-full flex items-center justify-between px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:ring-2 focus:ring-black outline-none cursor-pointer transition-all hover:border-black"
+                          className={cn(
+                            "w-full flex items-center justify-between px-5 py-4 bg-zinc-50 border rounded-2xl text-sm outline-none cursor-pointer transition-all hover:border-black",
+                            errors.category 
+                              ? "border-rose-500 bg-rose-50/30 focus:ring-2 focus:ring-rose-200" 
+                              : "border-zinc-200 focus:ring-2 focus:ring-black"
+                          )}
                         >
                           <span className={cn(formData.category ? "text-black font-bold" : "text-zinc-400")}>
                             {formData.category || 'Select Category'}
                           </span>
                           <ChevronDown size={18} className={cn("text-zinc-400 transition-transform duration-200", isCategoryOpen && "rotate-180")} />
                         </button>
+                        {errors.category && (
+                          <p className="mt-2 text-[10px] font-bold text-rose-500 uppercase tracking-widest flex items-center gap-1.5 animate-in slide-in-from-top-1">
+                            <AlertCircle size={12} />
+                            {errors.category}
+                          </p>
+                        )}
 
                         {isCategoryOpen && (
                           <>
@@ -342,6 +455,13 @@ const SubmitArticle = () => {
                                   onClick={() => {
                                     setFormData(prev => ({ ...prev, category: cat }));
                                     setIsCategoryOpen(false);
+                                    if (errors.category) {
+                                      setErrors(prev => {
+                                        const newErrors = { ...prev };
+                                        delete newErrors.category;
+                                        return newErrors;
+                                      });
+                                    }
                                   }}
                                   className={cn(
                                     "w-full px-5 py-3 text-left text-xs font-bold transition-all flex items-center gap-3",
@@ -385,8 +505,19 @@ const SubmitArticle = () => {
                       onChange={handleInputChange}
                       rows={8}
                       placeholder="Summarize your methodology, key findings, and theoretical significance..."
-                      className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:ring-2 focus:ring-black outline-none transition-all resize-none placeholder:text-zinc-400"
+                      className={cn(
+                        "w-full px-5 py-4 bg-zinc-50 border rounded-2xl text-sm focus:ring-2 outline-none transition-all resize-none placeholder:text-zinc-400",
+                        errors.abstract 
+                          ? "border-rose-500 bg-rose-50/30 focus:ring-rose-200" 
+                          : "border-zinc-200 focus:ring-black"
+                      )}
                     ></textarea>
+                    {errors.abstract && (
+                      <p className="mt-2 text-[10px] font-bold text-rose-500 uppercase tracking-widest flex items-center gap-1.5 animate-in slide-in-from-top-1">
+                        <AlertCircle size={12} />
+                        {errors.abstract}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -400,15 +531,25 @@ const SubmitArticle = () => {
                   <h3 className="font-bold text-black tracking-tight font-['Outfit'] uppercase">STEP 2: MANUSCRIPT UPLOAD</h3>
                 </div>
 
-                <div className="bg-zinc-50/50 border border-zinc-100 rounded-[2.5rem] p-8">
+                <div className={cn(
+                  "bg-zinc-50/50 border rounded-[2.5rem] p-8 transition-all",
+                  errors.pdf ? "border-rose-500 bg-rose-50/30" : "border-zinc-100"
+                )}>
                   {!file && !formData.pdfName ? (
                     <div className="flex flex-col items-center justify-center py-10 text-center space-y-6">
-                      <div className="w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center mx-auto border border-zinc-50">
-                        <Upload size={32} className="text-zinc-200" />
+                      <div className={cn(
+                        "w-24 h-24 bg-white rounded-3xl shadow-xl flex items-center justify-center mx-auto border transition-all",
+                        errors.pdf ? "border-rose-200 shadow-rose-500/10" : "border-zinc-50"
+                      )}>
+                        <Upload size={32} className={cn(errors.pdf ? "text-rose-400" : "text-zinc-200")} />
                       </div>
                       <div className="space-y-2">
-                        <h4 className="text-xl font-bold text-black font-['Outfit'] tracking-tight">Select Research Paper</h4>
-                        <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-[0.3em]">PDF Document Only (Max 25MB)</p>
+                        <h4 className={cn("text-xl font-bold font-['Outfit'] tracking-tight", errors.pdf ? "text-rose-600" : "text-black")}>
+                          {errors.pdf ? "Manuscript Required" : "Select Research Paper"}
+                        </h4>
+                        <p className={cn("text-[10px] uppercase font-bold tracking-[0.3em]", errors.pdf ? "text-rose-400" : "text-zinc-500")}>
+                          {errors.pdf ? errors.pdf : "PDF Document Only (Max 25MB)"}
+                        </p>
                       </div>
                       <button 
                         type="button"
@@ -533,14 +674,39 @@ const SubmitArticle = () => {
                     </div>
                   </div>
 
-                  <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
-                    <AlertCircle size={20} className="text-amber-500 shrink-0 mt-1" />
-                    <div>
-                      <p className="text-xs font-bold text-amber-900 mb-1">Final Submission Disclaimer</p>
-                      <p className="text-[10px] text-amber-700 leading-relaxed">
-                        By clicking "Confirm Submission", you certify that this research is original, anonymized for peer review, and has not been published elsewhere.
-                      </p>
-                    </div>
+                  <div className={cn(
+                    "p-6 rounded-2xl border transition-all",
+                    errors.termsAccepted ? "bg-rose-50 border-rose-200" : "bg-white border-zinc-100 shadow-sm"
+                  )}>
+                    <label className="flex items-start gap-4 cursor-pointer group">
+                      <div className="relative flex items-center pt-1">
+                        <input 
+                          type="checkbox"
+                          name="termsAccepted"
+                          checked={formData.termsAccepted}
+                          onChange={handleInputChange}
+                          className={cn(
+                            "peer h-6 w-6 cursor-pointer appearance-none rounded-md border transition-all checked:bg-black checked:border-black outline-none",
+                            errors.termsAccepted ? "border-rose-500 bg-rose-100" : "border-zinc-300 bg-white"
+                          )}
+                        />
+                        <CheckCircle2 className="absolute h-6 w-6 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity p-1" />
+                      </div>
+                      <div>
+                        <span className={cn("text-xs font-bold block mb-1", errors.termsAccepted ? "text-rose-700" : "text-black")}>
+                          I certify that this research is original and anonymized.
+                        </span>
+                        <p className={cn("text-[10px] leading-relaxed", errors.termsAccepted ? "text-rose-500" : "text-zinc-500")}>
+                          By checking this box, you confirm that the manuscript adheres to KMA Peer-Review standards and has not been published elsewhere.
+                        </p>
+                        {errors.termsAccepted && (
+                          <p className="mt-2 text-[9px] font-black text-rose-600 uppercase tracking-widest flex items-center gap-1 animate-pulse">
+                            <AlertCircle size={10} />
+                            Required Confirmation
+                          </p>
+                        )}
+                      </div>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -615,7 +781,7 @@ const SubmitArticle = () => {
                 </div>
                 <div>
                   <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-none mb-1">Author Name</p>
-                  <p className="text-sm font-bold text-black">{localStorage.getItem('userName') || 'Author'}</p>
+                  <p className="text-sm font-bold text-black">{profile?.name || localStorage.getItem('userName') || 'Author User'}</p>
                 </div>
               </div>
 
@@ -647,8 +813,11 @@ const SubmitArticle = () => {
           </div>
 
           {/* Section 4: Submission Settings */}
-          <div className="bg-zinc-50 rounded-3xl p-6 border border-zinc-100">
-            <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4 px-1">Options</h4>
+          <div className={cn(
+            "rounded-3xl p-6 border transition-all",
+            errors.allowComments ? "bg-rose-50 border-rose-200" : "bg-zinc-50 border-zinc-100"
+          )}>
+            <h4 className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-4 px-1", errors.allowComments ? "text-rose-400" : "text-zinc-400")}>Options</h4>
             <label className="flex items-start gap-3 cursor-pointer group">
               <div className="relative flex items-center pt-1">
                 <input 
@@ -656,15 +825,24 @@ const SubmitArticle = () => {
                   name="allowComments"
                   checked={formData.allowComments}
                   onChange={handleInputChange}
-                  className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-zinc-300 bg-white transition-all checked:bg-black checked:border-black outline-none"
+                  className={cn(
+                    "peer h-5 w-5 cursor-pointer appearance-none rounded-md border transition-all checked:bg-black checked:border-black outline-none",
+                    errors.allowComments ? "border-rose-500 bg-rose-100" : "border-zinc-300 bg-white"
+                  )}
                 />
                 <CheckCircle2 className="absolute h-5 w-5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity p-0.5" />
               </div>
               <div>
-                <span className="text-xs font-bold text-black block mb-1">Allow Internal Reviews</span>
-                <p className="text-[10px] text-zinc-500 leading-relaxed italic">
+                <span className={cn("text-xs font-bold block mb-1", errors.allowComments ? "text-rose-700" : "text-black")}>Allow Internal Reviews</span>
+                <p className={cn("text-[10px] leading-relaxed italic", errors.allowComments ? "text-rose-500" : "text-zinc-500")}>
                   Reviewers can embed digital annotations directly into the manuscript.
                 </p>
+                {errors.allowComments && (
+                  <p className="mt-2 text-[9px] font-black text-rose-600 uppercase tracking-widest flex items-center gap-1">
+                    <AlertCircle size={10} />
+                    Required Selection
+                  </p>
+                )}
               </div>
             </label>
           </div>

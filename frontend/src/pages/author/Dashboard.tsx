@@ -45,7 +45,7 @@ const Dashboard = () => {
   const stats = [
     { 
       label: 'Total Articles', 
-      value: articles.length.toString().padStart(2, '0'), 
+      value: articles.filter(a => a.status !== 'draft').length.toString().padStart(2, '0'), 
       icon: FileText, 
       color: 'text-zinc-600', 
       bg: 'bg-zinc-100' 
@@ -70,6 +70,13 @@ const Dashboard = () => {
       icon: CheckCircle2, 
       color: 'text-emerald-600', 
       bg: 'bg-emerald-50' 
+    },
+    { 
+      label: 'Drafts', 
+      value: articles.filter(a => a.status === 'draft').length.toString().padStart(2, '0'), 
+      icon: Inbox, 
+      color: 'text-indigo-600', 
+      bg: 'bg-indigo-50' 
     },
   ];
 
@@ -134,7 +141,7 @@ const Dashboard = () => {
       )}
 
       {/* Stats Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         {stats.map((stat, i) => (
           <div key={i} className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg group hover:border-black transition-all cursor-default">
             <div className="flex justify-between items-start mb-4">
