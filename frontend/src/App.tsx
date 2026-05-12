@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { auth } from './config/firebase';
 import { Loader2 } from 'lucide-react';
 import Auth from './pages/Auth'
@@ -27,9 +27,16 @@ import DeveloperIssues from './pages/developer/DeveloperIssues'
 function App() {
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const location = useLocation();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((u) => {
+      const isRegistering = localStorage.getItem('registration_in_progress');
+      if (u && isRegistering === 'true') {
+        localStorage.removeItem('registration_in_progress');
+        setInitializing(false);
+        return;
+      }
       setUser(u);
       setInitializing(false);
     });
@@ -40,18 +47,17 @@ function App() {
   useEffect(() => {
     if (!user) return;
     
-    const dashboardPaths = [
+    const portalPrefixes = [
       '/author', 
-      '/author/dashboard',
       '/admin-dashboard', 
       '/reviewer-dashboard', 
       '/developer-dashboard'
     ];
     
-    const currentPath = window.location.pathname;
-    const isDashboard = dashboardPaths.some(p => currentPath === p);
+    const currentPath = location.pathname;
+    const isProtectedPath = portalPrefixes.some(p => currentPath.startsWith(p));
 
-    if (!isDashboard) return;
+    if (!isProtectedPath) return;
 
     // Overwrite history immediately to make the current page the "forward" state
     window.history.pushState(null, '', window.location.href);

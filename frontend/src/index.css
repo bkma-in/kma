@@ -44,3 +44,17 @@
 ::-webkit-scrollbar-thumb {
   @apply bg-zinc-300 rounded-full border-2 border-accent hover:bg-zinc-400;
 }
+
+/* Hide browser-native password reveal icons */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+input::-webkit-contacts-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+}
