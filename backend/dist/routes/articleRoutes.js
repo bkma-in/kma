@@ -134,6 +134,40 @@ router.get('/:id/pdf', authMiddleware_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to generate signed URL' });
     }
 });
+// Update Article (Author only)
+router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['author']), uploadMiddleware_1.upload.single('pdf'), async (req, res) => {
+    try {
+        const id = req.params.id;
+        const { title, abstract, status = 'draft' } = req.body;
+        const authorId = req.user.uid;
+        const articleRef = firebase_1.db.collection('articles').doc(id);
+        const doc = await articleRef.get();
+        if (!doc.exists) {
+            return res.status(404).json({ error: 'Article not found' });
+        }
+        const article = doc.data();
+        if (article.authorId !== authorId) {
+            return res.status(403).json({ error: 'Unauthorized to update this article' });
+        }
+        const updateData = {
+            title,
+            abstract,
+            status,
+            updatedAt: new Date()
+        };
+        if (req.file) {
+            const objectKey = await (0, storageService_1.uploadPdfToR2)(req.file.buffer, req.file.originalname, authorId);
+            updateData.pdfUrl = objectKey;
+            updateData.pdfName = req.file.originalname;
+        }
+        await articleRef.update(updateData);
+        res.json({ success: true, message: 'Article updated successfully' });
+    }
+    catch (error) {
+        console.error('Update article error:', error);
+        res.status(500).json({ error: 'Failed to update article' });
+    }
+});
 // Admin Assign Reviewer
 router.patch('/:id/assign', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
     try {
