@@ -11,6 +11,7 @@ const Auth: React.FC = () => {
   const [prefilledEmail, setPrefilledEmail] = useState('');
 
   const handleRegistrationSuccess = (email: string) => {
+    localStorage.removeItem('registration_in_progress');
     setPrefilledEmail(email);
     setIsFlipped(true);
   };

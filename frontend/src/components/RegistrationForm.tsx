@@ -39,7 +39,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
   const isFormReady = 
     formData.name.length > 0 && 
     formData.email.length > 0 && 
-    formData.password.length === 8 && 
+    formData.password.length >= 8 && 
     passwordsMatch &&
     (formData.role !== 'reviewer' || (formData.qualification.length > 0 && formData.experience.length > 0));
 
@@ -59,6 +59,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     if (!validateForm()) return;
     setIsLoading(true);
     setErrors({});
+    localStorage.setItem('registration_in_progress', 'true');
 
     try {
       await register({
@@ -224,7 +225,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                     type={showPassword ? "text" : "password"}
                     className="input-field pl-11 pr-11 !border-none !ring-0 !bg-zinc-50"
                     placeholder="Enter your password"
-                    maxLength={8}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   />
@@ -280,7 +280,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                     type={showConfirmPassword ? "text" : "password"}
                     className="input-field pl-11 pr-11 !border-none !ring-0 !bg-zinc-50"
                     placeholder="Enter your password again"
-                    maxLength={8}
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   />
