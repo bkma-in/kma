@@ -36,15 +36,16 @@ export const useProfile = () => {
   useEffect(() => {
     loadProfile();
     
-    // Listen for storage changes to sync across tabs/components
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.startsWith('profile_')) {
-        loadProfile();
-      }
-    };
+    // Listen for storage changes and custom profile updates
+    const handleSync = () => loadProfile();
     
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('profile-update', handleSync);
+    
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('profile-update', handleSync);
+    };
   }, [loadProfile]);
 
   const updateProfile = async (newData: UserProfile) => {
@@ -53,9 +54,13 @@ export const useProfile = () => {
       await new Promise(resolve => setTimeout(resolve, 800));
       
       localStorage.setItem(`profile_${newData.email}`, JSON.stringify(newData));
+      localStorage.setItem('userName', newData.name);
       setProfile(newData);
       
-      // Manually trigger storage event for current tab
+      // Sync across same tab
+      window.dispatchEvent(new CustomEvent('profile-update'));
+      
+      // Sync across different tabs
       window.dispatchEvent(new StorageEvent('storage', { key: `profile_${newData.email}` }));
       
       return { success: true };

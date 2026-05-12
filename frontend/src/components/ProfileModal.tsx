@@ -69,6 +69,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
       return;
     }
 
+    if (formData.phone) {
+      const phoneRegex = /^[6-9]\d{9}$/;
+      if (!phoneRegex.test(formData.phone)) {
+        showToast('Phone number must be 10 digits and start with 6, 7, 8, or 9', 'error');
+        return;
+      }
+    }
+
     setIsSaving(true);
     const result = await onSave(formData);
     setIsSaving(false);
@@ -203,9 +211,15 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
                 {isEditing ? (
                   <input 
                     type="tel"
-                    placeholder="+91 00000 00000"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="10-digit mobile number"
+                    value={formData.phone || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      if (value.length > 0 && !['6', '7', '8', '9'].includes(value[0])) {
+                        return;
+                      }
+                      setFormData({ ...formData, phone: value });
+                    }}
                     className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   />
                 ) : (
