@@ -35,7 +35,7 @@ export const login = async (email: string, password: string) => {
         success: true,
         user: {
           email: response.data.user.email,
-          name: response.data.user.name || email.split('@')[0],
+          name: response.data.user.name,
           role: response.data.user.role
         }
       };
@@ -68,6 +68,8 @@ export const register = async (userData: any) => {
     });
 
     if (response.data.success) {
+      // Force sign out to prevent auto-login by Firebase Client SDK
+      await auth.signOut();
       return { success: true };
     }
     throw new Error('Backend registration failed');
