@@ -8,6 +8,7 @@ import articleRoutes from './routes/articleRoutes';
 import issueRoutes from './routes/issueRoutes';
 import subscriptionRoutes from './routes/subscriptionRoutes';
 import webhookRoutes from './routes/webhookRoutes';
+import userRoutes from './routes/userRoutes';
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/', (req, res) => {
   res.send({ status: 'ok', message: 'KMA Backend is running' });
