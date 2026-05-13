@@ -49,13 +49,16 @@ const SubmitArticle = () => {
   });
   
   const [file, setFile] = useState<File | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [savedDraftId, setSavedDraftId] = useState<string | null>(prefillData?.id || prefillData?.articleId || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (prefillData) {
@@ -68,7 +71,6 @@ const SubmitArticle = () => {
         termsAccepted: false,
         pdfName: prefillData.pdfName || ''
       });
-      showToast('Draft loaded successfully', 'success');
     }
   }, [prefillData]);
 
@@ -124,10 +126,30 @@ const SubmitArticle = () => {
   };
 
 
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      const extension = selectedFile.name.split('.').pop()?.toLowerCase();
+      if (['jpg', 'jpeg', 'png', 'webp'].includes(extension || '')) {
+        setThumbnailFile(selectedFile);
+        const url = URL.createObjectURL(selectedFile);
+        setThumbnailPreview(url);
+      } else {
+        showToast('Please upload an image file (JPG, PNG, WEBP).', 'error');
+      }
+    }
+  };
+
   const removeFile = () => {
     setFile(null);
     setFormData(prev => ({ ...prev, pdfName: '' }));
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeThumbnail = () => {
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+    if (thumbnailInputRef.current) thumbnailInputRef.current.value = '';
   };
 
   const validateStep = (step: number) => {
@@ -183,6 +205,10 @@ const SubmitArticle = () => {
         payload.append('pdf', file);
       } else if (formData.pdfName) {
         payload.append('pdfName', formData.pdfName);
+      }
+
+      if (thumbnailFile) {
+        payload.append('thumbnail', thumbnailFile);
       }
 
       let response;
@@ -259,6 +285,7 @@ const SubmitArticle = () => {
       payload.append('abstract', formData.abstract);
       payload.append('category', formData.category);
       if (file) payload.append('pdf', file);
+      if (thumbnailFile) payload.append('thumbnail', thumbnailFile);
       payload.append('status', 'submitted');
 
       let response;
@@ -416,6 +443,47 @@ const SubmitArticle = () => {
                         {errors.title}
                       </p>
                     )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Article Thumbnail (Optional)</label>
+                    <div className="flex items-center gap-6 p-4 bg-zinc-50 rounded-2xl border border-zinc-200">
+                      <div className="w-20 h-20 bg-white rounded-xl border border-zinc-100 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                        {thumbnailPreview ? (
+                          <img src={thumbnailPreview} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <Upload className="text-zinc-300" size={24} />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <button 
+                            type="button"
+                            onClick={() => thumbnailInputRef.current?.click()}
+                            className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase"
+                          >
+                            {thumbnailFile ? 'Change Image' : 'Select Image'}
+                          </button>
+                          {thumbnailFile && (
+                            <button 
+                              type="button"
+                              onClick={removeThumbnail}
+                              className="px-4 py-2 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black tracking-widest hover:bg-rose-100 transition-all uppercase"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-[9px] text-zinc-400 font-medium">Recommended: 1200x630px (JPG/PNG). Max 5MB.</p>
+                        <input 
+                          type="file"
+                          ref={thumbnailInputRef}
+                          onChange={handleThumbnailChange}
+                          accept="image/*"
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

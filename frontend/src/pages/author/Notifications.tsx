@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle2, FileEdit, MessageSquare, Info, Clock, AlertCircle, Loader2, Archive, Trash2, RotateCcw } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { getArticles } from '../../services/article.service';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -12,8 +12,12 @@ const Notifications = () => {
     const saved = localStorage.getItem('archivedNotifications');
     return saved ? JSON.parse(saved) : [];
   });
+  const [readIds, setReadIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('readNotifications');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('ALL');
+  const [activeTab, setActiveTab] = useState('UNREAD');
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -99,7 +103,7 @@ const Notifications = () => {
         id: article.articleId || index,
         ...config,
         time: formatTime(article.createdAt),
-        unread: index === 0, // Mock unread for the latest one
+        unread: !readIds.includes(article.articleId),
       };
     }).sort((a, b) => {
       const timeA = a.time === 'JUST NOW' ? Infinity : parseInt(a.time) || 0;
@@ -120,16 +124,29 @@ const Notifications = () => {
     localStorage.setItem('archivedNotifications', JSON.stringify(newArchived));
   };
 
-  const handleAction = (notification: any) => {
+  const handleMarkAsRead = (id: string) => {
+    if (!readIds.includes(id)) {
+      const newRead = [...readIds, id];
+      setReadIds(newRead);
+      localStorage.setItem('readNotifications', JSON.stringify(newRead));
+    }
+  };
+
+  const handleAction = (e: React.MouseEvent, notification: any) => {
+    e.stopPropagation();
+    handleMarkAsRead(notification.id);
+
+    const articleId = notification.id;
+    
     switch (notification.title) {
       case 'Article Submitted':
       case 'Peer Review Started':
       case 'Article Approved':
       case 'Review Decision':
-        navigate('/author/articles');
+        navigate('/author/articles', { state: { highlightId: articleId } });
         break;
       case 'Revision Requested':
-        navigate('/author/submit', { state: { draft: articles.find(a => a.articleId === notification.id) } });
+        navigate('/author/submit', { state: { draft: articles.find(a => a.articleId === articleId) } });
         break;
       default:
         navigate('/author/dashboard');
@@ -138,9 +155,9 @@ const Notifications = () => {
 
   const notifications = getDynamicNotifications();
   const filteredNotifications = notifications.filter(n => {
-    if (activeTab === 'ARCHIVED') return archivedIds.includes(n.id);
     if (activeTab === 'UNREAD') return n.unread && !archivedIds.includes(n.id);
-    return !archivedIds.includes(n.id);
+    if (activeTab === 'ALL') return !archivedIds.includes(n.id);
+    return archivedIds.includes(n.id);
   });
 
   if (loading) {
@@ -161,7 +178,7 @@ const Notifications = () => {
       </div>
 
       <div className="flex items-center gap-8 border-b border-zinc-200 mb-8">
-        {['ALL', 'UNREAD', 'ARCHIVED'].map((tab) => (
+        {['UNREAD', 'ALL', 'ARCHIVED'].map((tab) => (
           <button 
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -180,7 +197,11 @@ const Notifications = () => {
 
       <div className="space-y-6">
         {filteredNotifications.length > 0 ? filteredNotifications.map((notification) => (
-          <div key={notification.id} className="bg-white p-8 rounded-2xl border border-zinc-100 shadow-sm relative group hover:border-black transition-all cursor-default overflow-hidden">
+          <div 
+            key={notification.id} 
+            onClick={() => handleMarkAsRead(notification.id)}
+            className="bg-white p-8 rounded-2xl border border-zinc-100 shadow-sm relative group hover:border-black transition-all cursor-default overflow-hidden"
+          >
             {notification.unread && activeTab !== 'ARCHIVED' && (
               <div className="absolute right-8 top-10 w-2 h-2 rounded-full bg-black"></div>
             )}
@@ -199,7 +220,7 @@ const Notifications = () => {
                     </span>
                     {activeTab === 'ARCHIVED' ? (
                       <button 
-                        onClick={() => handleUnarchive(notification.id)}
+                        onClick={(e) => { e.stopPropagation(); handleUnarchive(notification.id); }}
                         className="p-1.5 text-zinc-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 flex items-center gap-1.5 px-2"
                         title="Restore Notification"
                       >
@@ -208,7 +229,7 @@ const Notifications = () => {
                       </button>
                     ) : (
                       <button 
-                        onClick={() => handleArchive(notification.id)}
+                        onClick={(e) => { e.stopPropagation(); handleArchive(notification.id); }}
                         className="p-1.5 text-zinc-300 hover:text-black hover:bg-zinc-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                         title="Archive Notification"
                       >
@@ -223,12 +244,23 @@ const Notifications = () => {
                 </p>
                 
                 <div className="flex items-center gap-6">
-                  <button 
-                    onClick={() => handleAction(notification)}
-                    className="text-[10px] font-black text-black uppercase tracking-widest hover:underline underline-offset-8 transition-all"
-                  >
-                    {notification.action}
-                  </button>
+                  {notification.action === 'EDIT MANUSCRIPT' ? (
+                    <button 
+                      onClick={(e) => handleAction(e, notification)}
+                      className="text-[10px] font-black text-black uppercase tracking-widest hover:underline underline-offset-8 transition-all"
+                    >
+                      {notification.action}
+                    </button>
+                  ) : (
+                    <NavLink 
+                      to="/author/articles"
+                      state={{ highlightId: notification.id }}
+                      onClick={() => handleMarkAsRead(notification.id)}
+                      className="text-[10px] font-black text-black uppercase tracking-widest hover:underline underline-offset-8 transition-all"
+                    >
+                      {notification.action}
+                    </NavLink>
+                  )}
                 </div>
               </div>
             </div>
@@ -240,14 +272,6 @@ const Notifications = () => {
           </div>
         )}
       </div>
-
-      {notifications.length > 0 && (
-        <div className="mt-12 flex justify-center">
-          <button className="bg-black text-white text-[10px] font-black px-10 py-5 rounded-xl uppercase tracking-[0.2em] hover:bg-zinc-800 transition-all active:scale-95 shadow-xl shadow-black/10">
-            LOAD ARCHIVED ALERTS
-          </button>
-        </div>
-      )}
     </div>
   );
 };

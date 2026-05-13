@@ -13,7 +13,8 @@ import {
   TrendingUp,
   FileEdit,
   Inbox,
-  Loader2
+  Loader2,
+  XCircle
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
@@ -70,6 +71,13 @@ const Dashboard = () => {
       icon: CheckCircle2, 
       color: 'text-emerald-600', 
       bg: 'bg-emerald-50' 
+    },
+    { 
+      label: 'Rejected', 
+      value: articles.filter(a => a.status === 'rejected').length.toString().padStart(2, '0'), 
+      icon: XCircle, 
+      color: 'text-red-600', 
+      bg: 'bg-red-50' 
     },
     { 
       label: 'Drafts', 
@@ -141,7 +149,7 @@ const Dashboard = () => {
       )}
 
       {/* Stats Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         {stats.map((stat, i) => (
           <div key={i} className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg group hover:border-black transition-all cursor-default">
             <div className="flex justify-between items-start mb-4">

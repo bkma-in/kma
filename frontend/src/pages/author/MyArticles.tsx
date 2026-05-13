@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation, NavLink } from 'react-router-dom';
 import { 
   Search, 
   Filter, 
@@ -16,7 +17,9 @@ import {
   ChevronDown,
   Loader2,
   Edit2,
-  Trash2
+  Trash2,
+  Lock,
+  FileUp
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
@@ -48,6 +51,8 @@ import { useNotification } from '../../utils/NotificationContext';
 const MyArticles = () => {
   const { showToast } = useNotification();
   const navigate = useNavigate();
+  const location = useLocation();
+  const highlightId = location.state?.highlightId;
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<Status | 'All'>('All');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
@@ -57,6 +62,15 @@ const MyArticles = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  // Revision modal state
+  const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
+  const [revisionArticle, setRevisionArticle] = useState<Article | null>(null);
+  const [revisionAbstract, setRevisionAbstract] = useState('');
+  const [revisionFile, setRevisionFile] = useState<File | null>(null);
+  const [isRevisionSubmitting, setIsRevisionSubmitting] = useState(false);
+  const [revisionError, setRevisionError] = useState('');
+  const revisionFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -91,6 +105,17 @@ const MyArticles = () => {
     };
     fetchArticles();
   }, []);
+
+  useEffect(() => {
+    if (highlightId && !isLoading) {
+      setTimeout(() => {
+        const element = document.getElementById(`article-${highlightId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+    }
+  }, [highlightId, isLoading]);
 
   const mapStatus = (backendStatus: string): Status => {
     switch(backendStatus) {
@@ -147,8 +172,68 @@ const MyArticles = () => {
   };
 
   const handleEdit = (article: Article) => {
-    if (article.status !== 'Submitted') return;
-    navigate('/author/submit', { state: { draft: article } });
+    if (article.status !== 'Needs Revision') return;
+    setRevisionArticle(article);
+    setRevisionAbstract(article.abstract);
+    setRevisionFile(null);
+    setRevisionError('');
+    setIsRevisionModalOpen(true);
+  };
+
+  const handleRevisionFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+    const ext = selected.name.split('.').pop()?.toLowerCase();
+    if (ext !== 'pdf') {
+      setRevisionError('Only PDF files are allowed.');
+      return;
+    }
+    if (selected.size > 25 * 1024 * 1024) {
+      setRevisionError('File size must be under 25MB.');
+      return;
+    }
+    setRevisionFile(selected);
+    setRevisionError('');
+  };
+
+  const handleRevisionSubmit = async () => {
+    if (!revisionArticle) return;
+    if (!revisionAbstract.trim()) {
+      setRevisionError('Abstract is required.');
+      return;
+    }
+    setIsRevisionSubmitting(true);
+    setRevisionError('');
+    try {
+      const payload = new FormData();
+      payload.append('abstract', revisionAbstract);
+      payload.append('title', revisionArticle.title); // send unchanged title
+      if (revisionFile) payload.append('pdf', revisionFile);
+      const response = await api.put(`/articles/${revisionArticle.id}`, payload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (response.data.success) {
+        showToast('Revision submitted successfully!', 'success');
+        setIsRevisionModalOpen(false);
+        // Refresh article list
+        const res = await api.get('/articles');
+        if (res.data.success) {
+          setArticles(res.data.articles.filter((a: any) => a.status !== 'draft').map((a: any) => ({
+            id: a.articleId,
+            title: a.title,
+            category: 'Mathematics',
+            dateSubmitted: new Date(a.createdAt._seconds * 1000).toISOString(),
+            status: mapStatus(a.status),
+            abstract: a.abstract,
+            versions: [{ version: 1, uploadedBy: 'Author' as const, timestamp: new Date(a.createdAt._seconds * 1000).toLocaleString(), fileName: a.pdfUrl?.split('/').pop() || 'manuscript.pdf' }]
+          })));
+        }
+      }
+    } catch (error: any) {
+      setRevisionError(error.response?.data?.error || 'Failed to submit revision.');
+    } finally {
+      setIsRevisionSubmitting(false);
+    }
   };
 
   const handleDelete = async (article: Article) => {
@@ -276,7 +361,14 @@ const MyArticles = () => {
               </thead>
               <tbody className="divide-y divide-zinc-50">
                 {filteredArticles.map((article) => (
-                  <tr key={article.id} className="group hover:bg-zinc-50/50 transition-colors">
+                  <tr 
+                    key={article.id} 
+                    id={`article-${article.id}`}
+                    className={cn(
+                      "group hover:bg-zinc-50/50 transition-colors relative",
+                      highlightId === article.id && "bg-black/[0.03] animate-pulse border-l-4 border-black"
+                    )}
+                  >
                     <td className="px-6 py-5">
                       <div>
                         <p className="text-[9px] font-black text-zinc-400 mb-1 leading-none tracking-widest">{article.id}</p>
@@ -323,25 +415,16 @@ const MyArticles = () => {
                         >
                           <Download size={18} />
                         </button>
-                        {article.status === 'Needs Revision' && (
-                          <button 
-                            onClick={() => openDetails(article)}
-                            className="p-2 hover:bg-rose-50 rounded-lg text-rose-400 hover:text-rose-600 transition-all animate-pulse"
-                            title="Resubmit"
-                          >
-                            <RefreshCw size={18} />
-                          </button>
-                        )}
                         <button 
                           onClick={() => handleEdit(article)}
-                          disabled={article.status !== 'Submitted'}
+                          disabled={article.status !== 'Needs Revision'}
                           className={cn(
                             "p-2 rounded-lg transition-all",
-                            article.status === 'Submitted' 
-                              ? "text-zinc-400 hover:text-black hover:bg-zinc-100" 
+                            article.status === 'Needs Revision' 
+                              ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50 animate-pulse" 
                               : "text-zinc-200 cursor-not-allowed"
                           )}
-                          title="Edit Manuscript"
+                          title={article.status === 'Needs Revision' ? 'Submit Revision' : `Editing locked (${article.status})`}
                         >
                           <Edit2 size={18} />
                         </button>
@@ -354,7 +437,7 @@ const MyArticles = () => {
                               ? "text-zinc-400 hover:text-rose-600 hover:bg-rose-50" 
                               : "text-zinc-200 cursor-not-allowed"
                           )}
-                          title="Delete Manuscript"
+                          title={article.status === 'Submitted' ? 'Delete Manuscript' : 'Cannot delete after review begins'}
                         >
                           <Trash2 size={18} />
                         </button>
@@ -477,16 +560,16 @@ const MyArticles = () => {
                   <div className="flex items-center gap-3">
                     <button 
                       onClick={() => handleEdit(selectedArticle)}
-                      disabled={selectedArticle.status !== 'Submitted'}
+                      disabled={selectedArticle.status !== 'Needs Revision'}
                       className={cn(
                         "flex items-center gap-2 px-6 py-4 rounded-2xl font-bold text-[10px] tracking-[0.2em] transition-all uppercase shadow-xl shadow-black/5",
-                        selectedArticle.status === 'Submitted'
-                          ? "bg-white border border-zinc-200 text-black hover:bg-zinc-50"
+                        selectedArticle.status === 'Needs Revision'
+                          ? "bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 animate-pulse"
                           : "bg-zinc-50 border border-zinc-100 text-zinc-300 cursor-not-allowed"
                       )}
                     >
                       <Edit2 size={16} />
-                      Edit Details
+                      {selectedArticle.status === 'Needs Revision' ? 'Submit Revision' : 'Edit Locked'}
                     </button>
                     <button 
                       onClick={() => handleDelete(selectedArticle)}
@@ -517,6 +600,160 @@ const MyArticles = () => {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Revision Modal */}
+      {isRevisionModalOpen && revisionArticle && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isRevisionSubmitting && setIsRevisionModalOpen(false)} />
+          <div className="relative bg-white w-full max-w-2xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300 border border-white/20">
+            {/* Header */}
+            <div className="px-8 py-6 border-b border-zinc-100 flex items-center justify-between bg-amber-50/50 backdrop-blur-md">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
+                  <Edit2 size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-black tracking-tight font-['Outfit'] text-lg">Submit Revision</h3>
+                  <p className="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Only abstract & document can be updated</p>
+                </div>
+              </div>
+              <button
+                onClick={() => !isRevisionSubmitting && setIsRevisionModalOpen(false)}
+                className="w-10 h-10 rounded-full hover:bg-zinc-200 flex items-center justify-center text-zinc-400 hover:text-black transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-6">
+              {/* Error Banner */}
+              {revisionError && (
+                <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-2">
+                  <AlertCircle size={16} className="text-rose-500 shrink-0" />
+                  <p className="text-xs font-bold text-rose-600">{revisionError}</p>
+                </div>
+              )}
+
+              {/* Title — Read Only */}
+              <div>
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Article Title</label>
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-zinc-100 rounded-md">
+                    <Lock size={10} className="text-zinc-400" />
+                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest">Locked after submission</span>
+                  </div>
+                </div>
+                <div className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm text-zinc-500 font-medium cursor-not-allowed select-none">
+                  {revisionArticle.title}
+                </div>
+              </div>
+
+              {/* Abstract — Editable */}
+              <div>
+                <div className="flex justify-between items-center mb-2 px-1">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                    Updated Abstract <span className="text-amber-500">*</span>
+                  </label>
+                  <span className="text-[8px] font-bold text-emerald-500 tracking-wider bg-emerald-50 px-2 py-1 rounded">EDITABLE</span>
+                </div>
+                <textarea
+                  value={revisionAbstract}
+                  onChange={(e) => setRevisionAbstract(e.target.value)}
+                  rows={6}
+                  className="w-full px-5 py-4 bg-white border border-amber-200 rounded-2xl text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all resize-none placeholder:text-zinc-400"
+                  placeholder="Update your abstract based on reviewer feedback..."
+                />
+              </div>
+
+              {/* PDF Upload */}
+              <div>
+                <div className="flex justify-between items-center mb-2 px-1">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                    Revised Document
+                  </label>
+                  <span className="text-[8px] font-bold text-emerald-500 tracking-wider bg-emerald-50 px-2 py-1 rounded">EDITABLE</span>
+                </div>
+
+                {revisionFile ? (
+                  <div className="p-5 bg-white border border-amber-200 rounded-2xl flex items-center gap-4 animate-in zoom-in duration-300">
+                    <div className="w-12 h-12 bg-amber-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
+                      <FileText size={22} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-black truncate">{revisionFile.name}</p>
+                      <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+                        {(revisionFile.size / (1024 * 1024)).toFixed(2)} MB • Ready to upload
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setRevisionFile(null); if (revisionFileRef.current) revisionFileRef.current.value = ''; }}
+                      className="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => revisionFileRef.current?.click()}
+                    className="w-full p-8 bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl flex flex-col items-center gap-3 hover:border-amber-400 hover:bg-amber-50/30 transition-all group cursor-pointer"
+                  >
+                    <div className="w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center text-zinc-300 group-hover:text-amber-500 transition-all border border-zinc-100">
+                      <FileUp size={24} />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-zinc-600">Click to select revised PDF</p>
+                      <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest mt-1">PDF only • Max 25MB</p>
+                    </div>
+                  </button>
+                )}
+                <input
+                  type="file"
+                  ref={revisionFileRef}
+                  onChange={handleRevisionFileChange}
+                  accept=".pdf"
+                  className="hidden"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-8 py-5 border-t border-zinc-100 bg-zinc-50/50 flex items-center justify-between">
+              <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest">
+                Revision for {revisionArticle.id}
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => !isRevisionSubmitting && setIsRevisionModalOpen(false)}
+                  disabled={isRevisionSubmitting}
+                  className="px-6 py-3 bg-white border border-zinc-200 rounded-xl text-[10px] font-black tracking-widest text-zinc-500 hover:bg-zinc-50 transition-all uppercase"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRevisionSubmit}
+                  disabled={isRevisionSubmitting}
+                  className="flex items-center gap-2 px-8 py-3 bg-amber-500 text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all shadow-xl shadow-amber-500/20 active:scale-95 uppercase disabled:bg-zinc-200 disabled:shadow-none disabled:cursor-not-allowed"
+                >
+                  {isRevisionSubmitting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw size={16} />
+                      Submit Revision
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
