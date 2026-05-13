@@ -1,6 +1,6 @@
 import multer from 'multer';
 
-// Use memory storage so we can upload directly to R2 without writing to local disk
+// Use memory storage so we can upload directly to cloud without writing to local disk
 const storage = multer.memoryStorage();
 
 export const upload = multer({
@@ -9,10 +9,17 @@ export const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10 MB limit
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
+    const allowedMimeTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/webp'
+    ];
+
+    if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF files are allowed.'));
+      cb(new Error('Invalid file type. Only PDF, JPEG, PNG, and WEBP are allowed.'));
     }
   }
 });

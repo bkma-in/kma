@@ -17,6 +17,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1042.0",
     "@getbrevo/brevo": "^5.0.4",
     "cashfree-pg": "^5.1.3",
+    "cloudinary": "^2.10.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
