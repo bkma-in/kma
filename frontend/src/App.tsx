@@ -43,39 +43,6 @@ function App() {
     return unsubscribe;
   }, []);
 
-  // EXTREME back-button paralysis: only active on main dashboard landing paths
-  useEffect(() => {
-    if (!user) return;
-    
-    const portalPrefixes = [
-      '/author', 
-      '/admin-dashboard', 
-      '/reviewer-dashboard', 
-      '/developer-dashboard'
-    ];
-    
-    const currentPath = location.pathname;
-    const isProtectedPath = portalPrefixes.some(p => currentPath.startsWith(p));
-
-    if (!isProtectedPath) return;
-
-    // Overwrite history immediately to make the current page the "forward" state
-    window.history.pushState(null, '', window.location.href);
-
-    const handlePopState = () => {
-      // Force the browser 'forward' again
-      window.history.forward();
-      window.history.pushState(null, '', window.location.href);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    window.history.forward();
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [user, location.pathname]);
-
   if (initializing) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
