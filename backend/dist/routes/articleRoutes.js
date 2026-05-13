@@ -5,20 +5,34 @@ const firebase_1 = require("../config/firebase");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const uploadMiddleware_1 = require("../middleware/uploadMiddleware");
 const storageService_1 = require("../services/storageService");
+const cloudinaryService_1 = require("../services/cloudinaryService");
 const router = (0, express_1.Router)();
 // Submit Article or Save Draft (Author only)
-router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['author']), uploadMiddleware_1.upload.single('pdf'), async (req, res) => {
+router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['author']), uploadMiddleware_1.upload.fields([
+    { name: 'pdf', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 }
+]), async (req, res) => {
     try {
         const { title, abstract, status = 'submitted' } = req.body;
         const authorId = req.user.uid;
+        const files = req.files;
+        const pdfFile = files?.pdf?.[0];
+        const thumbnailFile = files?.thumbnail?.[0];
         let objectKey = null;
         let pdfName = null;
-        if (req.file) {
-            objectKey = await (0, storageService_1.uploadPdfToR2)(req.file.buffer, req.file.originalname, authorId);
-            pdfName = req.file.originalname;
+        if (pdfFile) {
+            objectKey = await (0, storageService_1.uploadPdfToR2)(pdfFile.buffer, pdfFile.originalname, authorId);
+            pdfName = pdfFile.originalname;
         }
         else if (status !== 'draft') {
             return res.status(400).json({ error: 'PDF file is required for final submission' });
+        }
+        let thumbnailUrl = null;
+        let thumbnailPublicId = null;
+        if (thumbnailFile) {
+            const uploadResult = await (0, cloudinaryService_1.uploadImage)(thumbnailFile.buffer, 'articles');
+            thumbnailUrl = uploadResult.secure_url;
+            thumbnailPublicId = uploadResult.public_id;
         }
         const articleRef = firebase_1.db.collection('articles').doc();
         const newArticle = {
@@ -30,6 +44,8 @@ router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)
             status, // 'draft' or 'submitted'
             pdfUrl: objectKey,
             pdfName,
+            thumbnail: thumbnailUrl,
+            thumbnailPublicId: thumbnailPublicId,
             issueId: null,
             createdAt: new Date(),
             updatedAt: new Date()
@@ -83,6 +99,10 @@ router.delete('/:id', authMiddleware_1.requireAuth, async (req, res) => {
         if (role !== 'admin' && !['draft', 'submitted'].includes(article.status)) {
             return res.status(400).json({ error: 'Cannot delete article that is already under review or published' });
         }
+        // Cleanup Cloudinary thumbnail if exists
+        if (article.thumbnailPublicId) {
+            await (0, cloudinaryService_1.deleteImage)(article.thumbnailPublicId);
+        }
         await articleRef.delete();
         res.json({ success: true, message: 'Article deleted successfully' });
     }
@@ -135,7 +155,14 @@ router.get('/:id/pdf', authMiddleware_1.requireAuth, async (req, res) => {
     }
 });
 // Update Article (Author only)
-router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['author']), uploadMiddleware_1.upload.single('pdf'), async (req, res) => {
+// Enforces status-based edit restrictions:
+// - draft: full editing allowed (title, abstract, category, pdf, thumbnail)
+// - revision_requested: only abstract and pdf can be updated; title is locked
+// - all other statuses: editing is blocked entirely
+router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['author']), uploadMiddleware_1.upload.fields([
+    { name: 'pdf', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 }
+]), async (req, res) => {
     try {
         const id = req.params.id;
         const { title, abstract, status = 'draft' } = req.body;
@@ -146,22 +173,73 @@ router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRol
             return res.status(404).json({ error: 'Article not found' });
         }
         const article = doc.data();
+        // Ownership check
         if (article.authorId !== authorId) {
             return res.status(403).json({ error: 'Unauthorized to update this article' });
         }
-        const updateData = {
-            title,
-            abstract,
-            status,
-            updatedAt: new Date()
-        };
-        if (req.file) {
-            const objectKey = await (0, storageService_1.uploadPdfToR2)(req.file.buffer, req.file.originalname, authorId);
-            updateData.pdfUrl = objectKey;
-            updateData.pdfName = req.file.originalname;
+        // Status-based edit restriction
+        const currentStatus = article.status;
+        const editableStatuses = ['draft', 'revision_requested'];
+        if (!editableStatuses.includes(currentStatus)) {
+            return res.status(403).json({
+                error: `Editing is not allowed when article status is "${currentStatus}". Editing is only permitted for drafts or when revision is requested.`
+            });
+        }
+        const files = req.files;
+        const pdfFile = files?.pdf?.[0];
+        const thumbnailFile = files?.thumbnail?.[0];
+        let updateData = { updatedAt: new Date() };
+        if (currentStatus === 'revision_requested') {
+            // REVISION MODE: Only abstract and PDF can be updated. Title is locked.
+            if (title && title !== article.title) {
+                return res.status(403).json({
+                    error: 'Title cannot be modified after submission. Only abstract and document can be updated during revision.'
+                });
+            }
+            updateData.abstract = abstract || article.abstract;
+            // Store revision history before overwriting PDF
+            if (pdfFile) {
+                const revisionHistory = article.revisionHistory || [];
+                if (article.pdfUrl) {
+                    revisionHistory.push({
+                        version: revisionHistory.length + 1,
+                        pdfUrl: article.pdfUrl,
+                        pdfName: article.pdfName,
+                        replacedAt: new Date(),
+                        abstract: article.abstract
+                    });
+                    updateData.revisionHistory = revisionHistory;
+                }
+                const objectKey = await (0, storageService_1.uploadPdfToR2)(pdfFile.buffer, pdfFile.originalname, authorId);
+                updateData.pdfUrl = objectKey;
+                updateData.pdfName = pdfFile.originalname;
+            }
+            // Auto-set status back to submitted after revision
+            updateData.status = 'submitted';
+        }
+        else {
+            // DRAFT MODE: Full editing allowed (Continuity flow)
+            updateData.title = title;
+            updateData.abstract = abstract;
+            updateData.status = status;
+            if (pdfFile) {
+                const objectKey = await (0, storageService_1.uploadPdfToR2)(pdfFile.buffer, pdfFile.originalname, authorId);
+                updateData.pdfUrl = objectKey;
+                updateData.pdfName = pdfFile.originalname;
+            }
+            if (thumbnailFile) {
+                // Delete old thumbnail
+                if (article.thumbnailPublicId) {
+                    await (0, cloudinaryService_1.deleteImage)(article.thumbnailPublicId);
+                }
+                // Upload new thumbnail
+                const uploadResult = await (0, cloudinaryService_1.uploadImage)(thumbnailFile.buffer, 'articles');
+                updateData.thumbnail = uploadResult.secure_url;
+                updateData.thumbnailPublicId = uploadResult.public_id;
+            }
         }
         await articleRef.update(updateData);
-        res.json({ success: true, message: 'Article updated successfully' });
+        res.json({ success: true, message: currentStatus === 'revision_requested' ? 'Revision submitted successfully' : 'Article updated successfully' });
     }
     catch (error) {
         console.error('Update article error:', error);

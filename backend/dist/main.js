@@ -12,6 +12,7 @@ const articleRoutes_1 = __importDefault(require("./routes/articleRoutes"));
 const issueRoutes_1 = __importDefault(require("./routes/issueRoutes"));
 const subscriptionRoutes_1 = __importDefault(require("./routes/subscriptionRoutes"));
 const webhookRoutes_1 = __importDefault(require("./routes/webhookRoutes"));
+const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 // Use express.raw for webhooks to verify signatures
@@ -23,6 +24,7 @@ app.use('/api/auth', authRoutes_1.default);
 app.use('/api/articles', articleRoutes_1.default);
 app.use('/api/issues', issueRoutes_1.default);
 app.use('/api/subscriptions', subscriptionRoutes_1.default);
+app.use('/api/users', userRoutes_1.default);
 app.get('/', (req, res) => {
     res.send({ status: 'ok', message: 'KMA Backend is running' });
 });
