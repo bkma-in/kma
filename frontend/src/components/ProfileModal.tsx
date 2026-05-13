@@ -19,7 +19,7 @@ interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   profile: UserProfile | null;
-  onSave: (newData: UserProfile) => Promise<{ success: boolean; error?: string }>;
+  onSave: (newData: UserProfile, imageFile?: File | null) => Promise<{ success: boolean; error?: string }>;
 }
 
 const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, onSave }) => {
@@ -28,6 +28,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<UserProfile | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -42,15 +44,15 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        showToast('Image size should be less than 10MB', 'error');
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Image size should be less than 5MB', 'error');
         return;
       }
+      setSelectedFile(file);
+      setImageRemoved(false);
       const reader = new FileReader();
       reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setPreviewImage(base64);
-        setFormData({ ...formData, profileImage: base64 });
+        setPreviewImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -78,12 +80,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
     }
 
     setIsSaving(true);
-    const result = await onSave(formData);
+    const result = await onSave(formData, imageRemoved ? null : selectedFile);
     setIsSaving(false);
 
     if (result.success) {
       showToast('Profile updated successfully', 'success');
       setIsEditing(false);
+      setSelectedFile(null);
+      setImageRemoved(false);
     } else {
       showToast(result.error || 'Failed to update profile', 'error');
     }
@@ -151,7 +155,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
               type="button"
               onClick={() => {
                 setPreviewImage(null);
-                setFormData({ ...formData, profileImage: null });
+                setSelectedFile(null);
+                setImageRemoved(true);
               }}
               className="flex items-center gap-3 text-rose-500 hover:text-rose-400 transition-colors py-2 group mb-4"
             >

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getProfile, updateProfile as apiUpdateProfile } from '../services/user.service';
 
 export interface UserProfile {
   name: string;
@@ -10,69 +11,67 @@ export interface UserProfile {
 
 export const useProfile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const loadProfile = useCallback(() => {
-    const role = localStorage.getItem('role') || 'User';
-    const email = localStorage.getItem('userEmail') || '';
-    
-    // Try to get stored profile data
-    const storedProfile = localStorage.getItem(`profile_${email}`);
-    
-    if (storedProfile) {
-      setProfile(JSON.parse(storedProfile));
-    } else {
-      // Default profile based on role/localStorage
-      const defaultProfile: UserProfile = {
-        name: localStorage.getItem('userName') || (role === 'admin' ? 'Admin Manager' : 'Portal User'),
-        email: email,
-        role: role.charAt(0).toUpperCase() + role.slice(1),
+  const loadProfile = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await getProfile();
+      if (response.success) {
+        setProfile(response.profile);
+      }
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+      // Fallback to local data if available or default
+      const role = localStorage.getItem('role') || 'User';
+      const email = localStorage.getItem('userEmail') || '';
+      setProfile({
+        name: localStorage.getItem('userName') || 'Portal User',
+        email,
+        role,
         phone: '',
         profileImage: null
-      };
-      setProfile(defaultProfile);
+      });
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadProfile();
     
-    // Listen for storage changes and custom profile updates
     const handleSync = () => loadProfile();
-    
-    window.addEventListener('storage', handleSync);
     window.addEventListener('profile-update', handleSync);
-    
-    return () => {
-      window.removeEventListener('storage', handleSync);
-      window.removeEventListener('profile-update', handleSync);
-    };
+    return () => window.removeEventListener('profile-update', handleSync);
   }, [loadProfile]);
 
-  const updateProfile = async (newData: UserProfile) => {
+  const updateProfile = async (newData: UserProfile, imageFile?: File | null) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const formData = new FormData();
+      formData.append('name', newData.name);
+      formData.append('phone', newData.phone || '');
       
-      localStorage.setItem(`profile_${newData.email}`, JSON.stringify(newData));
-      localStorage.setItem('userName', newData.name);
-      setProfile(newData);
-      
-      // Sync across same tab
-      window.dispatchEvent(new CustomEvent('profile-update'));
-      
-      // Sync across different tabs
-      window.dispatchEvent(new StorageEvent('storage', { key: `profile_${newData.email}` }));
-      
-      return { success: true };
-    } catch (error: any) {
-      if (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-        console.error('Storage quota exceeded');
-        return { success: false, error: 'Image is too large for local storage. Please use a smaller file (< 3MB).' };
+      if (imageFile) {
+        formData.append('profileImage', imageFile);
+      } else if (imageFile === null) {
+        // Explicitly remove image
+        formData.append('profileImage', 'null');
       }
+
+      const response = await apiUpdateProfile(formData);
+      
+      if (response.success) {
+        setProfile(response.profile);
+        localStorage.setItem('userName', response.profile.name);
+        window.dispatchEvent(new CustomEvent('profile-update'));
+        return { success: true };
+      }
+      return { success: false, error: response.error || 'Failed to update profile' };
+    } catch (error: any) {
       console.error('Failed to update profile:', error);
-      return { success: false };
+      return { success: false, error: error.message || 'An unexpected error occurred' };
     }
   };
 
-  return { profile, updateProfile, refreshProfile: loadProfile };
+  return { profile, loading, updateProfile, refreshProfile: loadProfile };
 };

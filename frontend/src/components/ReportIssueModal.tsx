@@ -14,6 +14,8 @@ window.onerror = (message) => {
   lastFrontendError = String(message);
 };
 
+import { reportIssue } from '../services/user.service';
+
 const ReportIssueModal: React.FC<ReportIssueModalProps> = ({ isOpen, onClose, userRole }) => {
   const [issueType, setIssueType] = useState('');
   const [description, setDescription] = useState('');
@@ -66,27 +68,25 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({ isOpen, onClose, us
     };
 
     try {
-      // Logic from HEAD (Placeholder for real API)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Reporting Issue:', { issueType, description, screenshot: screenshot?.name, metadata });
+      const formData = new FormData();
+      formData.append('type', issueType);
+      formData.append('description', description);
+      formData.append('metadata', JSON.stringify(metadata));
+      if (screenshot) {
+        formData.append('screenshot', screenshot);
+      }
 
-      // Logic from UPSTREAM (Integration with Developer Dashboard)
-      const newIssue: any = {
-        id: `ISS-${Date.now().toString().slice(-6)}`,
-        type: issueType,
-        description,
-        screenshot: screenshotPreview,
-        status: 'Open',
-        createdAt: new Date().toISOString(),
-        metadata
-      };
-      const existingIssues = JSON.parse(localStorage.getItem('kma_reported_issues') || '[]');
-      localStorage.setItem('kma_reported_issues', JSON.stringify([newIssue, ...existingIssues]));
+      const response = await reportIssue(formData);
 
-      setIsSuccess(true);
-      setTimeout(() => onClose(), 2000);
+      if (response.success) {
+        setIsSuccess(true);
+        setTimeout(() => onClose(), 2000);
+      } else {
+        throw new Error(response.error || 'Failed to report issue');
+      }
     } catch (error) {
       console.error('Failed to report issue:', error);
+      alert('Failed to report issue. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
