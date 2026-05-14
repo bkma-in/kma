@@ -13,6 +13,7 @@ interface ConfirmOptions {
   message: string;
   confirmText?: string;
   cancelText?: string;
+  requiredConfirmationText?: string;
   onConfirm: () => void;
   onCancel?: () => void;
 }
