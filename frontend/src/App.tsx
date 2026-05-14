@@ -23,6 +23,7 @@ import ReviewerNotifications from './pages/reviewer/ReviewerNotifications'
 import DeveloperLayout from './layouts/DeveloperLayout'
 import DeveloperDashboard from './pages/developer/DeveloperDashboard'
 import DeveloperIssues from './pages/developer/DeveloperIssues'
+import AcceptInvitation from './pages/AcceptInvitation'
 
 function App() {
   const [initializing, setInitializing] = useState(true);
@@ -69,6 +70,7 @@ function App() {
       <Routes>
         <Route path="/" element={user ? <Navigate to={getDashboardRedirect()} replace /> : <LandingPage />} />
         <Route path="/auth" element={user ? <Navigate to={getDashboardRedirect()} replace /> : <Auth />} />
+        <Route path="/invitation/accept/:token" element={<AcceptInvitation />} />
         
         {/* Author Portal Routes */}
         <Route path="/author" element={user ? <AuthorLayout /> : <Navigate to="/auth" replace />}>
