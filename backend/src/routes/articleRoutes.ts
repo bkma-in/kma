@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { db } from '../config/firebase';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/authMiddleware';
 import { upload } from '../middleware/uploadMiddleware';
@@ -14,8 +15,10 @@ router.post('/', requireAuth, requireRole(['author']), upload.fields([
   { name: 'thumbnail', maxCount: 1 }
 ]), async (req: AuthRequest, res) => {
   try {
-    const { title, abstract, status = 'submitted' } = req.body;
+    const { title, abstract, status: requestedStatus = 'submitted', inviteeUserIds } = req.body;
     const authorId = req.user!.uid;
+    const authorName = req.user!.name || 'Author';
+    const authorEmail = req.user!.email || '';
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const pdfFile = files?.pdf?.[0];
@@ -26,7 +29,7 @@ router.post('/', requireAuth, requireRole(['author']), upload.fields([
     if (pdfFile) {
       objectKey = await uploadPdfToR2(pdfFile.buffer, pdfFile.originalname, authorId);
       pdfName = pdfFile.originalname;
-    } else if (status !== 'draft') {
+    } else if (requestedStatus !== 'draft') {
       return res.status(400).json({ error: 'PDF file is required for final submission' });
     }
 
@@ -38,14 +41,35 @@ router.post('/', requireAuth, requireRole(['author']), upload.fields([
       thumbnailPublicId = uploadResult.public_id;
     }
 
+    const invitees = Array.isArray(inviteeUserIds) ? inviteeUserIds : (inviteeUserIds ? [inviteeUserIds] : []);
+    
+    // Rule: Article remains in DRAFT while there are pending invitations
+    let finalStatus = requestedStatus;
+    if (invitees.length > 0) {
+      finalStatus = 'draft';
+    }
+
+    const participantIds = [authorId, ...invitees];
+
     const articleRef = db.collection('articles').doc();
-    const newArticle = {
+    const newArticle: any = {
       articleId: articleRef.id,
       title,
       abstract,
-      authorId,
+      authorId, // Legacy field (submitter)
+      participantIds, // New field for querying
+      authors: [
+        { 
+          userId: authorId, 
+          name: authorName, 
+          email: authorEmail, 
+          role: 'submitter', 
+          accepted: true, 
+          acceptedAt: new Date() 
+        }
+      ],
       reviewerId: null,
-      status, // 'draft' or 'submitted'
+      status: finalStatus,
       pdfUrl: objectKey, 
       pdfName,
       thumbnail: thumbnailUrl,
@@ -57,7 +81,67 @@ router.post('/', requireAuth, requireRole(['author']), upload.fields([
 
     await articleRef.set(newArticle);
 
-    res.json({ success: true, article: newArticle });
+    // Create invitations if any
+    if (invitees.length > 0) {
+      const invitationsBatch = db.batch();
+      for (const inviteeId of invitees) {
+        if (inviteeId === authorId) continue; // Prevent self-invite
+
+        // Fetch invitee details
+        const inviteeDoc = await db.collection('users').doc(inviteeId).get();
+        if (!inviteeDoc.exists) continue;
+        const inviteeData = inviteeDoc.data()!;
+
+        const inviteRef = articleRef.collection('invitations').doc();
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7);
+
+        const invitation = {
+          inviteId: inviteRef.id,
+          inviteeUserId: inviteeId,
+          inviteeEmail: inviteeData.email,
+          inviteeName: inviteeData.name,
+          inviterUserId: authorId,
+          token,
+          status: 'pending',
+          invitedAt: new Date(),
+          expiresAt,
+          history: [{ action: 'sent', at: new Date(), note: 'Initial invitation' }]
+        };
+
+        invitationsBatch.set(inviteRef, invitation);
+
+        // Create Notification
+        const notificationRef = db.collection('notifications').doc();
+        invitationsBatch.set(notificationRef, {
+          notificationId: notificationRef.id,
+          userId: inviteeId,
+          type: 'INVITATION_SENT',
+          title: 'Co-author Invitation',
+          message: `${authorName} has invited you to co-author the article "${title}".`,
+          metadata: { articleId: articleRef.id, inviteId: inviteRef.id, token },
+          read: false,
+          createdAt: new Date()
+        });
+
+        // Also add to article authors array (pending)
+        newArticle.authors.push({
+          userId: inviteeId,
+          name: inviteeData.name,
+          email: inviteeData.email,
+          role: 'coauthor',
+          accepted: false,
+          invitedAt: new Date()
+        });
+      }
+      await invitationsBatch.commit();
+      
+      // Update article with pending authors
+      await articleRef.update({ authors: newArticle.authors });
+    }
+
+    res.json({ success: true, article: newArticle, invitationsQueued: invitees.length > 0 });
   } catch (error) {
     console.error('Save article error:', error);
     res.status(500).json({ error: 'Failed to save article' });
@@ -71,7 +155,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     let query = db.collection('articles') as FirebaseFirestore.Query;
 
     if (role === 'author') {
-      query = query.where('authorId', '==', uid);
+      // Search in participantIds which includes submitter and co-authors
+      query = query.where('participantIds', 'array-contains', uid);
     } else if (role === 'reviewer') {
       query = query.where('reviewerId', '==', uid);
     }
@@ -80,8 +165,33 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       query = query.where('status', '==', 'accepted');
     }
 
-    const snapshot = await query.orderBy('createdAt', 'desc').get();
-    const articles = snapshot.docs.map(doc => doc.data());
+    // Note: We removed orderBy('createdAt', 'desc') here to avoid a composite index requirement 
+    // for the 'participantIds' array-contains filter. We'll sort in memory.
+    const snapshot = await query.get();
+    let articles = snapshot.docs.map(doc => {
+      const data = doc.data();
+      // Legacy mapping
+      if (!data.authors && data.authorId) {
+        data.authors = [
+          { 
+            userId: data.authorId, 
+            name: 'Original Author', // We don't have the name here easily, but we can map it
+            email: '', 
+            role: 'submitter', 
+            accepted: true, 
+            acceptedAt: data.createdAt 
+          }
+        ];
+      }
+      return data;
+    });
+
+    // In-memory sort since we can't use composite index easily
+    articles.sort((a, b) => {
+      const timeA = a.createdAt?._seconds || 0;
+      const timeB = b.createdAt?._seconds || 0;
+      return timeB - timeA;
+    });
 
     res.json({ success: true, articles });
   } catch (error) {
@@ -220,7 +330,44 @@ router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
     const pdfFile = files?.pdf?.[0];
     const thumbnailFile = files?.thumbnail?.[0];
 
+    const { includeAcceptedOnly, forceSubmitWithoutRejected, submissionNotes } = req.body;
+
     let updateData: any = { updatedAt: new Date() };
+
+    // Invitation Check for Final Submission
+    if (status === 'submitted') {
+      const invitationsSnapshot = await articleRef.collection('invitations').get();
+      const invitations = invitationsSnapshot.docs.map(doc => doc.data());
+      
+      const pendingInvites = invitations.filter(i => i.status === 'pending');
+      const rejectedInvites = invitations.filter(i => i.status === 'rejected');
+
+      if (pendingInvites.length > 0 && !includeAcceptedOnly) {
+        return res.status(400).json({ 
+          error: 'Cannot submit article with pending invitations. Please wait for responses or choose to proceed without pending co-authors.',
+          pendingCount: pendingInvites.length 
+        });
+      }
+
+      if (rejectedInvites.length > 0 && !forceSubmitWithoutRejected) {
+        return res.status(400).json({ 
+          error: 'There are rejected invitations. Please re-invite these authors or explicitly confirm you want to proceed without them.',
+          rejectedCount: rejectedInvites.length
+        });
+      }
+
+      // Record Draft Resolution if forced or filtered
+      if (includeAcceptedOnly || forceSubmitWithoutRejected) {
+        updateData.draftResolution = {
+          type: 'forceSubmit',
+          who: authorId,
+          at: new Date(),
+          reason: submissionNotes || (forceSubmitWithoutRejected ? 'Proceeded without rejected co-authors' : 'Proceeded with accepted co-authors only'),
+          pendingAtSubmit: pendingInvites.map(i => i.inviteeEmail || 'Unknown Email'),
+          rejectedAtSubmit: rejectedInvites.map(i => i.inviteeEmail || 'Unknown Email')
+        };
+      }
+    }
 
     if (currentStatus === 'revision_requested') {
       // REVISION MODE: Only abstract and PDF can be updated. Title is locked.
@@ -256,8 +403,8 @@ router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
 
     } else {
       // DRAFT MODE: Full editing allowed (Continuity flow)
-      updateData.title = title;
-      updateData.abstract = abstract;
+      if (title) updateData.title = title;
+      if (abstract) updateData.abstract = abstract;
       updateData.status = status;
 
       if (pdfFile) {
@@ -281,7 +428,25 @@ router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
 
     await articleRef.update(updateData);
 
-    res.json({ success: true, message: currentStatus === 'revision_requested' ? 'Revision submitted successfully' : 'Article updated successfully' });
+    // Fetch latest data for summary if submitted
+    let summary = null;
+    if (updateData.status === 'submitted') {
+      const invitationsSnapshot = await articleRef.collection('invitations').get();
+      const invitations = invitationsSnapshot.docs.map(doc => doc.data());
+      const updatedArticle = (await articleRef.get()).data()!;
+      
+      summary = {
+        included: updatedArticle.authors.filter((a: any) => a.accepted),
+        pending: invitations.filter((i: any) => i.status === 'pending'),
+        rejected: invitations.filter((i: any) => i.status === 'rejected')
+      };
+    }
+
+    res.json({ 
+      success: true, 
+      message: currentStatus === 'revision_requested' ? 'Revision submitted successfully' : 'Article updated successfully',
+      submissionSummary: summary
+    });
   } catch (error) {
     console.error('Update article error:', error);
     res.status(500).json({ error: 'Failed to update article' });
@@ -337,6 +502,467 @@ router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), asy
   } catch (error) {
     console.error('Update status error:', error);
     res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// --- INVITATION ENDPOINTS ---
+
+// Create/Reset Invitation for an Article
+router.post('/:id/invitations', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const id = req.params.id as string;
+    const { inviteeUserId } = req.body;
+    const inviterUserId = req.user!.uid;
+    const inviterName = req.user!.name || 'Author';
+
+    const articleRef = db.collection('articles').doc(id);
+    const articleDoc = await articleRef.get();
+    if (!articleDoc.exists) return res.status(404).json({ error: 'Article not found' });
+    const articleData = articleDoc.data()!;
+
+    // Only submitter can invite
+    if (articleData.authorId !== inviterUserId) {
+      return res.status(403).json({ error: 'Only the submitter can invite co-authors' });
+    }
+
+    // Fetch invitee details
+    const inviteeDoc = await db.collection('users').doc(inviteeUserId).get();
+    if (!inviteeDoc.exists) return res.status(404).json({ error: 'Invitee not found' });
+    const inviteeData = inviteeDoc.data()!;
+
+    // Check if invitation already exists for this user
+    const invitationsSnapshot = await articleRef.collection('invitations')
+      .where('inviteeUserId', '==', inviteeUserId)
+      .limit(1)
+      .get();
+
+    let inviteRef;
+    let oldInvitation: any = null;
+
+    if (!invitationsSnapshot.empty) {
+      inviteRef = invitationsSnapshot.docs[0].ref;
+      oldInvitation = invitationsSnapshot.docs[0].data();
+    } else {
+      inviteRef = articleRef.collection('invitations').doc();
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const invitation: any = {
+      inviteId: inviteRef.id,
+      inviteeUserId,
+      inviteeEmail: inviteeData.email,
+      inviteeName: inviteeData.name,
+      inviterUserId,
+      token,
+      status: 'pending',
+      invitedAt: new Date(),
+      expiresAt,
+      history: (oldInvitation?.history || []).concat([{ action: 'sent', at: new Date(), note: 'Invitation created/reset' }])
+    };
+
+    await inviteRef.set(invitation);
+
+    // Create Notification
+    const notificationRef = db.collection('notifications').doc();
+    await notificationRef.set({
+      notificationId: notificationRef.id,
+      userId: inviteeUserId,
+      type: 'INVITATION_SENT',
+      title: 'Co-author Invitation',
+      message: `${inviterName} has invited you to co-author the article "${articleData.title}".`,
+      metadata: { articleId: id, inviteId: inviteRef.id, token },
+      read: false,
+      createdAt: new Date()
+    });
+
+    // Ensure user is in authors array as pending
+    const authors = articleData.authors || [];
+    const authorIdx = authors.findIndex((a: any) => a.userId === inviteeUserId);
+    if (authorIdx === -1) {
+      authors.push({
+        userId: inviteeUserId,
+        name: inviteeData.name,
+        email: inviteeData.email,
+        role: 'coauthor',
+        accepted: false,
+        invitedAt: new Date()
+      });
+    } else {
+      authors[authorIdx].accepted = false;
+      authors[authorIdx].invitedAt = new Date();
+    }
+
+    await articleRef.update({ 
+      authors,
+      status: 'draft' // Lock to draft if new invitation sent
+    });
+
+    res.json({ success: true, inviteId: inviteRef.id, token });
+  } catch (error) {
+    console.error('Create invitation error:', error);
+    res.status(500).json({ error: 'Failed to create invitation' });
+  }
+});
+
+// Resend Invitation
+router.post('/:id/invitations/:inviteId/resend', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const id = req.params.id as string;
+    const inviteId = req.params.inviteId as string;
+    const inviterUserId = req.user!.uid;
+    const inviterName = req.user!.name || 'Author';
+
+    const articleRef = db.collection('articles').doc(id);
+    const articleDoc = await articleRef.get();
+    if (!articleDoc.exists) return res.status(404).json({ error: 'Article not found' });
+    const articleData = articleDoc.data()!;
+
+    if (articleData.authorId !== inviterUserId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const inviteRef = articleRef.collection('invitations').doc(inviteId);
+    const inviteDoc = await inviteRef.get();
+    if (!inviteDoc.exists) return res.status(404).json({ error: 'Invitation not found' });
+    const inviteData = inviteDoc.data()!;
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const updateData = {
+      token,
+      status: 'pending',
+      invitedAt: new Date(),
+      expiresAt,
+      history: inviteData.history.concat([{ action: 'resend', at: new Date() }])
+    };
+
+    await inviteRef.update(updateData);
+
+    // Create Notification
+    const notificationRef = db.collection('notifications').doc();
+    await notificationRef.set({
+      notificationId: notificationRef.id,
+      userId: inviteData.inviteeUserId,
+      type: 'INVITATION_SENT',
+      title: 'Co-author Invitation (Resent)',
+      message: `${inviterName} has resent the invitation to co-author "${articleData.title}".`,
+      metadata: { articleId: id, inviteId, token },
+      read: false,
+      createdAt: new Date()
+    });
+
+    res.json({ success: true, token });
+  } catch (error) {
+    console.error('Resend invitation error:', error);
+    res.status(500).json({ error: 'Failed to resend invitation' });
+  }
+});
+
+// List Invitations for an Article
+router.get('/:id/invitations', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const id = req.params.id as string;
+    const uid = req.user!.uid;
+
+    const articleDoc = await db.collection('articles').doc(id).get();
+    if (!articleDoc.exists) return res.status(404).json({ error: 'Article not found' });
+    const articleData = articleDoc.data()!;
+
+    const isAuthorOrParticipant = articleData.authorId === uid || 
+      (articleData.authors && articleData.authors.some((a: any) => a.userId === uid)) ||
+      req.user!.role === 'admin';
+
+    if (!isAuthorOrParticipant) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const snapshot = await db.collection('articles').doc(id).collection('invitations').get();
+    const invitations = snapshot.docs.map(doc => doc.data());
+
+    res.json({ success: true, invitations });
+  } catch (error) {
+    console.error('List invitations error:', error);
+    res.status(500).json({ error: 'Failed to list invitations' });
+  }
+});
+
+// --- GLOBAL INVITATION ROUTES (Public-ish) ---
+
+// Get Invitation Metadata by Token
+router.get('/invitations/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { articleId } = req.query;
+    let snapshot;
+
+    if (!articleId) {
+      return res.status(400).json({ error: 'Missing articleId' });
+    }
+
+    // Direct lookup is efficient and doesn't require composite indexes
+    snapshot = await db.collection('articles').doc(articleId as string).collection('invitations')
+      .where('token', '==', token).limit(1).get();
+
+    if (!snapshot || snapshot.empty) {
+      return res.status(404).json({ error: 'Invitation not found or invalid token' });
+    }
+
+    const inviteData = snapshot.docs[0].data();
+    const articleRef = snapshot.docs[0].ref.parent.parent!;
+    const articleDoc = await articleRef.get();
+    const articleData = articleDoc.data()!;
+
+    res.json({ 
+      success: true, 
+      invitation: inviteData,
+      article: {
+        title: articleData.title,
+        abstract: articleData.abstract,
+        authorName: articleData.authors?.find((a: any) => a.role === 'submitter')?.name || 'Unknown'
+      }
+    });
+  } catch (error) {
+    console.error('Get invitation by token error:', error);
+    res.status(500).json({ error: 'Failed to fetch invitation details' });
+  }
+});
+
+router.post('/invitations/:token/accept', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { token } = req.params;
+    const { articleId } = req.query;
+    const uid = req.user!.uid;
+
+    if (!articleId) {
+      return res.status(400).json({ error: 'Missing articleId' });
+    }
+
+    const snapshot = await db.collection('articles').doc(articleId as string).collection('invitations')
+      .where('token', '==', token).limit(1).get();
+
+    if (!snapshot || snapshot.empty) return res.status(404).json({ error: 'Invalid token' });
+
+    const inviteRef = snapshot.docs[0].ref;
+    const inviteData = snapshot.docs[0].data();
+
+    if (inviteData.inviteeUserId !== uid) {
+      return res.status(403).json({ error: 'This invitation was not meant for you' });
+    }
+
+    if (inviteData.status !== 'pending') {
+      return res.status(400).json({ error: `Invitation is already ${inviteData.status}` });
+    }
+
+    if (new Date(inviteData.expiresAt._seconds * 1000) < new Date()) {
+      await inviteRef.update({ status: 'expired' });
+      return res.status(400).json({ error: 'Invitation has expired' });
+    }
+
+    const articleRef = inviteRef.parent.parent!;
+    const articleDoc = await articleRef.get();
+    const articleData = articleDoc.data()!;
+
+    // Update Invitation
+    await inviteRef.update({
+      status: 'accepted',
+      acceptedAt: new Date(),
+      history: inviteData.history.concat([{ action: 'accepted', at: new Date() }])
+    });
+
+    // Update Article Authors
+    const authors = articleData.authors || [];
+    const authorIdx = authors.findIndex((a: any) => a.userId === uid);
+    if (authorIdx !== -1) {
+      authors[authorIdx].accepted = true;
+      authors[authorIdx].acceptedAt = new Date();
+    } else {
+      authors.push({
+        userId: uid,
+        name: req.user!.name,
+        email: req.user!.email,
+        role: 'coauthor',
+        accepted: true,
+        acceptedAt: new Date()
+      });
+    }
+
+    // Check if all are accepted
+    const allAccepted = authors.every((a: any) => a.accepted === true);
+    const pendingAuthors = authors.filter((a: any) => !a.accepted).map((a: any) => a.name);
+    
+    let autoSubmitted = false;
+    // Only auto-submit if it was in draft status (waiting for co-authors)
+    if (allAccepted && articleData.status === 'draft') {
+      await articleRef.update({ 
+        authors,
+        status: 'submitted', 
+        submittedAt: new Date(),
+        updatedAt: new Date()
+      });
+      autoSubmitted = true;
+    } else {
+      await articleRef.update({ authors, updatedAt: new Date() });
+    }
+
+    res.json({ 
+      success: true, 
+      message: autoSubmitted 
+        ? 'Invitation accepted and manuscript automatically submitted for review!' 
+        : 'Invitation accepted. Awaiting other co-authors.',
+      autoSubmitted,
+      remainingAuthors: pendingAuthors
+    });
+  } catch (error) {
+    console.error('Accept invitation error:', error);
+    res.status(500).json({ error: 'Failed to accept invitation' });
+  }
+});
+
+router.post('/invitations/:token/reject', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { token } = req.params;
+    const { articleId } = req.query;
+    const { reason } = req.body;
+    const uid = req.user!.uid;
+
+    if (!reason || reason.length < 10) {
+      return res.status(400).json({ error: 'Rejection reason must be at least 10 characters' });
+    }
+
+    if (!articleId) {
+      return res.status(400).json({ error: 'Missing articleId' });
+    }
+
+    const snapshot = await db.collection('articles').doc(articleId as string).collection('invitations')
+      .where('token', '==', token).limit(1).get();
+
+    if (!snapshot || snapshot.empty) return res.status(404).json({ error: 'Invalid token' });
+
+    const inviteRef = snapshot.docs[0].ref;
+    const inviteData = snapshot.docs[0].data();
+
+    if (inviteData.inviteeUserId !== uid) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    await inviteRef.update({
+      status: 'rejected',
+      rejectedAt: new Date(),
+      rejectedReason: reason,
+      history: inviteData.history.concat([{ action: 'rejected', at: new Date(), note: reason }])
+    });
+
+    const articleRef = inviteRef.parent.parent!;
+    const articleDoc = await articleRef.get();
+    const articleData = articleDoc.data()!;
+
+    // Update authors array in article document
+    const authors = articleData.authors || [];
+    const authorIdx = authors.findIndex((a: any) => a.userId === uid);
+    if (authorIdx !== -1) {
+      authors[authorIdx].status = 'rejected';
+      authors[authorIdx].rejectedAt = new Date();
+      authors[authorIdx].rejectedReason = reason;
+      await articleRef.update({ authors });
+    }
+
+    // Notify inviter
+    const notificationRef = db.collection('notifications').doc();
+    await notificationRef.set({
+      notificationId: notificationRef.id,
+      userId: inviteData.inviterUserId,
+      type: 'INVITATION_REJECTED',
+      title: 'Invitation Rejected',
+      message: `${req.user!.name} has declined the invitation for "${articleData.title}". Reason: ${reason}`,
+      metadata: { articleId: articleData.articleId, rejectedReason: reason },
+      read: false,
+      createdAt: new Date()
+    });
+
+    res.json({ success: true, message: 'Invitation rejected' });
+  } catch (error) {
+    console.error('Reject invitation error:', error);
+    res.status(500).json({ error: 'Failed to reject invitation' });
+  }
+});
+
+// --- REVISION ENDPOINTS ---
+
+// Submitter Upload Revised Manuscript
+router.post('/:id/revisions', requireAuth, upload.fields([
+  { name: 'pdf', maxCount: 1 }
+]), async (req: AuthRequest, res) => {
+  try {
+    const id = req.params.id as string;
+    const { message } = req.body;
+    const uid = req.user!.uid;
+
+    const articleRef = db.collection('articles').doc(id);
+    const articleDoc = await articleRef.get();
+    if (!articleDoc.exists) return res.status(404).json({ error: 'Article not found' });
+    const articleData = articleDoc.data()!;
+
+    // Only submitter can upload revisions
+    if (articleData.authorId !== uid) {
+      return res.status(403).json({ error: 'Only the original submitter can upload revised manuscripts' });
+    }
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const pdfFile = files?.pdf?.[0];
+
+    if (!pdfFile) {
+      return res.status(400).json({ error: 'Revised PDF file is required' });
+    }
+
+    // Backup current PDF to history
+    const revisionHistory = articleData.revisionHistory || [];
+    revisionHistory.push({
+      version: revisionHistory.length + 1,
+      pdfUrl: articleData.pdfUrl,
+      pdfName: articleData.pdfName,
+      abstract: articleData.abstract,
+      submittedAt: articleData.updatedAt || articleData.createdAt,
+      message: 'Previous version'
+    });
+
+    const objectKey = await uploadPdfToR2(pdfFile.buffer, pdfFile.originalname, uid);
+
+    await articleRef.update({
+      pdfUrl: objectKey,
+      pdfName: pdfFile.originalname,
+      status: 'revision_submitted',
+      updatedAt: new Date(),
+      revisionHistory
+    });
+
+    // Notify all co-authors
+    const authors = articleData.authors || [];
+    const notificationBatch = db.batch();
+    for (const author of authors) {
+      if (author.userId === uid) continue;
+      const notifRef = db.collection('notifications').doc();
+      notificationBatch.set(notifRef, {
+        notificationId: notifRef.id,
+        userId: author.userId,
+        type: 'REVISION_SUBMITTED',
+        title: 'Revision Submitted',
+        message: `The revised manuscript for "${articleData.title}" has been submitted by the primary author.`,
+        metadata: { articleId: id },
+        read: false,
+        createdAt: new Date()
+      });
+    }
+    await notificationBatch.commit();
+
+    res.json({ success: true, message: 'Revision submitted successfully' });
+  } catch (error) {
+    console.error('Revision upload error:', error);
+    res.status(500).json({ error: 'Failed to upload revision' });
   }
 });
 
