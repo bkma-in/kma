@@ -11,6 +11,7 @@ import {
   User, 
   Building2, 
   Mail,
+  GraduationCap,
   AlertCircle,
   ChevronRight,
   ChevronLeft,
@@ -43,7 +44,7 @@ const SubmitArticle = () => {
     abstract: prefillData?.abstract || '',
     keywords: prefillData?.keywords || '',
     category: prefillData?.category || '',
-    allowComments: false,
+    allowComments: prefillData?.allowComments !== undefined ? prefillData.allowComments : true,
     termsAccepted: false,
     pdfName: prefillData?.pdfName || ''
   });
@@ -57,6 +58,40 @@ const SubmitArticle = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Co-author state
+  const [coAuthors, setCoAuthors] = useState<any[]>(prefillData?.authors?.filter((a: any) => a.role === 'coauthor') || []);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (userSearchTerm.length < 2) {
+        setUserSearchResults([]);
+        return;
+      }
+      setIsSearchingUsers(true);
+      try {
+        const response = await api.get(`/users?search=${userSearchTerm}`);
+        if (response.data.success) {
+          // Filter out current user and already added co-authors
+          const filtered = response.data.users.filter((u: any) => 
+            u.id !== profile?.uid && !coAuthors.some(ca => ca.userId === u.id || ca.id === u.id)
+          );
+          setUserSearchResults(filtered);
+        }
+      } catch (error) {
+        console.error('User search failed:', error);
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    };
+
+    const timer = setTimeout(searchUsers, 300);
+    return () => clearTimeout(timer);
+  }, [userSearchTerm, profile?.uid, coAuthors]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
@@ -171,7 +206,6 @@ const SubmitArticle = () => {
 
     if (step === 3) {
       if (!formData.termsAccepted) newErrors.termsAccepted = 'You must agree to the submission terms';
-      if (!formData.allowComments) newErrors.allowComments = 'Please enable internal reviews for peer processing';
     }
 
     setErrors(newErrors);
@@ -287,6 +321,11 @@ const SubmitArticle = () => {
       if (file) payload.append('pdf', file);
       if (thumbnailFile) payload.append('thumbnail', thumbnailFile);
       payload.append('status', 'submitted');
+      
+      // Add co-authors
+      coAuthors.forEach(ca => {
+        payload.append('inviteeUserIds[]', ca.userId || ca.id);
+      });
 
       let response;
       if (savedDraftId) {
@@ -300,6 +339,9 @@ const SubmitArticle = () => {
       }
 
       if (response.data.success) {
+        if (response.data.invitationsQueued) {
+          showToast('Manuscript submitted. Co-author invitations queued.', 'success');
+        }
         setIsSuccess(true);
         // Reset form
         setFormData({
@@ -312,6 +354,10 @@ const SubmitArticle = () => {
           pdfName: ''
         });
         setFile(null);
+        setCoAuthors([]);
+        setSavedDraftId(null);
+        setThumbnailFile(null);
+        setThumbnailPreview(null);
       }
     } catch (error: any) {
       console.error('Submission failed:', error);
@@ -348,6 +394,10 @@ const SubmitArticle = () => {
                 termsAccepted: false,
                 pdfName: ''
               });
+              setCoAuthors([]);
+              setSavedDraftId(null);
+              setThumbnailFile(null);
+              setThumbnailPreview(null);
               setErrors({});
             }}
             className="px-8 py-4 bg-black text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 active:scale-95"
@@ -381,7 +431,7 @@ const SubmitArticle = () => {
 
       {/* Stepper Progress Bar */}
       <div className="mb-12 relative">
-        <div className="absolute top-1/2 left-0 w-full h-0.5 bg-zinc-100 -translate-y-1/2" />
+        <div className="absolute top-5 left-0 w-full h-0.5 bg-zinc-100" />
         <div className="relative flex justify-between">
           {steps.map((step) => (
             <div key={step.id} className="flex flex-col items-center gap-3">
@@ -403,7 +453,7 @@ const SubmitArticle = () => {
           ))}
         </div>
         <div 
-          className="absolute top-1/2 left-0 h-0.5 bg-black transition-all duration-500 -translate-y-1/2" 
+          className="absolute top-5 left-0 h-0.5 bg-black transition-all duration-500" 
           style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
         />
       </div>
@@ -417,10 +467,79 @@ const SubmitArticle = () => {
               <div className="bg-white rounded-3xl p-8 shadow-xl shadow-black/[0.02] border border-zinc-100 space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                 <div className="flex items-center gap-2 mb-2 border-b border-zinc-50 pb-4">
                   <div className="w-1.5 h-6 bg-black rounded-full" />
-                  <h3 className="font-bold text-black tracking-tight font-['Outfit']">STEP 1: METADATA</h3>
+                  <h3 className="font-bold text-black tracking-tight font-['Outfit']">STEP 1: METADATA & AUTHORS</h3>
                 </div>
 
                 <div className="space-y-5">
+                  {/* Co-author Picker */}
+                  <div className="relative">
+                    <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Invite Co-authors (Optional)</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <User size={16} className="text-zinc-400" />
+                      </div>
+                      <input 
+                        type="text"
+                        placeholder="Search by name or email..."
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                        className="w-full pl-11 pr-5 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:ring-2 focus:ring-black outline-none transition-all placeholder:text-zinc-400"
+                      />
+                      {isSearchingUsers && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          <Loader2 size={16} className="animate-spin text-zinc-400" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Search Results Dropdown */}
+                    {userSearchResults.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl z-30 py-2 animate-in slide-in-from-top-2 duration-200">
+                        {userSearchResults.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => {
+                              setCoAuthors([...coAuthors, { userId: user.id, name: user.name, email: user.email }]);
+                              setUserSearchTerm('');
+                              setUserSearchResults([]);
+                            }}
+                            className="w-full px-5 py-3 text-left hover:bg-zinc-50 transition-all flex items-center justify-between group"
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-black">{user.name}</span>
+                              <span className="text-[10px] text-zinc-400 font-medium">{user.email}</span>
+                            </div>
+                            <Send size={14} className="text-zinc-300 group-hover:text-black transition-all" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Selected Co-authors Chips */}
+                    {coAuthors.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {coAuthors.map((ca) => (
+                          <div key={ca.userId || ca.id} className="flex items-center gap-2 px-3 py-2 bg-zinc-100 rounded-xl border border-zinc-200 animate-in zoom-in duration-300">
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-black text-black leading-tight">{ca.name}</span>
+                              <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter">{ca.email}</span>
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => setCoAuthors(coAuthors.filter(a => (a.userId || a.id) !== (ca.userId || ca.id)))}
+                              className="p-1 hover:bg-zinc-200 rounded-lg text-zinc-400 hover:text-black transition-all"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-zinc-50 pt-4" />
+
                   <div>
                     <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Article Title *</label>
                     <input 
@@ -780,18 +899,18 @@ const SubmitArticle = () => {
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-6">
-              <div className="flex gap-4">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-6 border-t border-zinc-100">
+              <div className="grid grid-cols-2 sm:flex gap-3">
                 <button 
                   type="button"
                   onClick={prevStep}
                   disabled={currentStep === 1 || isSubmitting}
                   className={cn(
-                    "flex items-center gap-2 px-6 py-4 rounded-xl text-xs font-black tracking-widest transition-all",
-                    currentStep === 1 ? "opacity-0" : "bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50"
+                    "flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-[10px] font-black tracking-widest transition-all",
+                    currentStep === 1 ? "hidden sm:flex opacity-0 pointer-events-none" : "bg-white text-zinc-500 border border-zinc-200 hover:bg-zinc-50"
                   )}
                 >
-                  <ChevronLeft size={18} />
+                  <ChevronLeft size={16} />
                   BACK
                 </button>
 
@@ -799,7 +918,7 @@ const SubmitArticle = () => {
                   type="button"
                   onClick={handleSaveDraft}
                   disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-4 bg-zinc-100 text-zinc-600 rounded-xl font-bold text-xs tracking-widest hover:bg-zinc-200 transition-all active:scale-95 disabled:bg-zinc-50"
+                  className="flex items-center justify-center gap-2 px-6 py-4 bg-zinc-100 text-zinc-600 rounded-xl font-bold text-[10px] tracking-widest hover:bg-zinc-200 transition-all active:scale-95 disabled:bg-zinc-50"
                 >
                   {savedDraftId ? 'UPDATE DRAFT' : 'SAVE DRAFT'}
                 </button>
@@ -809,26 +928,26 @@ const SubmitArticle = () => {
                 <button 
                   type="button"
                   onClick={nextStep}
-                  className="flex items-center gap-2 px-10 py-4 bg-black text-white rounded-xl font-bold text-xs tracking-widest hover:bg-zinc-800 shadow-xl shadow-black/10 transition-all active:scale-95"
+                  className="flex items-center justify-center gap-2 px-10 py-4 bg-black text-white rounded-xl font-bold text-[10px] tracking-widest hover:bg-zinc-800 shadow-xl shadow-black/10 transition-all active:scale-95"
                 >
                   NEXT STEP
-                  <ChevronRight size={18} />
+                  <ChevronRight size={16} />
                 </button>
               ) : (
                 <button 
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex items-center gap-2 px-12 py-4 bg-black text-white rounded-xl font-bold text-xs tracking-widest hover:bg-zinc-800 shadow-xl shadow-black/10 transition-all active:scale-95 disabled:bg-zinc-200 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center gap-2 px-12 py-4 bg-black text-white rounded-xl font-bold text-[10px] tracking-widest hover:bg-zinc-800 shadow-xl shadow-black/10 transition-all active:scale-95 disabled:bg-zinc-200 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 size={18} className="animate-spin" />
+                      <Loader2 size={16} className="animate-spin" />
                       TRANSMITTING...
                     </>
                   ) : (
                     <>
                       CONFIRM SUBMISSION
-                      <Send size={18} />
+                      <Send size={16} />
                     </>
                   )}
                 </button>
@@ -844,14 +963,30 @@ const SubmitArticle = () => {
             <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-6 px-1">Author Identity</h4>
             <div className="space-y-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100">
-                  <User size={18} />
-                </div>
+                {profile?.profileImage ? (
+                  <img src={profile.profileImage} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-zinc-100 shadow-sm" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100">
+                    <User size={18} />
+                  </div>
+                )}
                 <div>
                   <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-none mb-1">Author Name</p>
                   <p className="text-sm font-bold text-black">{profile?.name || localStorage.getItem('userName') || 'Author User'}</p>
                 </div>
               </div>
+
+              {profile?.designation && (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100">
+                    <GraduationCap size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-none mb-1">Designation</p>
+                    <p className="text-sm font-bold text-black">{profile.designation}</p>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100">
@@ -859,17 +994,7 @@ const SubmitArticle = () => {
                 </div>
                 <div>
                   <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-none mb-1">Registry Email</p>
-                  <p className="text-sm font-bold text-black">{localStorage.getItem('userEmail') || 'research@kma.org'}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-zinc-400 border border-zinc-100">
-                  <Building2 size={18} />
-                </div>
-                <div>
-                  <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-none mb-1">Academic Host</p>
-                  <p className="text-sm font-bold text-black">Kerala Mathematical Inst.</p>
+                  <p className="text-sm font-bold text-black">{profile?.email || localStorage.getItem('userEmail') || 'research@kma.org'}</p>
                 </div>
               </div>
             </div>
@@ -883,9 +1008,9 @@ const SubmitArticle = () => {
           {/* Section 4: Submission Settings */}
           <div className={cn(
             "rounded-3xl p-6 border transition-all",
-            errors.allowComments ? "bg-rose-50 border-rose-200" : "bg-zinc-50 border-zinc-100"
+            !formData.allowComments ? "bg-amber-50 border-amber-200" : "bg-zinc-50 border-zinc-100"
           )}>
-            <h4 className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-4 px-1", errors.allowComments ? "text-rose-400" : "text-zinc-400")}>Options</h4>
+            <h4 className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-4 px-1", !formData.allowComments ? "text-amber-500" : "text-zinc-400")}>Options</h4>
             <label className="flex items-start gap-3 cursor-pointer group">
               <div className="relative flex items-center pt-1">
                 <input 
@@ -895,20 +1020,20 @@ const SubmitArticle = () => {
                   onChange={handleInputChange}
                   className={cn(
                     "peer h-5 w-5 cursor-pointer appearance-none rounded-md border transition-all checked:bg-black checked:border-black outline-none",
-                    errors.allowComments ? "border-rose-500 bg-rose-100" : "border-zinc-300 bg-white"
+                    !formData.allowComments ? "border-amber-500 bg-amber-100" : "border-zinc-300 bg-white"
                   )}
                 />
                 <CheckCircle2 className="absolute h-5 w-5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity p-0.5" />
               </div>
               <div>
-                <span className={cn("text-xs font-bold block mb-1", errors.allowComments ? "text-rose-700" : "text-black")}>Allow Internal Reviews</span>
-                <p className={cn("text-[10px] leading-relaxed italic", errors.allowComments ? "text-rose-500" : "text-zinc-500")}>
+                <span className={cn("text-xs font-bold block mb-1", !formData.allowComments ? "text-amber-700" : "text-black")}>Allow Internal Reviews</span>
+                <p className={cn("text-[10px] leading-relaxed italic", !formData.allowComments ? "text-amber-600" : "text-zinc-500")}>
                   Reviewers can embed digital annotations directly into the manuscript.
                 </p>
-                {errors.allowComments && (
-                  <p className="mt-2 text-[9px] font-black text-rose-600 uppercase tracking-widest flex items-center gap-1">
+                {!formData.allowComments && (
+                  <p className="mt-2 text-[9px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-1">
                     <AlertCircle size={10} />
-                    Required Selection
+                    Warning: Disabling this may delay the review process
                   </p>
                 )}
               </div>

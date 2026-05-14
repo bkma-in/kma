@@ -8,6 +8,7 @@ import {
   FileText, 
   History, 
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Clock,
   Ban,
@@ -19,12 +20,17 @@ import {
   Edit2,
   Trash2,
   Lock,
-  FileUp
+  FileUp,
+  Send,
+  User
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
 import { getPdfUrl } from '../../services/article.service';
 import { useNavigate } from 'react-router-dom';
+import { useNotification } from '../../utils/NotificationContext';
+import { auth, db } from '../../config/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 // Types
 type Status = 'Submitted' | 'Under Review' | 'Needs Revision' | 'Approved' | 'Rejected';
@@ -41,15 +47,16 @@ interface Article {
   title: string;
   category: string;
   dateSubmitted: string;
-  status: Status;
+  status: Status | 'Draft';
   abstract: string;
+  authors: any[];
+  authorId: string;
   versions: Version[];
 }
 
-import { useNotification } from '../../utils/NotificationContext';
 
 const MyArticles = () => {
-  const { showToast } = useNotification();
+  const { showToast, confirm } = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
   const highlightId = location.state?.highlightId;
@@ -63,6 +70,25 @@ const MyArticles = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
+  // Invitations & User state
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [isInvitationsLoading, setIsInvitationsLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Dynamically get current user for permission checks
+    const unsubscribe = api.interceptors.request.use((config) => {
+      // This is a hacky way since we don't have a user context here easily
+      // but we can check auth state
+      return config;
+    });
+    // Better way: use auth from config
+    const unsubscribeAuth = auth.onAuthStateChanged(user => setCurrentUser(user));
+    return () => {
+      unsubscribeAuth();
+    };
+  }, []);
+
   // Revision modal state
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
   const [revisionArticle, setRevisionArticle] = useState<Article | null>(null);
@@ -72,50 +98,132 @@ const MyArticles = () => {
   const [revisionError, setRevisionError] = useState('');
   const revisionFileRef = useRef<HTMLInputElement>(null);
 
+  // Final Submission Checklist state
+  const [isFinalSubmitModalOpen, setIsFinalSubmitModalOpen] = useState(false);
+  const [isFinalSubmitting, setIsFinalSubmitting] = useState(false);
+  const [confirmNoRejectedAuthors, setConfirmNoRejectedAuthors] = useState(false);
+  const [submissionSummary, setSubmissionSummary] = useState<any>(null);
+
+  // Invitation Decision Modal
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteArticle, setInviteArticle] = useState<Article | null>(null);
+  const [isInviteProcessing, setIsInviteProcessing] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectInput, setShowRejectInput] = useState(false);
+  const [inviteResult, setInviteResult] = useState<any>(null);
+
   useEffect(() => {
-    const fetchArticles = async () => {
-      try {
-        const response = await api.get('/articles');
-        if (response.data.success) {
-          const mappedArticles = response.data.articles
-            .filter((a: any) => a.status !== 'draft')
-            .map((a: any) => ({
-              id: a.articleId,
-              title: a.title,
-              category: 'Mathematics', // Default for now
-              dateSubmitted: new Date(a.createdAt._seconds * 1000).toISOString(),
-              status: mapStatus(a.status),
-              abstract: a.abstract,
-              versions: [
+    if (!currentUser?.uid) return;
+
+    const q = query(
+      collection(db, 'articles'),
+      where('participantIds', 'array-contains', currentUser.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let mappedArticles = snapshot.docs.map((doc: any) => {
+        const a = doc.data();
+        return {
+          id: a.articleId,
+          title: a.title,
+          category: a.category || 'Mathematics',
+          authorId: a.authorId,
+          authors: a.authors || [],
+          dateSubmitted: (() => {
+            const val = a.createdAt;
+            if (!val) return new Date().toISOString();
+            if (typeof val.toDate === 'function') return val.toDate().toISOString();
+            if (val._seconds) return new Date(val._seconds * 1000).toISOString();
+            if (val.seconds) return new Date(val.seconds * 1000).toISOString();
+            const d = new Date(val);
+            return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+          })(),
+          status: a.status === 'draft' ? 'Draft' : mapStatus(a.status),
+          abstract: a.abstract,
+          versions: a.revisionHistory ? 
+            a.revisionHistory.map((v: any, i: number) => ({
+              version: i + 1,
+              uploadedBy: 'Author',
+              timestamp: new Date(v.submittedAt?._seconds * 1000 || v.replacedAt?._seconds * 1000).toLocaleString(),
+              fileName: v.pdfName || 'manuscript.pdf'
+            })).concat([{
+              version: a.revisionHistory.length + 1,
+              uploadedBy: 'Author',
+              timestamp: new Date(a.updatedAt?._seconds * 1000 || a.createdAt?._seconds * 1000).toLocaleString(),
+              fileName: a.pdfUrl?.split('/').pop() || 'manuscript.pdf'
+            }]) : 
+            [
                 {
                   version: 1,
                   uploadedBy: 'Author',
-                  timestamp: new Date(a.createdAt._seconds * 1000).toLocaleString(),
+                  timestamp: (() => {
+                  const val = a.createdAt;
+                  if (!val) return new Date().toLocaleString();
+                  if (typeof val.toDate === 'function') return val.toDate().toLocaleString();
+                  if (val._seconds) return new Date(val._seconds * 1000).toLocaleString();
+                  if (val.seconds) return new Date(val.seconds * 1000).toLocaleString();
+                  return new Date(val).toLocaleString();
+                })(),
                   fileName: a.pdfUrl?.split('/').pop() || 'manuscript.pdf'
                 }
               ]
-            }));
-          setArticles(mappedArticles);
-        }
-      } catch (error) {
-        console.error('Failed to fetch articles', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchArticles();
-  }, []);
+        };
+      });
+      
+      // Filter articles based on visibility rules
+      mappedArticles = mappedArticles.filter(a => {
+        // 1. Submitter (C): Always sees the article
+        if (a.authorId === currentUser?.uid) return true;
+        
+        // Find user in authors array
+        const authorData = a.authors?.find((author: any) => author.userId === currentUser?.uid);
+        if (!authorData) return false; // If not primary and not a co-author, hide it
+        
+        // 2. Rejected (B): Hide if rejected
+        if (authorData.status === 'rejected') return false;
+        
+        // 5. Accepted: Always visible
+        if (authorData.accepted === true) return true;
+        
+        // At this point, the user's invitation is pending (accepted === false and not rejected)
+        
+        // 3 & 4. Pending: Visible only if the article is still a Draft
+        // If the article is no longer a draft (e.g. submitted), it is too late and should be hidden.
+        if (a.status !== 'Draft' && a.status !== 'draft') return false;
+        
+        return true;
+      });
+      
+      // Sort in memory
+      mappedArticles.sort((a, b) => new Date(b.dateSubmitted).getTime() - new Date(a.dateSubmitted).getTime());
+      
+      setArticles(mappedArticles);
+      setIsLoading(false);
 
-  useEffect(() => {
-    if (highlightId && !isLoading) {
-      setTimeout(() => {
-        const element = document.getElementById(`article-${highlightId}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Handle direct open from location state
+      if (highlightId) {
+        const art = mappedArticles.find(a => a.id === highlightId);
+        if (art) {
+          if (location.state?.openInvite) {
+            handleOpenInvite(art);
+          }
+          
+          setTimeout(() => {
+            const element = document.getElementById(`article-${highlightId}`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 500);
         }
-      }, 500);
-    }
-  }, [highlightId, isLoading]);
+      }
+    }, (error) => {
+      console.error('Real-time articles error:', error);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser?.uid, highlightId, location.state?.openInvite]);
 
   const mapStatus = (backendStatus: string): Status => {
     switch(backendStatus) {
@@ -128,8 +236,9 @@ const MyArticles = () => {
     }
   };
 
-  const getStatusStyles = (status: Status) => {
+  const getStatusStyles = (status: Status | 'Draft') => {
     switch (status) {
+      case 'Draft': return 'bg-zinc-100 text-zinc-600 border-zinc-200';
       case 'Submitted': return 'bg-blue-50 text-blue-600 border-blue-100';
       case 'Under Review': return 'bg-amber-50 text-amber-600 border-amber-100';
       case 'Needs Revision': return 'bg-rose-50 text-rose-600 border-rose-100';
@@ -138,8 +247,9 @@ const MyArticles = () => {
     }
   };
 
-  const getStatusIcon = (status: Status) => {
+  const getStatusIcon = (status: Status | 'Draft') => {
     switch (status) {
+      case 'Draft': return <Edit2 size={12} />;
       case 'Submitted': return <Clock size={12} />;
       case 'Under Review': return <History size={12} />;
       case 'Needs Revision': return <AlertCircle size={12} />;
@@ -159,6 +269,23 @@ const MyArticles = () => {
     setIsModalOpen(true);
     setIsPreviewLoading(true);
     setPreviewUrl(null);
+    setInvitations([]);
+    
+    // Fetch Invitations if current user is submitter
+    if (article.authorId === currentUser?.uid) {
+      setIsInvitationsLoading(true);
+      try {
+        const response = await api.get(`/articles/${article.id}/invitations`);
+        if (response.data.success) {
+          setInvitations(response.data.invitations);
+        }
+      } catch (error) {
+        console.error('Failed to fetch invitations', error);
+      } finally {
+        setIsInvitationsLoading(false);
+      }
+    }
+
     try {
       const response = await getPdfUrl(article.id);
       if (response.success) {
@@ -168,6 +295,60 @@ const MyArticles = () => {
       console.error('Failed to load preview', error);
     } finally {
       setIsPreviewLoading(false);
+    }
+  };
+
+  const handleResendInvite = async (inviteId: string) => {
+    if (!selectedArticle) return;
+    try {
+      const response = await api.post(`/articles/${selectedArticle.id}/invitations/${inviteId}/resend`);
+      if (response.data.success) {
+        showToast('Invitation resent successfully', 'success');
+        // Refresh invitations
+        const res = await api.get(`/articles/${selectedArticle.id}/invitations`);
+        if (res.data.success) setInvitations(res.data.invitations);
+      }
+    } catch (error: any) {
+      showToast(error.response?.data?.error || 'Failed to resend invitation', 'error');
+    }
+  };
+
+  const handleSubmitNow = () => {
+    if (!selectedArticle) return;
+    setConfirmNoRejectedAuthors(false);
+    setIsFinalSubmitModalOpen(true);
+  };
+
+  const handleFinalSubmit = async () => {
+    if (!selectedArticle) return;
+    
+    const hasPending = invitations.some(i => i.status === 'pending');
+    const hasRejected = invitations.some(i => i.status === 'rejected');
+    
+    if (hasRejected && !confirmNoRejectedAuthors) {
+      showToast('Please confirm that you want to proceed without rejected authors', 'error');
+      return;
+    }
+
+    setIsFinalSubmitting(true);
+    try {
+      const response = await api.put(`/articles/${selectedArticle.id}`, { 
+        status: 'submitted',
+        includeAcceptedOnly: hasPending,
+        forceSubmitWithoutRejected: hasRejected,
+        submissionNotes: hasRejected ? 'Proceeded without rejected co-authors' : ''
+      });
+      
+      if (response.data.success) {
+        showToast('Article submitted successfully!', 'success');
+        setSubmissionSummary(response.data.submissionSummary);
+        setIsFinalSubmitModalOpen(false);
+        setIsModalOpen(false);
+      }
+    } catch (error: any) {
+      showToast(error.response?.data?.error || 'Failed to submit article', 'error');
+    } finally {
+      setIsFinalSubmitting(false);
     }
   };
 
@@ -215,19 +396,6 @@ const MyArticles = () => {
       if (response.data.success) {
         showToast('Revision submitted successfully!', 'success');
         setIsRevisionModalOpen(false);
-        // Refresh article list
-        const res = await api.get('/articles');
-        if (res.data.success) {
-          setArticles(res.data.articles.filter((a: any) => a.status !== 'draft').map((a: any) => ({
-            id: a.articleId,
-            title: a.title,
-            category: 'Mathematics',
-            dateSubmitted: new Date(a.createdAt._seconds * 1000).toISOString(),
-            status: mapStatus(a.status),
-            abstract: a.abstract,
-            versions: [{ version: 1, uploadedBy: 'Author' as const, timestamp: new Date(a.createdAt._seconds * 1000).toLocaleString(), fileName: a.pdfUrl?.split('/').pop() || 'manuscript.pdf' }]
-          })));
-        }
       }
     } catch (error: any) {
       setRevisionError(error.response?.data?.error || 'Failed to submit revision.');
@@ -236,23 +404,106 @@ const MyArticles = () => {
     }
   };
 
-  const handleDelete = async (article: Article) => {
-    if (article.status !== 'Submitted') return;
+  const handleOpenInvite = async (article: Article) => {
+    setInviteArticle(article);
+    setIsInviteModalOpen(true);
+    setInviteResult(null);
+    setShowRejectInput(false);
+    setRejectReason('');
     
-    const confirmed = window.confirm('Are you sure you want to delete this article? This action cannot be undone.');
-    if (!confirmed) return;
-
-    try {
-      const response = await api.delete(`/articles/${article.id}`);
-      if (response.data.success) {
-        showToast('Article deleted successfully', 'success');
-        setArticles(prev => prev.filter(a => a.id !== article.id));
-        setIsModalOpen(false);
+    // We need the token.
+    const token = location.state?.token;
+    if (token) {
+      setInviteToken(token);
+    } else {
+      // Fetch the token for this user/article
+      try {
+        const response = await api.get(`/articles/${article.id}/invitations`);
+        if (response.data.success) {
+          const myInvite = response.data.invitations.find((inv: any) => 
+            inv.inviteeUserId === currentUser?.uid && inv.status === 'pending'
+          );
+          if (myInvite) setInviteToken(myInvite.token);
+        }
+      } catch (error) {
+        console.error('Failed to fetch invite token:', error);
       }
-    } catch (error) {
-      console.error('Delete failed:', error);
-      showToast('Failed to delete article', 'error');
     }
+  };
+
+  const handleAcceptInvite = async () => {
+    if (!inviteToken) {
+      showToast('Unable to process: Invitation token missing. Please refresh the page.', 'error');
+      return;
+    }
+    setIsInviteProcessing(true);
+    try {
+      const response = await api.post(`/articles/invitations/${inviteToken}/accept?articleId=${inviteArticle?.id}`);
+      if (response.data.success) {
+        setInviteResult(response.data);
+        showToast(response.data.message, 'success');
+        
+        // Auto-close after 2 seconds so user can see success message
+        setTimeout(() => {
+          setIsInviteModalOpen(false);
+          setInviteResult(null);
+        }, 2000);
+      }
+    } catch (error: any) {
+      showToast(error.response?.data?.error || 'Failed to accept invitation', 'error');
+    } finally {
+      setIsInviteProcessing(false);
+    }
+  };
+
+  const handleRejectInvite = async () => {
+    if (!inviteToken) {
+      showToast('Unable to process: Invitation token missing. Please refresh the page.', 'error');
+      return;
+    }
+    if (!rejectReason || rejectReason.length < 10) {
+      showToast('Please provide a reason (min 10 characters)', 'error');
+      return;
+    }
+    setIsInviteProcessing(true);
+    try {
+      const response = await api.post(`/articles/invitations/${inviteToken}/reject?articleId=${inviteArticle?.id}`, {
+        reason: rejectReason
+      });
+      if (response.data.success) {
+        showToast('Invitation declined', 'info');
+        setIsInviteModalOpen(false);
+        // fetchArticles is now handled by real-time listener
+      }
+    } catch (error: any) {
+      showToast(error.response?.data?.error || 'Failed to decline invitation', 'error');
+    } finally {
+      setIsInviteProcessing(false);
+    }
+  };
+
+  const handleDelete = async (article: Article) => {
+    if (article.status !== 'Submitted' && article.status !== 'Draft') return;
+    
+    confirm({
+      title: 'Confirm Deletion',
+      message: 'Are you sure you want to delete this manuscript? This action is permanent and cannot be undone.',
+      confirmText: 'Delete Manuscript',
+      requiredConfirmationText: article.title,
+      onConfirm: async () => {
+        try {
+          const response = await api.delete(`/articles/${article.id}`);
+          if (response.data.success) {
+            showToast('Article deleted successfully', 'success');
+            setArticles(prev => prev.filter(a => a.id !== article.id));
+            setIsModalOpen(false);
+          }
+        } catch (error) {
+          console.error('Delete failed:', error);
+          showToast('Failed to delete article', 'error');
+        }
+      }
+    });
   };
 
   return (
@@ -384,16 +635,40 @@ const MyArticles = () => {
                       {new Date(article.dateSubmitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
                     <td className="px-6 py-5">
-                      <div className={cn(
-                        "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                        getStatusStyles(article.status)
-                      )}>
-                        {getStatusIcon(article.status)}
-                        {article.status}
+                      <div className="flex flex-col items-center gap-1">
+                        <div className={cn(
+                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+                          getStatusStyles(article.status)
+                        )}>
+                          {getStatusIcon(article.status)}
+                          {article.status}
+                        </div>
+                        {article.status === 'Draft' && article.authors.some((a: any) => !a.accepted) && (
+                          <div className="flex items-center gap-1 text-[8px] font-black text-amber-500 uppercase tracking-tighter animate-pulse">
+                            <Clock size={8} />
+                            Awaiting Co-authors
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center justify-end gap-2">
+                        {/* Invitation Action for Co-authors */}
+                        {article.status === 'Draft' && article.authors.find((a: any) => a.userId === currentUser?.uid && !a.accepted && a.status !== 'rejected') && (
+                          <button 
+                            onClick={() => handleOpenInvite(article)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 active:scale-95 animate-pulse"
+                          >
+                            <User size={14} />
+                            DECIDE ON INVITE
+                          </button>
+                        )}
+                        {article.status !== 'Draft' && article.authors.find((a: any) => a.userId === currentUser?.uid && !a.accepted && a.status !== 'rejected') && (
+                          <span className="text-[9px] font-bold text-rose-500 italic px-2">
+                            Main author is no longer waiting for your response
+                          </span>
+                        )}
+
                         <button 
                           onClick={() => openDetails(article)}
                           className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-black transition-all"
@@ -428,19 +703,22 @@ const MyArticles = () => {
                         >
                           <Edit2 size={18} />
                         </button>
-                        <button 
-                          onClick={() => handleDelete(article)}
-                          disabled={article.status !== 'Submitted'}
-                          className={cn(
-                            "p-2 rounded-lg transition-all",
-                            article.status === 'Submitted' 
-                              ? "text-zinc-400 hover:text-rose-600 hover:bg-rose-50" 
-                              : "text-zinc-200 cursor-not-allowed"
-                          )}
-                          title={article.status === 'Submitted' ? 'Delete Manuscript' : 'Cannot delete after review begins'}
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        {/* Only primary author can delete */}
+                        {article.authorId === currentUser?.uid && (
+                          <button 
+                            onClick={() => handleDelete(article)}
+                            disabled={article.status !== 'Submitted' && article.status !== 'Draft'}
+                            className={cn(
+                              "p-2 rounded-lg transition-all",
+                              (article.status === 'Submitted' || article.status === 'Draft')
+                                ? "text-zinc-400 hover:text-rose-600 hover:bg-rose-50" 
+                                : "text-zinc-200 cursor-not-allowed"
+                            )}
+                            title={(article.status === 'Submitted' || article.status === 'Draft') ? 'Delete Manuscript' : 'Cannot delete after review begins'}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -503,6 +781,122 @@ const MyArticles = () => {
                     {selectedArticle.title}
                   </h2>
                 </div>
+
+                {/* Draft Reason Panel */}
+                {selectedArticle.status === 'Draft' && (invitations.some(i => i.status === 'pending' || i.status === 'rejected')) && (
+                  <div className="p-6 bg-amber-50/50 border border-amber-200 rounded-[2rem] space-y-3">
+                    <div className="flex items-center gap-3 text-amber-600">
+                      <AlertTriangle size={20} />
+                      <h3 className="text-sm font-bold uppercase tracking-tight font-['Outfit']">Draft Reason: Awaiting Co-Author Response</h3>
+                    </div>
+                    <div className="pl-8 space-y-2">
+                      <p className="text-xs text-amber-900/70 font-medium leading-relaxed">
+                        This article is currently in draft until all invited co-authors accept. 
+                        There are <span className="font-bold">{invitations.filter(i => i.status === 'pending').length} pending</span> and <span className="font-bold text-rose-600">{invitations.filter(i => i.status === 'rejected').length} rejected</span> responses.
+                      </p>
+                      <p className="text-[10px] text-amber-800/60 font-bold uppercase tracking-widest">
+                        You may re-invite rejected authors or proceed to submit now with the currently accepted authors.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Authors & Invitations Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Confirmed Authors */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                      <User size={14} />
+                      Confirmed Authors
+                    </div>
+                    <div className="space-y-2">
+                      {selectedArticle.authors.filter(a => a.accepted).map((author, idx) => (
+                        <div key={idx} className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                          <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center text-[10px] font-bold">
+                            {author.name.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-black truncate">{author.name}</p>
+                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-none">
+                              {author.role} {author.userId === selectedArticle.authorId && "• Primary"}
+                            </p>
+                          </div>
+                          <CheckCircle2 size={14} className="text-emerald-500" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Invitations Management (For Submitter) */}
+                  {selectedArticle.authorId === currentUser?.uid && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                          <Send size={14} />
+                          Collaboration Invitations
+                        </div>
+                        {isInvitationsLoading && <Loader2 size={12} className="animate-spin text-zinc-400" />}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {invitations.length > 0 ? (
+                          invitations.map((invite, idx) => (
+                            <div key={idx} className="p-3 bg-white border border-zinc-100 rounded-xl space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold text-black truncate">{invite.inviteeName || invite.inviteeEmail}</p>
+                                  <div className="flex items-center gap-2">
+                                    <span className={cn(
+                                      "text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded",
+                                      invite.status === 'pending' && "bg-amber-50 text-amber-600",
+                                      invite.status === 'rejected' && "bg-rose-50 text-rose-600",
+                                      invite.status === 'accepted' && "bg-emerald-50 text-emerald-600",
+                                      invite.status === 'expired' && "bg-zinc-100 text-zinc-400"
+                                    )}>
+                                      {invite.status}
+                                    </span>
+                                    {invite.status === 'rejected' && (
+                                      <span className="text-[8px] text-zinc-400 font-bold truncate">"{invite.rejectedReason}"</span>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-1">
+                                  {(invite.status === 'rejected' || invite.status === 'expired') && selectedArticle.status === 'Draft' && (
+                                    <button 
+                                      onClick={() => handleResendInvite(invite.inviteId)}
+                                      className="p-1.5 hover:bg-zinc-50 rounded-lg text-zinc-400 hover:text-black transition-all"
+                                      title="Resend Invitation"
+                                    >
+                                      <RefreshCw size={14} />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-4 bg-zinc-50/50 rounded-xl border border-dashed border-zinc-200 text-center">
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">No invitations sent</p>
+                          </div>
+                        )}
+
+                        {/* Submit Now Override for Drafts */}
+                        {selectedArticle.status === 'Draft' && (
+                          <button 
+                            onClick={handleSubmitNow}
+                            className="w-full mt-2 py-3 bg-zinc-900 text-white rounded-xl font-black text-[9px] tracking-widest hover:bg-black transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-2 uppercase"
+                          >
+                            <Send size={12} />
+                            Submit now with accepted authors
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="h-[1px] bg-zinc-100" />
 
                 {/* Abstract Section */}
                 <div className="space-y-4">
@@ -606,7 +1000,210 @@ const MyArticles = () => {
         </div>
       )}
 
-      {/* Revision Modal */}
+      {/* Final Submission Checklist Modal */}
+      {isFinalSubmitModalOpen && selectedArticle && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isFinalSubmitting && setIsFinalSubmitModalOpen(false)} />
+          <div className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl flex flex-col h-[100dvh] sm:h-auto sm:max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="px-8 py-6 border-b border-zinc-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Send className="text-black" size={20} />
+                <h3 className="font-bold text-black tracking-tight font-['Outfit'] text-lg">Submission Checklist</h3>
+              </div>
+              <button 
+                onClick={() => setIsFinalSubmitModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-zinc-100 flex items-center justify-center text-zinc-400"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                  <User size={12} />
+                  Co-Author Statuses
+                </h4>
+                
+                <div className="space-y-3">
+                  {/* Primary Author */}
+                  <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center text-[10px] font-bold">ME</div>
+                      <div>
+                        <p className="text-xs font-bold text-black">Primary Author (You)</p>
+                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Submitter</p>
+                      </div>
+                    </div>
+                    <CheckCircle2 size={16} className="text-emerald-500" />
+                  </div>
+
+                  {/* Other Invitations */}
+                  {invitations.map((invite, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-4 bg-white border border-zinc-100 rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-400 flex items-center justify-center text-[10px] font-bold">
+                          {(invite.inviteeName || invite.inviteeEmail).charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-black truncate">{invite.inviteeName || invite.inviteeEmail}</p>
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded",
+                              invite.status === 'pending' && "bg-amber-50 text-amber-600",
+                              invite.status === 'rejected' && "bg-rose-50 text-rose-600",
+                              invite.status === 'accepted' && "bg-emerald-50 text-emerald-600"
+                            )}>
+                              {invite.status}
+                            </span>
+                            {invite.status === 'rejected' && (
+                              <span className="text-[8px] text-rose-400 font-bold italic truncate">"{invite.rejectedReason}"</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {invite.status === 'rejected' && selectedArticle.status === 'Draft' && (
+                        <button 
+                          onClick={() => handleResendInvite(invite.inviteId)}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-zinc-900 text-white rounded-lg text-[8px] font-black tracking-widest hover:bg-black transition-all uppercase"
+                        >
+                          <RefreshCw size={10} />
+                          Re-invite
+                        </button>
+                      )}
+                      {invite.status === 'accepted' && <CheckCircle2 size={16} className="text-emerald-500" />}
+                      {invite.status === 'pending' && <Clock size={16} className="text-amber-500" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Warnings & Confirmations */}
+              <div className="space-y-4">
+                {invitations.some(i => i.status === 'pending') && (
+                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex gap-3">
+                    <AlertCircle size={18} className="text-blue-500 shrink-0" />
+                    <p className="text-[11px] text-blue-700 font-medium leading-relaxed">
+                      Submitting now will proceed only with accepted co-authors. <strong>{invitations.filter(i => i.status === 'pending').length} pending invitees</strong> will remain invited but won't be listed in the initial publication metadata.
+                    </p>
+                  </div>
+                )}
+
+                {invitations.some(i => i.status === 'rejected') && (
+                  <div className="space-y-3">
+                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex gap-3">
+                      <AlertTriangle size={18} className="text-rose-500 shrink-0" />
+                      <p className="text-[11px] text-rose-700 font-medium leading-relaxed">
+                        There are rejected invitations. You must explicitly acknowledge that you are proceeding without these co-authors.
+                      </p>
+                    </div>
+                    <label className="flex items-center gap-3 p-4 bg-white border-2 border-zinc-100 rounded-2xl cursor-pointer hover:border-black transition-all group">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-zinc-300 text-black focus:ring-black"
+                        checked={confirmNoRejectedAuthors}
+                        onChange={(e) => setConfirmNoRejectedAuthors(e.target.checked)}
+                      />
+                      <span className="text-[10px] font-black text-black uppercase tracking-wider group-hover:text-black transition-all">
+                        I understand and will proceed without rejected co-authors
+                      </span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-8 py-6 bg-zinc-50 border-t border-zinc-100 flex items-center justify-between gap-4">
+              <button 
+                onClick={() => setIsFinalSubmitModalOpen(false)}
+                className="px-6 py-3 text-zinc-400 font-black text-[10px] tracking-widest hover:text-black transition-all uppercase"
+                disabled={isFinalSubmitting}
+              >
+                Cancel
+              </button>
+              
+              <button 
+                onClick={handleFinalSubmit}
+                disabled={isFinalSubmitting || (invitations.some(i => i.status === 'rejected') && !confirmNoRejectedAuthors)}
+                className={cn(
+                  "flex items-center gap-2 px-8 py-3 bg-zinc-900 text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-black transition-all shadow-xl shadow-black/10 uppercase",
+                  (isFinalSubmitting || (invitations.some(i => i.status === 'rejected') && !confirmNoRejectedAuthors)) && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                {isFinalSubmitting ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    FINALIZING...
+                  </>
+                ) : (
+                  <>
+                    <Send size={12} />
+                    {invitations.length === 0 || invitations.every(i => i.status === 'accepted') ? 'SUBMIT MANUSCRIPT' : 'SUBMIT NOW WITH ACCEPTED AUTHORS'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Post-Submission Summary Report Modal */}
+      {submissionSummary && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSubmissionSummary(null)} />
+          <div className="relative bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-10 text-center space-y-6">
+              <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-lg">
+                <CheckCircle2 size={40} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-black font-['Outfit']">Submission Finalized</h3>
+                <p className="text-zinc-500 text-sm mt-2 font-medium">Your manuscript has been formally submitted for review.</p>
+              </div>
+
+              <div className="bg-zinc-50 rounded-3xl p-6 text-left space-y-4">
+                <div>
+                  <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3">Included Authors</h4>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1.5 bg-black text-white text-[10px] font-bold rounded-lg">YOU (Submitter)</span>
+                    {submissionSummary.included.map((a: any, i: number) => (
+                      <span key={i} className="px-3 py-1.5 bg-white border border-zinc-200 text-black text-[10px] font-bold rounded-lg">{a.name}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {(submissionSummary.pending.length > 0 || submissionSummary.rejected.length > 0) && (
+                  <div>
+                    <h4 className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-3">Excluded Invitees</h4>
+                    <div className="space-y-2">
+                      {submissionSummary.pending.map((a: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between text-[10px] font-bold text-zinc-400">
+                          <span>{a.inviteeName || a.inviteeEmail}</span>
+                          <span>PENDING</span>
+                        </div>
+                      ))}
+                      {submissionSummary.rejected.map((a: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between text-[10px] font-bold text-rose-400">
+                          <span>{a.inviteeName || a.inviteeEmail}</span>
+                          <span>REJECTED</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button 
+                onClick={() => setSubmissionSummary(null)}
+                className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black text-[11px] tracking-widest hover:bg-black transition-all shadow-xl shadow-black/10 uppercase"
+              >
+                RETURN TO DASHBOARD
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {isRevisionModalOpen && revisionArticle && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isRevisionSubmitting && setIsRevisionModalOpen(false)} />
@@ -759,6 +1356,143 @@ const MyArticles = () => {
           </div>
         </div>
       )}
+      {/* Invitation Decision Modal */}
+      {isInviteModalOpen && inviteArticle && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
+            onClick={() => setIsInviteModalOpen(false)}
+          />
+          
+          <div className="relative bg-white rounded-[2.5rem] w-full max-w-2xl flex flex-col h-[100dvh] sm:h-auto sm:max-h-[90vh] overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+            {/* Close Button inside card */}
+            <button 
+              onClick={() => setIsInviteModalOpen(false)}
+              className="absolute top-8 right-8 p-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-500 rounded-full transition-all z-10"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Header */}
+            <div className="p-8 border-b border-zinc-50 text-center bg-gradient-to-b from-zinc-50/50 to-white">
+              <div className="w-16 h-16 bg-black text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+                <User size={32} />
+              </div>
+              <h2 className="text-[10px] font-black tracking-[0.3em] text-zinc-400 uppercase mb-2">Collaboration Request</h2>
+              <h1 className="text-2xl font-bold tracking-tight text-black font-['Outfit']">Join as Co-author?</h1>
+            </div>
+
+            <div className="p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+              {!inviteResult ? (
+                <>
+                  <div className="p-6 bg-zinc-50 rounded-2xl border border-zinc-100 space-y-4">
+                    <div>
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Article Title</p>
+                      <p className="text-lg font-bold text-black font-['Outfit']">{inviteArticle.title}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Executive Abstract</p>
+                      <p className="text-sm text-zinc-500 leading-relaxed italic line-clamp-3">"{inviteArticle.abstract}"</p>
+                    </div>
+                  </div>
+
+                  {!showRejectInput ? (
+                    <div className="flex gap-4 pt-4">
+                      <button 
+                        onClick={handleAcceptInvite}
+                        disabled={isInviteProcessing}
+                        className="flex-1 py-4 bg-black text-white rounded-2xl font-black text-[10px] tracking-[0.3em] hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 uppercase"
+                      >
+                        {isInviteProcessing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                        Accept Invitation
+                      </button>
+                      <button 
+                        onClick={() => setShowRejectInput(true)}
+                        disabled={isInviteProcessing}
+                        className="px-8 py-4 bg-white text-rose-500 border border-rose-100 rounded-2xl font-black text-[10px] tracking-[0.3em] hover:bg-rose-50 transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 uppercase"
+                      >
+                        <Lock size={18} />
+                        Decline
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 animate-in slide-in-from-bottom-2">
+                      <div>
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-2 px-1">Reason for Declining</label>
+                        <textarea 
+                          className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-rose-100 transition-all resize-none h-32"
+                          placeholder="Please provide a brief reason (min 10 characters)..."
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex gap-4">
+                        <button 
+                          onClick={() => setShowRejectInput(false)}
+                          className="flex-1 py-3 bg-zinc-100 text-zinc-500 rounded-xl font-bold text-xs"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          onClick={handleRejectInvite}
+                          disabled={isInviteProcessing || rejectReason.length < 10}
+                          className="flex-1 py-3 bg-rose-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {isInviteProcessing ? (
+                            <>
+                              <Loader2 size={14} className="animate-spin" />
+                              Submitting...
+                            </>
+                          ) : (
+                            'Submit Rejection'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center space-y-6 py-4 animate-in zoom-in">
+                  <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto shadow-inner border-4 border-white">
+                    <CheckCircle2 size={40} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-black mb-2">Success!</h3>
+                    <p className="text-zinc-500 text-sm">{inviteResult.message}</p>
+                  </div>
+
+                  {inviteResult.autoSubmitted ? (
+                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl text-blue-700 text-xs font-bold animate-pulse">
+                      The manuscript has been automatically submitted for review.
+                    </div>
+                  ) : inviteResult.remainingAuthors?.length > 0 && (
+                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                      <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2">Awaiting Others</p>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {inviteResult.remainingAuthors.map((name: string) => (
+                          <span key={name} className="px-2 py-1 bg-white/50 rounded-lg text-[10px] font-bold text-amber-700 border border-amber-200/50">
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <button 
+                    onClick={() => { setIsInviteModalOpen(false); setInviteResult(null); }}
+                    className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-black text-[10px] tracking-widest uppercase hover:bg-black transition-all"
+                  >
+                    Back to Dashboard
+                  </button>
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

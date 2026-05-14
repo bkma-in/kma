@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { auth } from '../config/firebase';
+import { auth, db } from '../config/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FileEdit, BookOpen, Inbox, Bell, Search, LogOut, X, HelpCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
@@ -29,41 +30,76 @@ const AuthorLayout = () => {
     if (location.pathname === '/author/articles') localStorage.setItem('lastViewed_articles', now.toString());
     if (location.pathname === '/author/drafts') localStorage.setItem('lastViewed_drafts', now.toString());
     if (location.pathname === '/author/notifications') localStorage.setItem('lastViewed_notifications', now.toString());
+    
+    // Auto-close sidebar on mobile after navigation
+    setIsSidebarOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
-    const fetchCounts = async () => {
-      try {
-        const response = await getArticles();
-        if (response.success) {
-          const lastViewedArticles = parseInt(localStorage.getItem('lastViewed_articles') || '0');
-          const lastViewedDrafts = parseInt(localStorage.getItem('lastViewed_drafts') || '0');
-          const lastViewedNotifications = parseInt(localStorage.getItem('lastViewed_notifications') || '0');
-
-          const drafts = response.articles.filter((a: any) => {
-            const time = (a.updatedAt?._seconds || a.createdAt?._seconds || 0) * 1000;
-            return a.status === 'draft' && time > lastViewedDrafts;
-          }).length;
-
-          const articles = response.articles.filter((a: any) => {
-            const time = (a.updatedAt?._seconds || a.createdAt?._seconds || 0) * 1000;
-            return a.status !== 'draft' && time > lastViewedArticles;
-          }).length;
-
-          const notifications = response.articles.filter((a: any) => {
-            const time = (a.updatedAt?._seconds || a.createdAt?._seconds || 0) * 1000;
-            const isActionRequired = a.status === 'revision_requested' || a.status === 'accepted' || a.status === 'rejected';
-            return isActionRequired && time > lastViewedNotifications;
-          }).length;
-          
-          setCounts({ drafts, articles, notifications });
-        }
-      } catch (error) {
-        console.error('Failed to fetch sidebar counts:', error);
-      }
+    if (!profile?.uid) return;
+    
+    // 1. Real-time Notifications Listener (Unread only)
+    const qNotif = query(
+      collection(db, 'notifications'), 
+      where('userId', '==', profile.uid),
+      where('read', '==', false)
+    );
+    
+    const getTimestamp = (val: any) => {
+      if (!val) return 0;
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (val.seconds) return val.seconds * 1000;
+      if (val._seconds) return val._seconds * 1000;
+      return new Date(val).getTime() || 0;
     };
-    fetchCounts();
-  }, [location.pathname]);
+
+    const unsubscribeNotif = onSnapshot(qNotif, (snapshot) => {
+      setCounts(prev => ({ ...prev, notifications: snapshot.size }));
+    });
+
+    // 2. Real-time Articles Listener (For Drafts and Articles badges)
+    const qArticles = query(
+      collection(db, 'articles'),
+      where('participantIds', 'array-contains', profile.uid)
+    );
+
+    const unsubscribeArticles = onSnapshot(qArticles, (snapshot) => {
+      const lastViewedArticles = parseInt(localStorage.getItem('lastViewed_articles') || '0');
+      const lastViewedDrafts = parseInt(localStorage.getItem('lastViewed_drafts') || '0');
+
+      const articles = snapshot.docs.map(doc => doc.data());
+
+      // Personal Drafts: user is author, and it's a draft, and updated since last view
+      const draftsCount = articles.filter((a: any) => {
+        const time = getTimestamp(a.updatedAt || a.createdAt);
+        const isPersonalDraft = a.status === 'draft' && a.authorId === profile.uid && (!a.participantIds || a.participantIds.length <= 1);
+        return isPersonalDraft && time > lastViewedDrafts;
+      }).length;
+
+      // My Articles: Action needed (Revision requested) OR Pending invitation
+      // ONLY show if updated since last view OR specifically pending invitation
+      const articlesCount = articles.filter((a: any) => {
+        const time = getTimestamp(a.updatedAt || a.createdAt);
+        const isRevisionNeeded = a.status === 'revision_requested' && a.authorId === profile.uid && time > lastViewedArticles;
+        const isPendingInvitation = a.status === 'draft' && a.authors?.some((auth: any) => 
+          auth.userId === profile.uid && !auth.accepted
+        ) && time > lastViewedArticles;
+        
+        return isRevisionNeeded || isPendingInvitation;
+      }).length;
+
+      setCounts(prev => ({ 
+        ...prev, 
+        drafts: draftsCount, 
+        articles: articlesCount 
+      }));
+    });
+
+    return () => {
+      unsubscribeNotif();
+      unsubscribeArticles();
+    };
+  }, [profile?.uid, location.pathname]);
 
   const role = localStorage.getItem('role');
   const userName = profile?.name || localStorage.getItem('userName') || 'Author User';

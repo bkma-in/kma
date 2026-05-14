@@ -13,6 +13,8 @@ import { useNotification } from '../../utils/NotificationContext';
 import { getArticles, deleteArticle } from '../../services/article.service';
 import api from '../../services/api';
 
+import { useProfile } from '../../hooks/useProfile';
+
 interface Draft {
   id: string;
   title: string;
@@ -24,6 +26,7 @@ interface Draft {
 
 const Drafts = () => {
   const { confirm, showToast } = useNotification();
+  const { profile } = useProfile();
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,9 +36,13 @@ const Drafts = () => {
     try {
       setIsLoading(true);
       const response = await getArticles();
-      if (response.success) {
+      if (response.success && profile?.uid) {
         const backendDrafts = response.articles
-          .filter((a: any) => a.status === 'draft')
+          .filter((a: any) => 
+            a.status === 'draft' && 
+            a.authorId === profile.uid && 
+            (!a.participantIds || a.participantIds.length <= 1)
+          )
           .map((a: any) => ({
             id: a.articleId,
             title: a.title,
@@ -55,8 +62,8 @@ const Drafts = () => {
   };
 
   useEffect(() => {
-    fetchDrafts();
-  }, []);
+    if (profile?.uid) fetchDrafts();
+  }, [profile?.uid]);
 
   const deleteDraft = (id: string) => {
     confirm({

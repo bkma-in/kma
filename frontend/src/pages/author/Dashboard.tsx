@@ -31,7 +31,31 @@ const Dashboard = () => {
       try {
         const response = await getArticles();
         if (response.success) {
-          setArticles(response.articles);
+          // Filter articles based on visibility rules
+          const filteredArticles = response.articles.filter((a: any) => {
+            // 1. Submitter (C): Always sees the article
+            if (!profile?.uid) return false;
+            if (a.authorId === profile?.uid) return true;
+            
+            // Find user in authors array
+            const authorData = a.authors?.find((author: any) => author.userId === profile?.uid);
+            if (!authorData) return false; // If not primary and not a co-author, hide it
+            
+            // 2. Rejected (B): Hide if rejected
+            if (authorData.status === 'rejected') return false;
+            
+            // 5. Accepted: Always visible
+            if (authorData.accepted === true) return true;
+            
+            // At this point, the user's invitation is pending (accepted === false and not rejected)
+            
+            // 3 & 4. Pending: Visible only if the article is still a Draft
+            // If the article is no longer a draft (e.g. submitted), it is too late and should be hidden.
+            if (a.status !== 'draft') return false;
+            
+            return true;
+          });
+          setArticles(filteredArticles);
         }
       } catch (error) {
         console.error('Failed to fetch articles:', error);
@@ -39,14 +63,17 @@ const Dashboard = () => {
         setLoading(false);
       }
     };
-    fetchArticles();
-  }, []);
+
+    if (profile?.uid) {
+      fetchArticles();
+    }
+  }, [profile?.uid]);
 
   // Calculate dynamic stats
   const stats = [
     { 
       label: 'Total Articles', 
-      value: articles.filter(a => a.status !== 'draft').length.toString().padStart(2, '0'), 
+      value: articles.filter(a => !(a.status === 'draft' && a.authorId === profile?.uid && (!a.participantIds || a.participantIds.length <= 1))).length.toString().padStart(2, '0'), 
       icon: FileText, 
       color: 'text-zinc-600', 
       bg: 'bg-zinc-100' 
@@ -81,7 +108,7 @@ const Dashboard = () => {
     },
     { 
       label: 'Drafts', 
-      value: articles.filter(a => a.status === 'draft').length.toString().padStart(2, '0'), 
+      value: articles.filter(a => a.status === 'draft' && a.authorId === profile?.uid && (!a.participantIds || a.participantIds.length <= 1)).length.toString().padStart(2, '0'), 
       icon: Inbox, 
       color: 'text-indigo-600', 
       bg: 'bg-indigo-50' 
@@ -108,14 +135,6 @@ const Dashboard = () => {
     { message: 'Welcome to the KMA Author Portal!', time: 'Now' },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="animate-spin text-zinc-300" size={48} />
-      </div>
-    );
-  }
-
   return (
     <div className="animate-in fade-in duration-700 max-w-7xl mx-auto">
       {/* Welcome Header */}
@@ -130,39 +149,53 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Alert Section - Revision Required */}
-      {revisionArticle && (
-        <div className="mb-8 p-4 bg-rose-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-rose-600/10 animate-pulse-slow border border-white/10">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-              <AlertCircle size={20} />
+      {loading ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg animate-pulse">
+              <div className="w-10 h-10 rounded-xl bg-zinc-100 mb-4" />
+              <div className="h-8 w-12 bg-zinc-100 rounded-lg mb-2" />
+              <div className="h-3 w-16 bg-zinc-50 rounded" />
             </div>
-            <div>
-              <h4 className="text-sm font-bold tracking-tight">Revision Required</h4>
-              <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">{revisionArticle.title} needs your attention</p>
-            </div>
-          </div>
-          <NavLink to="/author/articles" className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-rose-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20">
-            Review Comments
-          </NavLink>
+          ))}
         </div>
-      )}
-
-      {/* Stats Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        {stats.map((stat, i) => (
-          <div key={i} className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg group hover:border-black transition-all cursor-default">
-            <div className="flex justify-between items-start mb-4">
-              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", stat.bg, stat.color)}>
-                <stat.icon size={20} />
+      ) : (
+        <>
+          {/* Alert Section - Revision Required */}
+          {revisionArticle && (
+            <div className="mb-8 p-4 bg-rose-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-rose-600/10 animate-pulse-slow border border-white/10">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+                  <AlertCircle size={20} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold tracking-tight">Revision Required</h4>
+                  <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">{revisionArticle.title} needs your attention</p>
+                </div>
               </div>
-              <TrendingUp size={16} className="text-zinc-200" />
+              <NavLink to="/author/articles" className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-rose-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20">
+                Review Comments
+              </NavLink>
             </div>
-            <h3 className="text-3xl font-bold text-black tracking-tighter mb-1">{stat.value}</h3>
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{stat.label}</p>
+          )}
+
+          {/* Stats Cards Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            {stats.map((stat, i) => (
+              <div key={i} className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg group hover:border-black transition-all cursor-default">
+                <div className="flex justify-between items-start mb-4">
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", stat.bg, stat.color)}>
+                    <stat.icon size={20} />
+                  </div>
+                  <TrendingUp size={16} className="text-zinc-200" />
+                </div>
+                <h3 className="text-3xl font-bold text-black tracking-tighter mb-1">{stat.value}</h3>
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{stat.label}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       {/* Main Grid Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
