@@ -9,11 +9,15 @@ import {
   Edit3, 
   Save, 
   Loader2,
-  Trash2
+  Trash2,
+  Globe,
+  ChevronDown,
+  GraduationCap
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useNotification } from '../utils/NotificationContext';
 import type { UserProfile } from '../hooks/useProfile';
+import { countryCodes } from '../utils/countryCodes';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -30,11 +34,26 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imageRemoved, setImageRemoved] = useState(false);
+  const [countryCode, setCountryCode] = useState('+91');
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (profile) {
-      setFormData(profile);
+      let code = '+91';
+      let phoneNum = profile.phone || '';
+      
+      if (phoneNum.startsWith('+')) {
+        const sortedCodes = [...countryCodes].sort((a, b) => b.code.length - a.code.length);
+        const matchedCountry = sortedCodes.find(c => phoneNum.startsWith(c.code));
+        if (matchedCountry) {
+          code = matchedCountry.code;
+          phoneNum = phoneNum.slice(matchedCountry.code.length).trim();
+        }
+      }
+      
+      setCountryCode(code);
+      setFormData({ ...profile, phone: phoneNum });
       setPreviewImage(profile.profileImage);
     }
   }, [profile, isOpen]);
@@ -72,15 +91,26 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
     }
 
     if (formData.phone) {
-      const phoneRegex = /^[6-9]\d{9}$/;
-      if (!phoneRegex.test(formData.phone)) {
-        showToast('Phone number must be 10 digits and start with 6, 7, 8, or 9', 'error');
-        return;
+      if (countryCode === '+91') {
+        const phoneRegex = /^[6-9]\d{9}$/;
+        if (!phoneRegex.test(formData.phone)) {
+          showToast('Indian phone number must be 10 digits and start with 6, 7, 8, or 9', 'error');
+          return;
+        }
+      } else {
+        if (formData.phone.length < 7 || formData.phone.length > 15) {
+          showToast('Please enter a valid phone number', 'error');
+          return;
+        }
       }
     }
 
     setIsSaving(true);
-    const result = await onSave(formData, imageRemoved ? null : selectedFile);
+    const dataToSave = { 
+      ...formData, 
+      phone: formData.phone ? `${countryCode}${formData.phone}` : '' 
+    };
+    const result = await onSave(dataToSave, imageRemoved ? null : (selectedFile || undefined));
     setIsSaving(false);
 
     if (result.success) {
@@ -103,8 +133,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
       
       {/* Modal Container */}
       <div className={cn(
-        "relative w-full max-w-lg bg-zinc-900 text-white shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 border border-white/10",
-        "h-full sm:h-auto sm:rounded-3xl"
+        "relative w-full max-w-lg bg-zinc-900 text-white shadow-2xl flex flex-col animate-in zoom-in-95 duration-300 border border-white/10",
+        "h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:rounded-3xl overflow-hidden"
       )}>
         {/* Header Overlay */}
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-black/40 to-transparent z-0" />
@@ -117,7 +147,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
           <X size={20} />
         </button>
 
-        <div className="relative z-10 p-8 pt-12 flex flex-col items-center">
+        <div className="relative z-10 p-8 pt-12 flex flex-col items-center overflow-y-auto flex-1 custom-scrollbar">
           {/* Profile Image Section */}
           <div className="relative group mb-6">
             <div className="w-32 h-32 rounded-full bg-zinc-800 border-4 border-zinc-900 overflow-hidden shadow-2xl flex items-center justify-center">
@@ -191,6 +221,26 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
                 )}
               </div>
 
+              {/* Designation Field */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                  <GraduationCap size={12} /> Designation / Qualification <span className="opacity-50">(Optional)</span>
+                </label>
+                {isEditing ? (
+                  <input 
+                    type="text"
+                    placeholder="e.g. Ph.D. in Computer Science"
+                    value={formData.designation || ''}
+                    onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                    className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  />
+                ) : (
+                  <p className="text-sm font-medium bg-white/5 border border-white/5 rounded-xl px-4 py-3">
+                    {formData.designation || <span className="opacity-40 italic">Not specified</span>}
+                  </p>
+                )}
+              </div>
+
               {/* Email Field */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
@@ -214,22 +264,69 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
                   <Phone size={12} /> Phone Number
                 </label>
                 {isEditing ? (
-                  <input 
-                    type="tel"
-                    placeholder="10-digit mobile number"
-                    value={formData.phone || ''}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                      if (value.length > 0 && !['6', '7', '8', '9'].includes(value[0])) {
-                        return;
-                      }
-                      setFormData({ ...formData, phone: value });
-                    }}
-                    className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                  />
+                  <div className="space-y-3">
+                    <div className="relative">
+                      {/* Custom Dropdown Trigger */}
+                      <button
+                        type="button"
+                        onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+                        className="w-full flex items-center justify-between bg-zinc-800 text-white border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+                      >
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Globe size={16} className="text-zinc-500" />
+                        </div>
+                        <span className="truncate pr-2">
+                          {countryCodes.find(c => c.code === countryCode)?.label || countryCode}
+                        </span>
+                        <ChevronDown size={16} className={cn("text-zinc-500 transition-transform", isCountryDropdownOpen && "rotate-180")} />
+                      </button>
+
+                      {/* Custom Dropdown Menu */}
+                      {isCountryDropdownOpen && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-[160]" 
+                            onClick={() => setIsCountryDropdownOpen(false)}
+                          />
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-800 border border-white/10 rounded-xl shadow-2xl z-[170] py-2 max-h-48 overflow-y-auto overflow-x-hidden animate-in slide-in-from-top-2 duration-200">
+                            {countryCodes.map((country) => (
+                              <button
+                                key={country.code}
+                                type="button"
+                                onClick={() => {
+                                  setCountryCode(country.code);
+                                  setIsCountryDropdownOpen(false);
+                                }}
+                                className={cn(
+                                  "w-full px-4 py-3 text-left text-sm transition-all flex items-center justify-between group",
+                                  countryCode === country.code ? "bg-zinc-700 text-white font-bold" : "text-zinc-300 hover:bg-zinc-700 hover:text-white"
+                                )}
+                              >
+                                {country.label}
+                                {countryCode === country.code && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <input 
+                      type="tel"
+                      placeholder={countryCode === '+91' ? "10-digit mobile number" : "Mobile number"}
+                      value={formData.phone || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, countryCode === '+91' ? 10 : 15);
+                        if (countryCode === '+91' && value.length > 0 && !['6', '7', '8', '9'].includes(value[0])) {
+                          return;
+                        }
+                        setFormData({ ...formData, phone: value });
+                      }}
+                      className="w-full bg-zinc-800 border border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    />
+                  </div>
                 ) : (
                   <p className="text-sm font-medium bg-white/5 border border-white/5 rounded-xl px-4 py-3">
-                    {formData.phone || <span className="opacity-40 italic">No phone number provided</span>}
+                    {formData.phone ? `${countryCode} ${formData.phone}` : <span className="opacity-40 italic">No phone number provided</span>}
                   </p>
                 )}
               </div>
@@ -243,7 +340,18 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
                     type="button"
                     onClick={() => {
                       setIsEditing(false);
-                      setFormData(profile);
+                      let code = '+91';
+                      let phoneNum = profile?.phone || '';
+                      if (phoneNum.startsWith('+')) {
+                        const sortedCodes = [...countryCodes].sort((a, b) => b.code.length - a.code.length);
+                        const matchedCountry = sortedCodes.find(c => phoneNum.startsWith(c.code));
+                        if (matchedCountry) {
+                          code = matchedCountry.code;
+                          phoneNum = phoneNum.slice(matchedCountry.code.length).trim();
+                        }
+                      }
+                      setCountryCode(code);
+                      setFormData(profile ? { ...profile, phone: phoneNum } : null);
                       setPreviewImage(profile?.profileImage || null);
                     }}
                     className="flex-1 py-4 bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95"

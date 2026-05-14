@@ -107,7 +107,8 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({ isOpen, onClose, us
 
       {/* Modal Content */}
       <div className={cn(
-        "relative bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 border border-white/20",
+        "relative bg-white w-full max-w-lg rounded-2xl shadow-2xl flex flex-col transform transition-all duration-300 border border-white/20",
+        "h-[100dvh] sm:h-auto sm:max-h-[90vh] overflow-hidden",
         isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4"
       )}>
         {isSuccess ? (
@@ -133,7 +134,7 @@ const ReportIssueModal: React.FC<ReportIssueModalProps> = ({ isOpen, onClose, us
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
               {/* Issue Type */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Issue Type</label>
