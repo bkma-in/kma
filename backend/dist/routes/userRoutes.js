@@ -25,7 +25,7 @@ router.get('/profile', authMiddleware_1.requireAuth, async (req, res) => {
 router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.single('profileImage'), async (req, res) => {
     try {
         const { uid } = req.user;
-        const { name, phone } = req.body;
+        const { name, phone, designation } = req.body;
         const userRef = firebase_1.db.collection('users').doc(uid);
         const userDoc = await userRef.get();
         if (!userDoc.exists) {
@@ -39,6 +39,8 @@ router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.s
             updateData.name = name;
         if (phone !== undefined)
             updateData.phone = phone;
+        if (designation !== undefined)
+            updateData.designation = designation;
         // Handle Image Upload
         if (req.file) {
             // 1. Upload new image to Cloudinary
@@ -99,6 +101,41 @@ router.post('/report-issue', authMiddleware_1.requireAuth, uploadMiddleware_1.up
     catch (error) {
         console.error('Report issue error:', error);
         res.status(500).json({ error: 'Failed to report issue' });
+    }
+});
+// Search Users (Registered users only)
+router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const { search = '', limit = '20' } = req.query;
+        const searchTerm = search.toLowerCase();
+        const limitNum = parseInt(limit) || 20;
+        if (!searchTerm) {
+            return res.json({ success: true, users: [] });
+        }
+        // Firestore doesn't support case-insensitive search well.
+        // We'll fetch all users (up to a reasonable limit) and filter in memory for now,
+        // or use prefix matching if we had a normalized search field.
+        // Given the task, we'll implement a basic search.
+        // Note: In a production app with many users, we'd use Algolia or normalized fields.
+        const snapshot = await firebase_1.db.collection('users').limit(100).get();
+        const users = snapshot.docs
+            .map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.name,
+                email: data.email,
+                affiliation: data.affiliation || ''
+            };
+        })
+            .filter(user => user.name?.toLowerCase().includes(searchTerm) ||
+            user.email?.toLowerCase().includes(searchTerm))
+            .slice(0, limitNum);
+        res.json({ success: true, users });
+    }
+    catch (error) {
+        console.error('Search users error:', error);
+        res.status(500).json({ error: 'Failed to search users' });
     }
 });
 exports.default = router;
