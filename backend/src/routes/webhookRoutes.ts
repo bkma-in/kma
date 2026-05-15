@@ -16,7 +16,16 @@ router.post('/razorpay', async (req, res) => {
       .update(req.body) // req.body is a Buffer due to express.raw in main.ts
       .digest('hex');
 
-    if (signature !== expectedSignature) {
+    if (!signature) {
+      console.error('Razorpay Webhook Verification Failed: Signature header missing');
+      return res.status(400).send('Webhook verification failed');
+    }
+
+    const signatureBuffer = Buffer.from(signature, 'utf8');
+    const expectedSignatureBuffer = Buffer.from(expectedSignature, 'utf8');
+
+    if (signatureBuffer.length !== expectedSignatureBuffer.length || 
+        !crypto.timingSafeEqual(signatureBuffer, expectedSignatureBuffer)) {
       console.error('Razorpay Webhook Verification Failed: Signature mismatch');
       return res.status(400).send('Webhook verification failed');
     }
