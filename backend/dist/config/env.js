@@ -22,14 +22,10 @@ exports.config = {
         apiKey: process.env.BREVO_API_KEY || '',
     },
     payments: {
-        cashfree: {
-            appId: process.env.CASHFREE_APP_ID || '',
-            secretKey: process.env.CASHFREE_SECRET_KEY || '',
-            environment: process.env.CASHFREE_ENVIRONMENT || 'SANDBOX',
-        },
         razorpay: {
             keyId: process.env.RAZORPAY_KEY_ID || '',
             keySecret: process.env.RAZORPAY_KEY_SECRET || '',
+            webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
         }
     },
     cloudinary: {

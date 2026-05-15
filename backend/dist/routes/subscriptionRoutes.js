@@ -1,11 +1,17 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const firebase_1 = require("../config/firebase");
 const authMiddleware_1 = require("../middleware/authMiddleware");
-const cashfree_pg_1 = require("cashfree-pg");
+const razorpay_1 = __importDefault(require("razorpay"));
 const env_1 = require("../config/env");
-const cashfree = new cashfree_pg_1.Cashfree(env_1.config.payments.cashfree.environment === 'PRODUCTION' ? cashfree_pg_1.Cashfree.PRODUCTION : cashfree_pg_1.Cashfree.SANDBOX, env_1.config.payments.cashfree.appId, env_1.config.payments.cashfree.secretKey);
+const razorpay = new razorpay_1.default({
+    key_id: env_1.config.payments.razorpay.keyId,
+    key_secret: env_1.config.payments.razorpay.keySecret,
+});
 const router = (0, express_1.Router)();
 // List user's subscriptions
 router.get('/my-subscriptions', authMiddleware_1.requireAuth, async (req, res) => {
@@ -23,28 +29,25 @@ router.get('/my-subscriptions', authMiddleware_1.requireAuth, async (req, res) =
         res.status(500).json({ error: 'Failed to list subscriptions' });
     }
 });
-// Create Cashfree Order
+// Create Razorpay Order
 router.post('/create-order', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const { uid, email } = req.user;
         const { issueId, type } = req.body; // type: "online" or "online_print"
         // Amount logic (mocked)
         const orderAmount = type === 'online_print' ? 500 : 200;
-        const orderId = `order_${Date.now()}_${uid.substring(0, 5)}`;
-        const request = {
-            order_amount: orderAmount,
-            order_currency: "INR",
-            customer_details: {
-                customer_id: uid,
-                customer_email: email,
-                customer_phone: "9999999999" // Add proper phone requirement if needed
-            },
-            order_meta: {
-                return_url: `http://localhost:5173/payment-success?order_id={order_id}`
-            },
-            order_id: orderId
+        const options = {
+            amount: orderAmount * 100, // amount in the smallest currency unit (paise for INR)
+            currency: "INR",
+            receipt: `receipt_${Date.now()}_${uid.substring(0, 5)}`,
+            notes: {
+                userId: uid,
+                email: email,
+                issueId: issueId,
+                type: type
+            }
         };
-        const response = await cashfree.PGCreateOrder(request);
+        const order = await razorpay.orders.create(options);
         // Save pending subscription in Firestore
         const subRef = firebase_1.db.collection('subscriptions').doc();
         await subRef.set({
@@ -53,18 +56,19 @@ router.post('/create-order', authMiddleware_1.requireAuth, async (req, res) => {
             issueId,
             type,
             status: 'pending',
-            paymentId: orderId,
+            paymentId: order.id,
             createdAt: new Date(),
             updatedAt: new Date()
         });
         res.json({
             success: true,
-            paymentSessionId: response.data.payment_session_id,
-            orderId
+            orderId: order.id,
+            paymentSessionId: order.id, // for backward compatibility
+            keyId: env_1.config.payments.razorpay.keyId
         });
     }
     catch (error) {
-        console.error('Create order error:', error.response?.data || error);
+        console.error('Create order error:', error);
         res.status(500).json({ error: 'Failed to create payment order' });
     }
 });

@@ -1,35 +1,59 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const firebase_1 = require("../config/firebase");
-const cashfree_pg_1 = require("cashfree-pg");
+const crypto_1 = __importDefault(require("crypto"));
 const env_1 = require("../config/env");
 const router = (0, express_1.Router)();
-router.post('/cashfree', async (req, res) => {
+router.post('/razorpay', async (req, res) => {
     try {
-        const cashfree = new cashfree_pg_1.Cashfree(env_1.config.payments.cashfree.environment === 'PRODUCTION' ? cashfree_pg_1.Cashfree.PRODUCTION : cashfree_pg_1.Cashfree.SANDBOX, env_1.config.payments.cashfree.appId, env_1.config.payments.cashfree.secretKey);
-        cashfree.PGVerifyWebhookSignature(req.headers["x-webhook-signature"], req.body.toString(), req.headers["x-webhook-timestamp"]);
+        const signature = req.headers["x-razorpay-signature"];
+        const webhookSecret = env_1.config.payments.razorpay.webhookSecret;
+        // Verify signature
+        const expectedSignature = crypto_1.default
+            .createHmac('sha256', webhookSecret)
+            .update(req.body) // req.body is a Buffer due to express.raw in main.ts
+            .digest('hex');
+        if (signature !== expectedSignature) {
+            console.error('Razorpay Webhook Verification Failed: Signature mismatch');
+            return res.status(400).send('Webhook verification failed');
+        }
         // Parse body after verifying signature
         const payload = JSON.parse(req.body.toString());
-        const { order, payment } = payload.data;
-        if (payment.payment_status === 'SUCCESS') {
-            const orderId = order.order_id;
-            // Find subscription
-            const snapshot = await firebase_1.db.collection('subscriptions').where('paymentId', '==', orderId).limit(1).get();
-            if (!snapshot.empty) {
-                const docRef = snapshot.docs[0].ref;
-                await docRef.update({
-                    status: 'active',
-                    updatedAt: new Date()
-                });
-                console.log(`Subscription updated to active for order ${orderId}`);
+        const event = payload.event;
+        console.log(`Razorpay Webhook Received: ${event}`);
+        // Handle order.paid or payment.captured
+        if (event === 'order.paid' || event === 'payment.captured') {
+            const orderId = payload.payload.order?.entity?.id || payload.payload.payment?.entity?.order_id;
+            if (orderId) {
+                // Find subscription by orderId (stored as paymentId in our DB)
+                const snapshot = await firebase_1.db.collection('subscriptions').where('paymentId', '==', orderId).limit(1).get();
+                if (!snapshot.empty) {
+                    const docRef = snapshot.docs[0].ref;
+                    await docRef.update({
+                        status: 'active',
+                        updatedAt: new Date()
+                    });
+                    console.log(`Subscription updated to active for order ${orderId}`);
+                }
+                else {
+                    console.warn(`No subscription found for order ${orderId}`);
+                }
             }
+        }
+        else if (event === 'subscription.active') {
+            const subscriptionId = payload.payload.subscription.entity.id;
+            // Handle subscription-specific logic if needed
+            console.log(`Subscription ${subscriptionId} is now active`);
         }
         res.status(200).send('OK');
     }
     catch (error) {
-        console.error('Cashfree Webhook Verification Failed:', error);
-        res.status(400).send('Webhook verification failed');
+        console.error('Razorpay Webhook Error:', error);
+        res.status(500).send('Internal Server Error');
     }
 });
 exports.default = router;
