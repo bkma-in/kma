@@ -25,6 +25,7 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // ─── Attach stream to video element whenever both are available ───────────
   // This useEffect watches for when the video element mounts and the stream
@@ -118,10 +119,18 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
       stopCamera();
       setCapturedImage(null);
       setError(null);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     }
 
     return () => {
       stopCamera();
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -156,7 +165,8 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
   const handleRetake = () => {
     setCapturedImage(null);
     // Small delay to ensure the video element re-mounts before camera starts
-    setTimeout(() => startCamera(), 50);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => startCamera(), 50);
   };
 
   // ─── Save ─────────────────────────────────────────────────────────────────
