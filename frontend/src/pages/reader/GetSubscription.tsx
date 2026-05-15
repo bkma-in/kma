@@ -129,7 +129,10 @@ const GetSubscription = () => {
             </ul>
 
             <button 
-              onClick={handleSubscribe}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSubscribe();
+              }}
               disabled={isLoading}
               className={cn(
                 "w-full py-5 rounded-2xl font-bold text-sm tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase",
