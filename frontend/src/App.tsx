@@ -1,4 +1,3 @@
-import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { getDashboardByRole } from './utils/auth';
@@ -26,7 +25,6 @@ import DeveloperDashboard from './pages/developer/DeveloperDashboard';
 import DeveloperIssues from './pages/developer/DeveloperIssues';
 import AcceptInvitation from './pages/AcceptInvitation';
 import ProtectedRoute from './components/ProtectedRoute';
-import { DevPlaceholder } from './pages/PlaceholderPages';
 
 // Reader Portal Imports
 import ReaderLayout from './layouts/ReaderLayout';

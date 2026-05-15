@@ -1,9 +1,6 @@
-import React from 'react';
 import { useState } from 'react';
 import { 
   User, 
-  Mail, 
-  Phone, 
   Shield, 
   Edit3, 
   Camera,
@@ -12,7 +9,6 @@ import {
   Award
 } from 'lucide-react';
 import { useProfile } from '../../hooks/useProfile';
-import { cn } from '../../utils/cn';
 import ProfileModal from '../../components/ProfileModal';
 import PhotoActionModal from '../../components/PhotoActionModal';
 import { useNotification } from '../../utils/NotificationContext';

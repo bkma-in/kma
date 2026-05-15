@@ -25,7 +25,7 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ─── Attach stream to video element whenever both are available ───────────
   // This useEffect watches for when the video element mounts and the stream
