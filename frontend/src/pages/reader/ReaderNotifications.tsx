@@ -50,7 +50,7 @@ const ReaderNotifications = () => {
     switch (type) {
       case 'success': return <CheckCircle2 size={18} className="text-emerald-600" />;
       case 'warning': return <AlertCircle size={18} className="text-amber-600" />;
-      case 'error': return <Trash2 size={18} className="text-rose-600" />;
+      case 'error': return <XCircle size={18} className="text-rose-600" />;
       default: return <Info size={18} className="text-blue-600" />;
     }
   };

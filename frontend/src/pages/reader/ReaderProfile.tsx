@@ -154,13 +154,15 @@ const ReaderProfile = () => {
         onClose={() => setIsPhotoModalOpen(false)}
         currentImage={profile?.profileImage || null}
         onUpdate={async (newImage) => {
-          if (profile) {
-            const result = await updateProfile({ ...profile, profileImage: newImage });
-            if (result.success) {
-              showToast(newImage ? 'Profile photo updated' : 'Photo removed successfully', 'success');
-            } else {
-              showToast(result.error || 'Failed to update photo', 'error');
-            }
+          if (!profile) {
+            showToast('Unable to update photo: Profile not loaded', 'error');
+            return;
+          }
+          const result = await updateProfile({ ...profile, profileImage: newImage });
+          if (result.success) {
+            showToast(newImage ? 'Profile photo updated' : 'Photo removed successfully', 'success');
+          } else {
+            showToast(result.error || 'Failed to update photo', 'error');
           }
         }}
       />

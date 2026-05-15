@@ -25,14 +25,27 @@ const PhotoActionModal: React.FC<PhotoActionModalProps> = ({ isOpen, onClose, cu
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        onUpdate(reader.result as string);
-        onClose();
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+    if (!allowedTypes.includes(file.type)) {
+      console.error('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
+      return;
     }
+    
+    if (file.size > MAX_SIZE) {
+      console.error('File size exceeds 5MB limit.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      onUpdate(reader.result as string);
+      onClose();
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRemove = () => {
@@ -49,11 +62,16 @@ const PhotoActionModal: React.FC<PhotoActionModalProps> = ({ isOpen, onClose, cu
       />
       
       {/* Modal Container */}
-      <div className="relative w-full max-w-sm bg-zinc-900 border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+      <div 
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="photo-modal-title"
+        className="relative w-full max-w-sm bg-zinc-900 border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-          <h3 className="text-sm font-bold text-white tracking-tight uppercase tracking-widest">Profile Photo</h3>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
+          <h3 id="photo-modal-title" className="text-sm font-bold text-white tracking-tight uppercase tracking-widest">Profile Photo</h3>
+          <button onClick={onClose} aria-label="Close" className="text-zinc-500 hover:text-white transition-colors">
             <X size={18} />
           </button>
         </div>

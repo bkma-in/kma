@@ -190,7 +190,12 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
       />
 
       {/* Modal Content */}
-      <div className="relative w-full max-w-xl bg-zinc-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-300">
+      <div 
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="camera-modal-title"
+        className="relative w-full max-w-xl bg-zinc-900 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-300"
+      >
 
         {/* Header */}
         <div className="px-8 py-5 border-b border-white/5 flex items-center justify-between">
@@ -199,7 +204,7 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
               <Camera size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white tracking-tight">Capture Profile Photo</h3>
+              <h3 id="camera-modal-title" className="text-base font-bold text-white tracking-tight">Capture Profile Photo</h3>
               <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-0.5">
                 {capturedImage ? 'Preview — looks good?' : 'Live Webcam Preview'}
               </p>
@@ -207,6 +212,7 @@ const CameraModal: React.FC<CameraModalProps> = ({ isOpen, onClose, onCapture })
           </div>
           <button 
             onClick={onClose}
+            aria-label="Close camera modal"
             className="text-zinc-500 hover:text-white transition-all p-2 hover:bg-white/5 rounded-full"
           >
             <X size={20} />

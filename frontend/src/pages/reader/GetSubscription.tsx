@@ -85,7 +85,7 @@ const GetSubscription = () => {
         {plans.map((plan) => (
           <div 
             key={plan.id}
-            onClick={() => setSelectedPlan(plan.id as any)}
+            onClick={() => setSelectedPlan(plan.id as 'annual' | 'lifetime')}
             className={cn(
               "relative bg-white border-2 rounded-[2.5rem] p-10 transition-all cursor-pointer group",
               selectedPlan === plan.id 

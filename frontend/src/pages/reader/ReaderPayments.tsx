@@ -71,7 +71,7 @@ const ReaderPayments = () => {
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
             <select 
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as PaymentStatus | 'All')}
               className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black focus:ring-1 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm"
             >
               <option value="All">All Status</option>
@@ -133,8 +133,14 @@ const ReaderPayments = () => {
                   <td className="px-6 py-5 text-right">
                     <button 
                       onClick={() => handleDownloadReceipt(payment.id)}
-                      className="p-2 bg-zinc-50 hover:bg-black text-zinc-400 hover:text-white rounded-lg transition-all"
+                      className={cn(
+                        "p-2 rounded-lg transition-all",
+                        payment.status === 'Paid' 
+                          ? "bg-zinc-50 hover:bg-black text-zinc-400 hover:text-white" 
+                          : "bg-zinc-100 text-zinc-300 opacity-50 cursor-not-allowed"
+                      )}
                       disabled={payment.status !== 'Paid'}
+                      aria-disabled={payment.status !== 'Paid'}
                     >
                       <Download size={16} />
                     </button>

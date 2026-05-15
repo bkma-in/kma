@@ -175,7 +175,7 @@ const ReaderLayout = () => {
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
           userName={profile?.name || "Premium Reader"}
-          userInitials={profile?.name ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : "R"}
+          userInitials={profile?.name ? (profile.name.trim().split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || "R") : "R"}
         />
 
         {/* Page Content */}
