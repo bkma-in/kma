@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 import { login } from '../services/auth.service';
+import { getDashboardByRole } from '../utils/auth';
 
 interface LoginFormProps {
   prefilledEmail?: string;
@@ -30,15 +31,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
         localStorage.setItem('userEmail', response.user.email);
         localStorage.setItem('is_temp_password', 'false'); 
         
-        if (response.user.role === 'reviewer') {
-          window.location.replace('/reviewer-dashboard');
-        } else if (response.user.role === 'admin') {
-          window.location.replace('/admin-dashboard');
-        } else if (response.user.role === 'developer') {
-          window.location.replace('/developer-dashboard');
-        } else {
-          window.location.replace('/author/dashboard');
-        }
+        navigate(getDashboardByRole(response.user.role), { replace: true });
+        // Use window.location.replace to ensure full app state reload if needed, 
+        // or just navigate if using a global state.
+        // Given we are moving to AuthProvider, navigate should be fine.
+        window.location.reload(); 
       }
     } catch (err: any) {
       setError(err.message || 'Invalid email or password');

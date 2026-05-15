@@ -61,7 +61,7 @@ export const getPasswordStrength = (password: string): number => {
   return strength;
 };
 
-export type Role = 'user' | 'author' | 'reviewer';
+export type Role = 'admin' | 'reviewer' | 'author' | 'reader' | 'dev';
 export type Status = 'approved' | 'pending' | 'rejected';
 
 export interface RegistrationData {

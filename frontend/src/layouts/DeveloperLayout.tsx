@@ -39,8 +39,8 @@ const DeveloperLayout = () => {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/developer-dashboard', end: true, icon: LayoutDashboard },
-    { name: 'Issues List', path: '/developer-dashboard/issues', icon: Bug },
+    { name: 'Dashboard', path: '/dev/dashboard', end: true, icon: LayoutDashboard },
+    { name: 'Issues List', path: '/dev/issues', icon: Bug },
   ];
 
   return (

@@ -17,8 +17,8 @@ router.post('/verify', authMiddleware_1.requireAuth, async (req, res) => {
 // Endpoint to handle new user registration profile creation in Firestore
 router.post('/register', authMiddleware_1.requireAuth, async (req, res) => {
     try {
-        const { name, role } = req.body; // e.g., "author" or "reader"
-        const allowedRoles = ['author', 'reader']; // Admins & Reviewers assigned manually
+        const { name, role } = req.body; // e.g., "author", "reader", or "reviewer"
+        const allowedRoles = ['author', 'reader', 'reviewer']; // Admin & Dev assigned manually
         const userRole = allowedRoles.includes(role) ? role : 'reader';
         const { uid, email } = req.user;
         // Check if user already exists
