@@ -21,12 +21,17 @@ router.get('/profile', authMiddleware_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch profile' });
     }
 });
-// Update Profile (including optional image)
+// Update Profile (Optimized: 1 Read, 1 Write, Non-blocking Cleanup)
 router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.single('profileImage'), async (req, res) => {
     try {
         const { uid } = req.user;
         const { name, phone, designation, bio } = req.body;
+        // 1. Lightweight Validation & Sanitization
+        const sanitizedBio = bio?.trim().slice(0, 500) || '';
+        const sanitizedName = name?.trim();
+        const sanitizedPhone = phone?.trim();
         const userRef = firebase_1.db.collection('users').doc(uid);
+        // Performance: Only one read to get current state (required for old image ID)
         const userDoc = await userRef.get();
         if (!userDoc.exists) {
             return res.status(404).json({ error: 'User profile not found' });
@@ -35,40 +40,50 @@ router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.s
         const updateData = {
             updatedAt: new Date(),
         };
-        if (name)
-            updateData.name = name;
-        if (phone !== undefined)
-            updateData.phone = phone;
+        // Only add to update payload if provided to avoid overwriting with undefined
+        if (sanitizedName)
+            updateData.name = sanitizedName;
+        if (sanitizedPhone !== undefined)
+            updateData.phone = sanitizedPhone;
         if (designation !== undefined)
-            updateData.designation = designation;
+            updateData.designation = designation.trim();
         if (bio !== undefined)
-            updateData.bio = bio;
-        // Handle Image Upload
+            updateData.bio = sanitizedBio;
+        // 2. Handle Image Operations
         if (req.file) {
-            // 1. Upload new image to Cloudinary
+            // Must await upload to get the new URL for the database
             const uploadResult = await (0, cloudinaryService_1.uploadImage)(req.file.buffer, 'profiles');
-            // 2. Delete old image from Cloudinary if it exists
+            // Performance: Fire-and-forget deletion of old image (don't block the response)
             if (userData.profileImagePublicId) {
-                await (0, cloudinaryService_1.deleteImage)(userData.profileImagePublicId);
+                (0, cloudinaryService_1.deleteImage)(userData.profileImagePublicId).catch(err => console.error('Background cleanup error (old image):', err));
             }
-            // 3. Update database with new URLs
             updateData.profileImage = uploadResult.secure_url;
             updateData.profileImagePublicId = uploadResult.public_id;
         }
         else if (req.body.profileImage === null || req.body.profileImage === 'null') {
             // Explicitly removed profile image
             if (userData.profileImagePublicId) {
-                await (0, cloudinaryService_1.deleteImage)(userData.profileImagePublicId);
+                (0, cloudinaryService_1.deleteImage)(userData.profileImagePublicId).catch(err => console.error('Background cleanup error (removed image):', err));
             }
             updateData.profileImage = null;
             updateData.profileImagePublicId = null;
         }
+        // 3. Database Update (Single Write)
         await userRef.update(updateData);
-        const updatedDoc = await userRef.get();
-        res.json({ success: true, profile: updatedDoc.data() });
+        // Performance: Avoid second read by merging locally
+        const mergedProfile = {
+            ...userData,
+            ...updateData,
+            // Ensure complex objects like Date/Timestamp are handled consistently
+            updatedAt: updateData.updatedAt
+        };
+        res.json({
+            success: true,
+            profile: mergedProfile
+        });
     }
     catch (error) {
-        console.error('Update profile error:', error);
+        console.error('Senior Audit - Update profile error:', error);
         res.status(500).json({ error: error.message || 'Failed to update profile' });
     }
 });
