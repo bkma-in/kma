@@ -45,9 +45,9 @@ const ReviewerLayout = () => {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/reviewer-dashboard', end: true, icon: LayoutDashboard },
-    { name: 'Assigned Articles', path: '/reviewer-dashboard/articles', icon: FileText },
-    { name: 'Notifications', path: '/reviewer-dashboard/notifications', icon: Bell, badge: 2 },
+    { name: 'Dashboard', path: '/reviewer/dashboard', end: true, icon: LayoutDashboard },
+    { name: 'Assigned Articles', path: '/reviewer/articles', icon: FileText },
+    { name: 'Notifications', path: '/reviewer/notifications', icon: Bell, badge: 2 },
   ];
 
   return (

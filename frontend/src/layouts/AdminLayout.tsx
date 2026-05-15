@@ -43,9 +43,9 @@ const AdminLayout = () => {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/admin-dashboard', end: true, icon: LayoutDashboard },
-    { name: 'Reviewers', path: '/admin-dashboard/authors', icon: Users },
-    { name: 'Articles', path: '/admin-dashboard/articles', icon: FileText },
+    { name: 'Dashboard', path: '/admin/dashboard', end: true, icon: LayoutDashboard },
+    { name: 'Reviewers', path: '/admin/authors', icon: Users },
+    { name: 'Articles', path: '/admin/articles', icon: FileText },
   ];
 
   return (

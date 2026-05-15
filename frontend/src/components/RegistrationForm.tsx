@@ -18,7 +18,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'user' as Role,
+    role: 'author' as Role,
     password: '',
     confirmPassword: '',
     qualification: '',
@@ -159,7 +159,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
               <div className="space-y-2">
                 <label className="form-label">Role</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(['user', 'author', 'reviewer'] as Role[]).map((r) => (
+                  {(['author', 'reader', 'reviewer'] as Role[]).map((r) => (
                     <button
                       key={r}
                       type="button"
@@ -171,7 +171,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                           : "bg-white text-zinc-400 border-zinc-200 hover:border-black/30"
                       )}
                     >
-                      {r === 'user' ? 'User' : r === 'author' ? 'Author' : 'Reviewer'}
+                      {r.charAt(0).toUpperCase() + r.slice(1)}
                     </button>
                   ))}
                 </div>
