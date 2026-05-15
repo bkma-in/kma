@@ -25,7 +25,7 @@ router.get('/profile', authMiddleware_1.requireAuth, async (req, res) => {
 router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.single('profileImage'), async (req, res) => {
     try {
         const { uid } = req.user;
-        const { name, phone, designation } = req.body;
+        const { name, phone, designation, bio } = req.body;
         const userRef = firebase_1.db.collection('users').doc(uid);
         const userDoc = await userRef.get();
         if (!userDoc.exists) {
@@ -41,6 +41,8 @@ router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.s
             updateData.phone = phone;
         if (designation !== undefined)
             updateData.designation = designation;
+        if (bio !== undefined)
+            updateData.bio = bio;
         // Handle Image Upload
         if (req.file) {
             // 1. Upload new image to Cloudinary

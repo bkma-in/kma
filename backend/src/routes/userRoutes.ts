@@ -27,7 +27,7 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
 router.put('/profile', requireAuth, upload.single('profileImage'), async (req: AuthRequest, res) => {
   try {
     const { uid } = req.user!;
-    const { name, phone, designation } = req.body;
+    const { name, phone, designation, bio } = req.body;
 
     const userRef = db.collection('users').doc(uid);
     const userDoc = await userRef.get();
@@ -44,6 +44,7 @@ router.put('/profile', requireAuth, upload.single('profileImage'), async (req: A
     if (name) updateData.name = name;
     if (phone !== undefined) updateData.phone = phone;
     if (designation !== undefined) updateData.designation = designation;
+    if (bio !== undefined) updateData.bio = bio;
 
     // Handle Image Upload
     if (req.file) {
