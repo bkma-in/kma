@@ -8,6 +8,8 @@ export interface UserProfile {
   phone: string;
   profileImage: string | null;
   designation?: string;
+  bio?: string;
+  createdAt?: any;
 }
 
 export const useProfile = () => {
@@ -53,6 +55,7 @@ export const useProfile = () => {
       formData.append('name', newData.name);
       formData.append('phone', newData.phone || '');
       formData.append('designation', newData.designation || '');
+      formData.append('bio', newData.bio || '');
       
       if (imageFile) {
         formData.append('profileImage', imageFile);
