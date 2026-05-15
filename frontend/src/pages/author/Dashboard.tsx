@@ -14,7 +14,8 @@ import {
   FileEdit,
   Inbox,
   Loader2,
-  XCircle
+  XCircle,
+  UserPlus
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
@@ -115,7 +116,12 @@ const Dashboard = () => {
     },
   ];
 
-  const revisionArticle = articles.find(a => a.status === 'revision_requested');
+  const revisionArticles = articles.filter(a => a.status === 'revision_requested');
+  const pendingInvitations = articles.filter(a => {
+    const authorData = a.authors?.find((author: any) => author.userId === profile?.uid);
+    // An invitation is pending if the user is in the authors list but hasn't accepted yet
+    return authorData && authorData.accepted === false && authorData.status !== 'rejected';
+  });
 
   const activities = articles.slice(0, 3).map(a => ({
     title: a.status === 'accepted' ? 'Article Approved' : 
@@ -162,22 +168,45 @@ const Dashboard = () => {
       ) : (
         <>
           {/* Alert Section - Revision Required */}
-          {revisionArticle && (
-            <div className="mb-8 p-4 bg-rose-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-rose-600/10 animate-pulse-slow border border-white/10">
+          {revisionArticles.map((article) => (
+            <div key={article.articleId} className="mb-6 p-4 bg-rose-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-rose-600/10 animate-pulse-slow border border-white/10">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
                   <AlertCircle size={20} />
                 </div>
                 <div>
                   <h4 className="text-sm font-bold tracking-tight">Revision Required</h4>
-                  <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">{revisionArticle.title} needs your attention</p>
+                  <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">{article.title} needs your attention</p>
                 </div>
               </div>
-              <NavLink to="/author/articles" className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-rose-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20">
+              <NavLink to={`/author/articles`} className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-rose-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20 text-center">
                 Review Comments
               </NavLink>
             </div>
-          )}
+          ))}
+
+          {/* Alert Section - Co-author Invitations */}
+          {pendingInvitations.map((article) => {
+            const inviter = article.authors?.find((au: any) => au.role === 'submitter')?.name || 'Another Author';
+            return (
+              <div key={article.articleId} className="mb-6 p-4 bg-indigo-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-indigo-600/10 border border-white/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+                    <UserPlus size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold tracking-tight">Co-author Invitation</h4>
+                    <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">
+                      {inviter} invited you to co-author: {article.title}
+                    </p>
+                  </div>
+                </div>
+                <NavLink to="/author/articles" className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-indigo-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20 text-center">
+                  View Invitation
+                </NavLink>
+              </div>
+            );
+          })}
 
           {/* Stats Cards Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
