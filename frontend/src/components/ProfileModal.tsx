@@ -137,7 +137,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
       {/* Modal Container */}
       <div className={cn(
         "relative w-full bg-zinc-900 text-white shadow-2xl flex flex-col animate-in zoom-in-95 duration-300 border border-white/10 overflow-hidden",
-        isEditing ? "max-w-lg h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:rounded-3xl" : "max-w-5xl sm:rounded-[2.5rem] h-auto sm:max-h-[95vh]"
+        isEditing ? "max-w-lg h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:rounded-3xl" : "max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[95vh] sm:rounded-[2.5rem]"
       )}>
         {/* Header Overlay */}
         <div className={cn(
@@ -153,7 +153,10 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
           <X size={20} />
         </button>
 
-        <div className="relative z-10 p-6 sm:p-10 flex flex-col overflow-y-auto flex-1 custom-scrollbar">
+        <div className={cn(
+          "relative z-10 flex flex-col overflow-y-auto flex-1 min-h-0 custom-scrollbar",
+          isEditing ? "p-4 sm:p-8" : "p-6 sm:p-10"
+        )}>
           {!isEditing ? (
             /* Redesigned View Mode (Matching Image 2) */
             <div className="space-y-8">
@@ -430,43 +433,46 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
                     </div>
                   </div>
                 </div>
-
-                <div className="pt-4 flex gap-4">
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      setIsEditing(false);
-                      let code = '+91';
-                      let phoneNum = profile?.phone || '';
-                      if (phoneNum.startsWith('+')) {
-                        const sortedCodes = [...countryCodes].sort((a, b) => b.code.length - a.code.length);
-                        const matchedCountry = sortedCodes.find(c => phoneNum.startsWith(c.code));
-                        if (matchedCountry) {
-                          code = matchedCountry.code;
-                          phoneNum = phoneNum.slice(matchedCountry.code.length).trim();
-                        }
-                      }
-                      setCountryCode(code);
-                      setFormData(profile ? { ...profile, phone: phoneNum } : null);
-                      setPreviewImage(profile?.profileImage || null);
-                    }}
-                    className="flex-1 py-4 bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    disabled={isSaving}
-                    className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-xl shadow-blue-600/20 active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                    Save Changes
-                  </button>
-                </div>
               </form>
             </div>
           )}
         </div>
+
+        {/* Sticky Footer for Edit Mode */}
+        {isEditing && (
+          <div className="relative z-20 p-4 bg-zinc-900 border-t border-white/5 flex gap-3 shadow-[0_-10px_20px_rgba(0,0,0,0.4)]">
+            <button 
+              type="button"
+              onClick={() => {
+                setIsEditing(false);
+                let code = '+91';
+                let phoneNum = profile?.phone || '';
+                if (phoneNum.startsWith('+')) {
+                  const sortedCodes = [...countryCodes].sort((a, b) => b.code.length - a.code.length);
+                  const matchedCountry = sortedCodes.find(c => phoneNum.startsWith(c.code));
+                  if (matchedCountry) {
+                    code = matchedCountry.code;
+                    phoneNum = phoneNum.slice(matchedCountry.code.length).trim();
+                  }
+                }
+                setCountryCode(code);
+                setFormData(profile ? { ...profile, phone: phoneNum } : null);
+                setPreviewImage(profile?.profileImage || null);
+              }}
+              className="flex-1 py-3.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 border border-white/5"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20 active:scale-95 flex items-center justify-center gap-2"
+            >
+              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              Save Changes
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
