@@ -26,7 +26,17 @@ import DeveloperDashboard from './pages/developer/DeveloperDashboard';
 import DeveloperIssues from './pages/developer/DeveloperIssues';
 import AcceptInvitation from './pages/AcceptInvitation';
 import ProtectedRoute from './components/ProtectedRoute';
-import { ReaderPlaceholder, DevPlaceholder } from './pages/PlaceholderPages';
+import { DevPlaceholder } from './pages/PlaceholderPages';
+
+// Reader Portal Imports
+import ReaderLayout from './layouts/ReaderLayout';
+import ReaderDashboard from './pages/reader/ReaderDashboard';
+import ReaderProfile from './pages/reader/ReaderProfile';
+import ReaderPayments from './pages/reader/ReaderPayments';
+import ReaderNotifications from './pages/reader/ReaderNotifications';
+import ReaderSavedArticles from './pages/reader/ReaderSavedArticles';
+import GetSubscription from './pages/reader/GetSubscription';
+import { SubscriptionProvider } from './utils/SubscriptionContext';
 
 function App() {
   const { currentUser, loading } = useAuth();
@@ -46,49 +56,51 @@ function App() {
     <div className="w-full min-h-screen">
       <ToastContainer />
       <ConfirmModal />
-      <Routes>
-        <Route path="/" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <LandingPage />} />
-        <Route path="/auth" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Auth />} />
-        <Route path="/invitation/accept/:token" element={<AcceptInvitation />} />
-        
-        {/* Author Portal Routes */}
-        <Route path="/author/*" element={
-          <ProtectedRoute allowedRoles={['author']}>
-            <AuthorRoutes />
-          </ProtectedRoute>
-        } />
+      <SubscriptionProvider>
+        <Routes>
+          <Route path="/" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <LandingPage />} />
+          <Route path="/auth" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Auth />} />
+          <Route path="/invitation/accept/:token" element={<AcceptInvitation />} />
+          
+          {/* Author Portal Routes */}
+          <Route path="/author/*" element={
+            <ProtectedRoute allowedRoles={['author']}>
+              <AuthorRoutes />
+            </ProtectedRoute>
+          } />
 
-        {/* Admin Portal Routes */}
-        <Route path="/admin/*" element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <AdminRoutes />
-          </ProtectedRoute>
-        } />
+          {/* Admin Portal Routes */}
+          <Route path="/admin/*" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminRoutes />
+            </ProtectedRoute>
+          } />
 
-        {/* Reviewer Portal Routes */}
-        <Route path="/reviewer/*" element={
-          <ProtectedRoute allowedRoles={['reviewer']}>
-            <ReviewerRoutes />
-          </ProtectedRoute>
-        } />
+          {/* Reviewer Portal Routes */}
+          <Route path="/reviewer/*" element={
+            <ProtectedRoute allowedRoles={['reviewer']}>
+              <ReviewerRoutes />
+            </ProtectedRoute>
+          } />
 
-        {/* Reader Portal Routes */}
-        <Route path="/reader/*" element={
-          <ProtectedRoute allowedRoles={['reader']}>
-            <ReaderRoutes />
-          </ProtectedRoute>
-        } />
+          {/* Reader Portal Routes */}
+          <Route path="/reader/*" element={
+            <ProtectedRoute allowedRoles={['reader']}>
+              <ReaderRoutes />
+            </ProtectedRoute>
+          } />
 
-        {/* Developer Portal Routes */}
-        <Route path="/dev/*" element={
-          <ProtectedRoute allowedRoles={['dev']}>
-            <DeveloperRoutes />
-          </ProtectedRoute>
-        } />
+          {/* Developer Portal Routes */}
+          <Route path="/dev/*" element={
+            <ProtectedRoute allowedRoles={['dev']}>
+              <DeveloperRoutes />
+            </ProtectedRoute>
+          } />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </SubscriptionProvider>
     </div>
   );
 }
@@ -138,8 +150,15 @@ function ReviewerRoutes() {
 function ReaderRoutes() {
   return (
     <Routes>
-      <Route path="dashboard" element={<ReaderPlaceholder />} />
-      <Route index element={<Navigate to="dashboard" replace />} />
+      <Route element={<ReaderLayout />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<ReaderDashboard />} />
+        <Route path="payments" element={<ReaderPayments />} />
+        <Route path="notifications" element={<ReaderNotifications />} />
+        <Route path="saved" element={<ReaderSavedArticles />} />
+        <Route path="profile" element={<ReaderProfile />} />
+        <Route path="get-subscription" element={<GetSubscription />} />
+      </Route>
     </Routes>
   );
 }
