@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getProfile, updateProfile as apiUpdateProfile } from '../services/user.service';
 
 export interface UserProfile {
+  uid?: string;
   name: string;
   email: string;
   role: string;
@@ -29,6 +30,7 @@ export const useProfile = () => {
       const role = localStorage.getItem('role') || 'User';
       const email = localStorage.getItem('userEmail') || '';
       setProfile({
+        uid: localStorage.getItem('userId') || '',
         name: localStorage.getItem('userName') || 'Portal User',
         email,
         role,
