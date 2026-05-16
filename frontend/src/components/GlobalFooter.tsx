@@ -42,7 +42,7 @@ const GlobalFooter = ({ showSocials = false }: GlobalFooterProps) => {
               href="https://chetanbschool.org/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block px-4 py-1.5 my-1 rounded-full border border-zinc-800 hover:border-zinc-600 bg-zinc-900 hover:bg-zinc-800 text-[11px] font-bold text-zinc-300 tracking-tight transition-all duration-300"
+              className="inline-block px-4 py-1.5 my-1 rounded-full border border-zinc-800 hover:border-zinc-600 bg-zinc-900 hover:bg-zinc-800 text-[11px] font-bold text-zinc-300 tracking-tight transition-all duration-300 translate-x-2 md:translate-x-4"
             >
               Chetan Business School | Hubballi-580031
             </a>
