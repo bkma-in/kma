@@ -38,9 +38,14 @@ const GlobalFooter = ({ showSocials = false }: GlobalFooterProps) => {
           {/* Developed By (Right) */}
           <div className="flex flex-col items-center md:items-end gap-1 text-center md:text-right">
             <h4 className="text-[10px] font-medium text-zinc-400">Designed And Developed By</h4>
-            <p className="text-[12px] font-bold text-zinc-300 tracking-tight">
+            <a 
+              href="https://chetanbschool.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-4 py-1.5 my-1 rounded-full border border-zinc-800 hover:border-zinc-600 bg-zinc-900 hover:bg-zinc-800 text-[11px] font-bold text-zinc-300 tracking-tight transition-all duration-300 translate-x-2 md:translate-x-4"
+            >
               Chetan Business School | Hubballi-580031
-            </p>
+            </a>
             <div className="flex items-center gap-2">
               <a 
                 href="https://nandeeshmn.vercel.app/" 

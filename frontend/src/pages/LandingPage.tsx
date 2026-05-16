@@ -485,6 +485,7 @@ const LandingPage: React.FC = () => {
                 Advancing mathematical research and higher education through global collaboration and peer-reviewed scholarly excellence.
               </p>
               <div className="flex gap-4">
+                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">About Us</button>
                 <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Guidelines</button>
                 <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Archives</button>
               </div>
@@ -494,7 +495,7 @@ const LandingPage: React.FC = () => {
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Policies</h4>
               <ul className="space-y-2.5">
-                {['Publication', 'Review Guidelines', 'Copyright', 'Privacy', 'Refunds'].map(link => (
+                {['Publication', 'Review Guidelines', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
                   <li key={link}>
                     <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
                   </li>
@@ -521,7 +522,7 @@ const LandingPage: React.FC = () => {
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Support</h4>
               <ul className="space-y-2.5">
-                {['Contact', 'Help Center', 'Report Issue'].map(link => (
+                {['Contact Us', 'Help Center', 'Report Issue'].map(link => (
                   <li key={link}>
                     <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
                   </li>
