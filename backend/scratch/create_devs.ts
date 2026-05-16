@@ -7,21 +7,32 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const usersToAdd = [
   {
-    email: 'fullstackproject18@gmail.com',
-    password: 'Nandi@123',
+    email: 'dev1@kma.example.com',
+    password: process.env.DEV1_PASSWORD,
     name: 'Dev Team Member 1',
     role: 'dev'
   },
   {
-    email: 'shivunaganur2001@gmail.com',
-    password: 'Shivu@788197',
+    email: 'dev2@kma.example.com',
+    password: process.env.DEV2_PASSWORD,
     name: 'Dev Team Member 2',
     role: 'dev'
   }
 ];
 
+// Note: Rotate these credentials immediately if they were leaked.
+// Ensure DEV1_PASSWORD and DEV2_PASSWORD are set in your environment.
+
 const createUsers = async () => {
+  let hadError = false;
+
   for (const userData of usersToAdd) {
+    if (!userData.password) {
+      console.error(`Error: Password for ${userData.email} is missing in environment variables.`);
+      hadError = true;
+      continue;
+    }
+
     try {
       console.log(`Attempting to create user: ${userData.email}...`);
 
@@ -44,22 +55,37 @@ const createUsers = async () => {
 
       // Create/Update Firestore document
       const userRef = db.collection('users').doc(userRecord.uid);
-      await userRef.set({
+      const doc = await userRef.get();
+
+      const payload: any = {
         uid: userRecord.uid,
         email: userData.email,
         name: userData.name,
         role: userData.role,
         status: 'approved',
-        createdAt: new Date(),
         updatedAt: new Date(),
-      }, { merge: true });
+      };
+
+      if (!doc.exists) {
+        payload.createdAt = new Date();
+      }
+
+      await userRef.set(payload, { merge: true });
 
       console.log(`Successfully configured ${userData.role} profile in Firestore for UID: ${userRecord.uid}`);
     } catch (error) {
       console.error(`Error creating user ${userData.email}:`, error);
+      hadError = true;
     }
   }
-  process.exit(0);
+
+  if (hadError) {
+    console.error('Seeding completed with errors.');
+    process.exit(1);
+  } else {
+    console.log('Seeding completed successfully.');
+    process.exit(0);
+  }
 };
 
 createUsers();
