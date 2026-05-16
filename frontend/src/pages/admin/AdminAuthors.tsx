@@ -15,7 +15,10 @@ import {
   Mail,
   Award,
   Briefcase,
-  Plus
+  Plus,
+  CheckCircle2,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import AddReviewerModal from '../../components/admin/AddReviewerModal';
@@ -32,6 +35,7 @@ interface Reviewer {
   regDate: string;
   status: ReviewerStatus;
   experience?: string;
+  rejectionReason?: string;
 }
 
 const AdminAuthors = () => {
@@ -42,6 +46,11 @@ const AdminAuthors = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionError, setRejectionError] = useState('');
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
 
   useEffect(() => {
     const initialReviewers: Reviewer[] = [
@@ -99,26 +108,44 @@ const AdminAuthors = () => {
     setReviewers([...storedReviewers, ...initialReviewers]);
   }, []);
 
-  const handleStatusUpdate = (id: string, newStatus: ReviewerStatus) => {
-    const update = () => {
-      setReviewers(prev => prev.map(rev => 
-        rev.id === id ? { ...rev, status: newStatus } : rev
-      ));
-      if (selectedReviewer?.id === id) {
-        setSelectedReviewer(prev => prev ? { ...prev, status: newStatus } : null);
-      }
-      showToast(`Reviewer ${newStatus.toLowerCase()} successfully`, newStatus === 'Approved' ? 'success' : 'error');
-    };
+  const handleStatusUpdate = (id: string, newStatus: ReviewerStatus, reason?: string) => {
+    setReviewers(prev => prev.map(rev => 
+      rev.id === id ? { ...rev, status: newStatus, rejectionReason: reason } : rev
+    ));
+    if (selectedReviewer?.id === id) {
+      setSelectedReviewer(prev => prev ? { ...prev, status: newStatus, rejectionReason: reason } : null);
+    }
+    showToast(`Reviewer ${newStatus.toLowerCase()} successfully`, newStatus === 'Approved' ? 'success' : 'error');
+  };
 
-    if (newStatus === 'Rejected') {
-      confirm({
-        title: 'Reject Reviewer',
-        message: 'Are you sure you want to reject this reviewer? They will not be able to access the portal.',
-        confirmText: 'Reject',
-        onConfirm: update
-      });
-    } else {
-      update();
+  const initiateStatusUpdate = (id: string, newStatus: ReviewerStatus) => {
+    setPendingActionId(id);
+    if (newStatus === 'Approved') {
+      setIsApproveModalOpen(true);
+    } else if (newStatus === 'Rejected') {
+      setRejectionReason('');
+      setRejectionError('');
+      setIsRejectModalOpen(true);
+    }
+  };
+
+  const confirmApproval = () => {
+    if (pendingActionId) {
+      handleStatusUpdate(pendingActionId, 'Approved');
+      setIsApproveModalOpen(false);
+      setPendingActionId(null);
+    }
+  };
+
+  const confirmRejection = () => {
+    if (!rejectionReason.trim()) {
+      setRejectionError('Please provide a rejection reason.');
+      return;
+    }
+    if (pendingActionId) {
+      handleStatusUpdate(pendingActionId, 'Rejected', rejectionReason);
+      setIsRejectModalOpen(false);
+      setPendingActionId(null);
     }
   };
 
@@ -249,14 +276,14 @@ const AdminAuthors = () => {
                       {reviewer.status === 'Pending' ? (
                         <>
                           <button 
-                            onClick={() => handleStatusUpdate(reviewer.id, 'Approved')}
+                            onClick={() => initiateStatusUpdate(reviewer.id, 'Approved')}
                             className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all border border-emerald-100 shadow-sm"
                             title="Approve Reviewer"
                           >
                             <Check size={18} />
                           </button>
                           <button 
-                            onClick={() => handleStatusUpdate(reviewer.id, 'Rejected')}
+                            onClick={() => initiateStatusUpdate(reviewer.id, 'Rejected')}
                             className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-all border border-rose-100 shadow-sm"
                             title="Reject Access"
                           >
@@ -341,19 +368,31 @@ const AdminAuthors = () => {
                   </p>
                 </div>
               </div>
+              
+              {selectedReviewer.status === 'Rejected' && selectedReviewer.rejectionReason && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-[10px] font-black text-rose-400 uppercase tracking-widest">
+                    <AlertCircle size={14} />
+                    Rejection Reason
+                  </div>
+                  <div className="p-5 bg-rose-50/50 rounded-2xl border border-rose-100 text-sm font-medium text-rose-700">
+                    {selectedReviewer.rejectionReason}
+                  </div>
+                </div>
+              )}
 
               {/* Status Specific Actions */}
               {selectedReviewer.status === 'Pending' ? (
                 <div className="flex gap-4 pt-4">
                   <button 
-                    onClick={() => handleStatusUpdate(selectedReviewer.id, 'Approved')}
+                    onClick={() => initiateStatusUpdate(selectedReviewer.id, 'Approved')}
                     className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95 flex items-center justify-center gap-2"
                   >
                     <UserCheck size={18} />
                     GRANT ACCESS
                   </button>
                   <button 
-                    onClick={() => handleStatusUpdate(selectedReviewer.id, 'Rejected')}
+                    onClick={() => initiateStatusUpdate(selectedReviewer.id, 'Rejected')}
                     className="flex-1 py-4 bg-white text-rose-600 border border-rose-100 rounded-2xl font-bold text-xs tracking-widest hover:bg-rose-50 transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
                     <UserX size={18} />
@@ -381,6 +420,94 @@ const AdminAuthors = () => {
           setReviewers(prev => [newReviewer, ...prev]);
         }}
       />
+
+      {/* Approval Confirmation Modal */}
+      {isApproveModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsApproveModalOpen(false)} />
+          <div className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300">
+            <div className="px-8 py-8 space-y-6 text-center">
+              <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl flex items-center justify-center mx-auto text-emerald-500">
+                <CheckCircle2 size={40} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white tracking-tight">Approve Reviewer?</h3>
+                <p className="text-sm text-zinc-400 font-medium">Are you sure you want to approve this user as a reviewer? They will gain access to the peer review portal.</p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={() => setIsApproveModalOpen(false)}
+                  className="flex-1 py-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-2xl font-bold text-[10px] tracking-widest transition-all uppercase"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmApproval}
+                  className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-[10px] tracking-widest transition-all shadow-lg shadow-emerald-600/20 uppercase"
+                >
+                  Confirm Approval
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Reason Modal */}
+      {isRejectModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsRejectModalOpen(false)} />
+          <div className="relative w-full max-w-lg bg-zinc-900 border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300">
+            <div className="px-8 py-8 space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-center text-rose-500">
+                  <XCircle size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white tracking-tight">Reject Reviewer</h3>
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Reviewer access denial</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Reason for Rejection</label>
+                  <textarea 
+                    value={rejectionReason}
+                    onChange={(e) => {
+                      setRejectionReason(e.target.value);
+                      if (e.target.value.trim()) setRejectionError('');
+                    }}
+                    placeholder="Enter the specific reason for rejecting this application..."
+                    className={cn(
+                      "w-full h-32 bg-zinc-800/50 border rounded-2xl p-5 text-white text-sm focus:ring-2 focus:ring-rose-500/20 outline-none transition-all resize-none",
+                      rejectionError ? "border-rose-500/50" : "border-white/10 focus:border-rose-500/50"
+                    )}
+                  />
+                  {rejectionError && (
+                    <p className="text-[10px] text-rose-500 font-bold uppercase tracking-widest ml-1">{rejectionError}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={() => setIsRejectModalOpen(false)}
+                  className="flex-1 py-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 rounded-2xl font-bold text-[10px] tracking-widest transition-all uppercase"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmRejection}
+                  className="flex-1 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-bold text-[10px] tracking-widest transition-all shadow-lg shadow-rose-600/20 uppercase"
+                >
+                  Reject Reviewer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
