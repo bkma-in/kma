@@ -21,11 +21,13 @@ import ReportIssueModal from '../components/ReportIssueModal';
 import { useNotification } from '../utils/NotificationContext';
 import { useProfile } from '../hooks/useProfile';
 import { useSubscription } from '../utils/SubscriptionContext';
+import { useAuth } from '../context/AuthContext';
 
 const ReaderLayout = () => {
   const { confirm, showToast } = useNotification();
   const { profile } = useProfile();
   const { isSubscribed } = useSubscription();
+  const { logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const navigate = useNavigate();
@@ -35,11 +37,14 @@ const ReaderLayout = () => {
       title: 'Confirm Logout',
       message: 'Are you sure you want to log out of the Reader Portal?',
       confirmText: 'Logout',
-      onConfirm: () => {
-        localStorage.removeItem('isLoggedIn');
-        localStorage.removeItem('role');
-        showToast('Logged out successfully', 'success');
-        navigate('/auth');
+      onConfirm: async () => {
+        try {
+          await logout();
+          showToast('Logged out successfully', 'success');
+          navigate('/auth?mode=login');
+        } catch (error) {
+          showToast('Logout failed', 'error');
+        }
       }
     });
   };

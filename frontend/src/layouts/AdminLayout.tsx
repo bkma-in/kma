@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { auth } from '../config/firebase';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
@@ -8,11 +7,14 @@ import GlobalHeader from '../components/GlobalHeader';
 import GlobalFooter from '../components/GlobalFooter';
 import ReportIssueModal from '../components/ReportIssueModal';
 import { useNotification } from '../utils/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../hooks/useProfile';
 
 const AdminLayout = () => {
   const { confirm, showToast } = useNotification();
   const { profile } = useProfile();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
@@ -31,10 +33,9 @@ const AdminLayout = () => {
       confirmText: 'Logout',
       onConfirm: async () => {
         try {
-          await auth.signOut();
-          localStorage.clear();
-          sessionStorage.clear();
-          window.location.replace('/auth?mode=login');
+          await logout();
+          showToast('Logged out successfully', 'success');
+          navigate('/auth?mode=login');
         } catch (error) {
           showToast('Logout failed', 'error');
         }
