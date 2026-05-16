@@ -1,4 +1,3 @@
-import React from 'react';
 import { useState } from 'react';
 import { 
   Bell, 
@@ -7,7 +6,8 @@ import {
   Clock,
   Info,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';

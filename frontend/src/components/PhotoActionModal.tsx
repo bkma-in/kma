@@ -2,12 +2,10 @@ import React, { useState, useRef } from 'react';
 import { 
   X, 
   Camera, 
-  Image as ImageIcon, 
   Trash2, 
   Upload,
   User
 } from 'lucide-react';
-import { cn } from '../utils/cn';
 import CameraModal from './CameraModal';
 
 interface PhotoActionModalProps {
