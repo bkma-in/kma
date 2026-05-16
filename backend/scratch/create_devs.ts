@@ -1,11 +1,11 @@
 import { auth, db } from '../src/config/firebase';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 // Load .env from backend root
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-import * as crypto from 'crypto';
 
 const createUsers = async () => {
   let hadError = false;

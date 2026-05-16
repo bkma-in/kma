@@ -26,7 +26,7 @@ import { useAuth } from '../context/AuthContext';
 const ReaderLayout = () => {
   const { confirm, showToast } = useNotification();
   const { profile } = useProfile();
-  const { isSubscribed } = useSubscription();
+  const { isSubscribed, unsubscribe } = useSubscription();
   const { logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -40,6 +40,7 @@ const ReaderLayout = () => {
       onConfirm: async () => {
         try {
           await logout();
+          unsubscribe(); // Clear subscription state on logout
           showToast('Logged out successfully', 'success');
           navigate('/auth?mode=login');
         } catch (error) {

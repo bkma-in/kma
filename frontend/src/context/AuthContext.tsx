@@ -57,8 +57,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await auth.signOut();
-      localStorage.clear();
-      sessionStorage.clear();
+      const authKeys = ["isLoggedIn", "role", "userEmail", "userName", "userId", "is_temp_password"];
+      authKeys.forEach(key => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      });
     } catch (error) {
       console.error("Error signing out:", error);
       throw error;
