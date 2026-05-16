@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, FileEdit, BookOpen, Inbox, Bell, Search, LogOut, X, HelpCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
@@ -10,11 +10,13 @@ import GlobalFooter from '../components/GlobalFooter';
 import ReportIssueModal from '../components/ReportIssueModal';
 import { useNotification } from '../utils/NotificationContext';
 import { useProfile } from '../hooks/useProfile';
-import { getArticles } from '../services/article.service';
+import { useAuth } from '../context/AuthContext';
 
 const AuthorLayout = () => {
   const { confirm, showToast } = useNotification();
   const { profile } = useProfile();
+  const { logout, currentUser } = useAuth();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const location = useLocation();
@@ -36,12 +38,14 @@ const AuthorLayout = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!profile?.uid) return;
+    if (!currentUser?.uid) return;
+    
+    const uid = currentUser.uid;
     
     // 1. Real-time Notifications Listener (Unread only)
     const qNotif = query(
       collection(db, 'notifications'), 
-      where('userId', '==', profile.uid),
+      where('userId', '==', uid),
       where('read', '==', false)
     );
     
@@ -60,7 +64,7 @@ const AuthorLayout = () => {
     // 2. Real-time Articles Listener (For Drafts and Articles badges)
     const qArticles = query(
       collection(db, 'articles'),
-      where('participantIds', 'array-contains', profile.uid)
+      where('participantIds', 'array-contains', uid)
     );
 
     const unsubscribeArticles = onSnapshot(qArticles, (snapshot) => {
@@ -72,7 +76,7 @@ const AuthorLayout = () => {
       // Personal Drafts: user is author, and it's a draft, and updated since last view
       const draftsCount = articles.filter((a: any) => {
         const time = getTimestamp(a.updatedAt || a.createdAt);
-        const isPersonalDraft = a.status === 'draft' && a.authorId === profile.uid && (!a.participantIds || a.participantIds.length <= 1);
+        const isPersonalDraft = a.status === 'draft' && a.authorId === uid && (!a.participantIds || a.participantIds.length <= 1);
         return isPersonalDraft && time > lastViewedDrafts;
       }).length;
 
@@ -80,9 +84,9 @@ const AuthorLayout = () => {
       // ONLY show if updated since last view OR specifically pending invitation
       const articlesCount = articles.filter((a: any) => {
         const time = getTimestamp(a.updatedAt || a.createdAt);
-        const isRevisionNeeded = a.status === 'revision_requested' && a.authorId === profile.uid && time > lastViewedArticles;
+        const isRevisionNeeded = a.status === 'revision_requested' && a.authorId === uid && time > lastViewedArticles;
         const isPendingInvitation = a.status === 'draft' && a.authors?.some((auth: any) => 
-          auth.userId === profile.uid && !auth.accepted
+          auth.userId === uid && !auth.accepted
         ) && time > lastViewedArticles;
         
         return isRevisionNeeded || isPendingInvitation;
@@ -99,9 +103,8 @@ const AuthorLayout = () => {
       unsubscribeNotif();
       unsubscribeArticles();
     };
-  }, [profile?.uid, location.pathname]);
+  }, [currentUser?.uid, location.pathname]);
 
-  const role = localStorage.getItem('role');
   const userName = profile?.name || localStorage.getItem('userName') || 'Author User';
   const userInitials = profile?.name 
     ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -114,10 +117,9 @@ const AuthorLayout = () => {
       confirmText: 'Logout',
       onConfirm: async () => {
         try {
-          await auth.signOut();
-          localStorage.clear();
-          sessionStorage.clear();
-          window.location.replace('/auth?mode=login');
+          await logout();
+          showToast('Logged out successfully', 'success');
+          navigate('/auth?mode=login');
         } catch (error) {
           showToast('Logout failed', 'error');
         }

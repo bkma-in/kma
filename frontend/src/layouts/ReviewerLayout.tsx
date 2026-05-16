@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { auth } from '../config/firebase';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, FileText, Bell, LogOut, X, Search, HelpCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
@@ -10,10 +9,13 @@ import ReportIssueModal from '../components/ReportIssueModal';
 import ChangePasswordModal from '../components/reviewer/ChangePasswordModal';
 import { useNotification } from '../utils/NotificationContext';
 import { useProfile } from '../hooks/useProfile';
+import { useAuth } from '../context/AuthContext';
 
 const ReviewerLayout = () => {
   const { confirm, showToast } = useNotification();
   const { profile } = useProfile();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [mustChangePassword, setMustChangePassword] = useState(localStorage.getItem('is_temp_password') === 'true');
@@ -33,10 +35,9 @@ const ReviewerLayout = () => {
       confirmText: 'Logout',
       onConfirm: async () => {
         try {
-          await auth.signOut();
-          localStorage.clear();
-          sessionStorage.clear();
-          window.location.replace('/auth?mode=login');
+          await logout();
+          showToast('Logged out successfully', 'success');
+          navigate('/auth?mode=login');
         } catch (error) {
           showToast('Logout failed', 'error');
         }

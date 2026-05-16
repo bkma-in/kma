@@ -1,65 +1,89 @@
 import { auth, db } from '../src/config/firebase';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 // Load .env from backend root
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const usersToAdd = [
-  {
-    email: 'fullstackproject18@gmail.com',
-    password: 'Nandi@123',
-    name: 'Dev Team Member 1',
-    role: 'dev'
-  },
-  {
-    email: 'shivunaganur2001@gmail.com',
-    password: 'Shivu@788197',
-    name: 'Dev Team Member 2',
-    role: 'dev'
-  }
-];
 
 const createUsers = async () => {
-  for (const userData of usersToAdd) {
-    try {
-      console.log(`Attempting to create user: ${userData.email}...`);
+  let hadError = false;
 
-      let userRecord;
-      try {
-        userRecord = await auth.createUser({
-          email: userData.email,
-          password: userData.password,
-          displayName: userData.name,
-        });
-        console.log(`Successfully created new user ${userData.email} in Firebase Auth:`, userRecord.uid);
-      } catch (error: any) {
-        if (error.code === 'auth/email-already-exists') {
-          userRecord = await auth.getUserByEmail(userData.email);
-          console.log(`User ${userData.email} already exists in Firebase Auth, using existing UID:`, userRecord.uid);
-        } else {
-          throw error;
-        }
+  try {
+    console.log('Querying Firestore for developer users...');
+    const devSnapshot = await db.collection('users').where('role', '==', 'dev').get();
+
+    if (devSnapshot.empty) {
+      console.log('No developer users found in Firestore. Please add developer users to the "users" collection manually first.');
+      process.exit(0);
+    }
+
+    for (const doc of devSnapshot.docs) {
+      const userData = doc.data();
+      const email = userData.email;
+      const name = userData.name || 'Dev Team Member';
+      const uid = doc.id;
+
+      if (!email) {
+        console.warn(`User document ${uid} is missing an email field. Skipping.`);
+        continue;
       }
 
-      // Create/Update Firestore document
-      const userRef = db.collection('users').doc(userRecord.uid);
-      await userRef.set({
-        uid: userRecord.uid,
-        email: userData.email,
-        name: userData.name,
-        role: userData.role,
-        status: 'approved',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }, { merge: true });
+      try {
+        console.log(`Synchronizing developer: ${email}...`);
 
-      console.log(`Successfully configured ${userData.role} profile in Firestore for UID: ${userRecord.uid}`);
-    } catch (error) {
-      console.error(`Error creating user ${userData.email}:`, error);
+        let userRecord;
+        try {
+          userRecord = await auth.getUserByEmail(email);
+          console.log(`User ${email} already exists in Firebase Auth:`, userRecord.uid);
+        } catch (error: any) {
+          if (error.code === 'auth/user-not-found') {
+            const tempPassword = crypto.randomBytes(16).toString('hex');
+            userRecord = await auth.createUser({
+              email,
+              password: tempPassword,
+              displayName: name,
+            });
+            console.log(`Successfully created new developer ${email} in Firebase Auth with UID: ${userRecord.uid}`);
+            console.log(`IMPORTANT: The user must use "Forgot Password" to set their password for ${email}`);
+          } else {
+            throw error;
+          }
+        }
+
+        // Update Firestore document
+        const userRef = db.collection('users').doc(userRecord.uid);
+        
+        const payload: any = {
+          uid: userRecord.uid,
+          email,
+          name,
+          role: 'dev',
+          status: 'approved',
+          updatedAt: new Date(),
+        };
+
+        await userRef.set(payload, { merge: true });
+
+        console.log(`Successfully verified ${userData.role} profile in Firestore for UID: ${userRecord.uid}`);
+      } catch (error) {
+        console.error(`Error synchronizing user ${email}:`, error);
+        hadError = true;
+      }
     }
+  } catch (error) {
+    console.error('Fatal error during synchronization:', error);
+    hadError = true;
   }
-  process.exit(0);
+
+  if (hadError) {
+    console.error('Seeding completed with errors.');
+    process.exit(1);
+  } else {
+    console.log('Seeding completed successfully.');
+    process.exit(0);
+  }
 };
 
 createUsers();

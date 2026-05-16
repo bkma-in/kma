@@ -1,22 +1,25 @@
 import { useState } from 'react';
-import { auth } from '../config/firebase';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Bug, 
   LogOut, 
   X, 
   Menu,
-  Terminal
+  Terminal,
+  User
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useNotification } from '../utils/NotificationContext';
 import { useProfile } from '../hooks/useProfile';
+import { useAuth } from '../context/AuthContext';
 import ProfileModal from '../components/ProfileModal';
 
 const DeveloperLayout = () => {
   const { confirm, showToast } = useNotification();
   const { profile, updateProfile } = useProfile();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -27,10 +30,9 @@ const DeveloperLayout = () => {
       confirmText: 'Logout',
       onConfirm: async () => {
         try {
-          await auth.signOut();
-          localStorage.clear();
-          sessionStorage.clear();
-          window.location.replace('/auth?mode=login');
+          await logout();
+          showToast('Logged out successfully', 'success');
+          navigate('/auth?mode=login');
         } catch (error) {
           showToast('Logout failed', 'error');
         }
@@ -58,27 +60,23 @@ const DeveloperLayout = () => {
         "w-64 bg-black text-white flex flex-col fixed left-0 top-0 h-full z-30 transition-transform duration-300",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        {/* Sidebar Header */}
-        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-zinc-900/50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-black shadow-xl shadow-white/5">
-              <Terminal size={24} />
-            </div>
-            <div>
-              <h1 className="text-sm font-black tracking-tighter text-white">DEV_PORTAL</h1>
-              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">v1.0.4-stable</p>
-            </div>
+        <div className="flex items-center gap-3 px-6 py-8">
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
+            <Terminal className="text-black" size={24} />
+          </div>
+          <div>
+            <h1 className="font-black text-xl tracking-tighter">KMA</h1>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Dev Portal</p>
           </div>
           <button 
-            className="lg:hidden text-zinc-400 hover:text-white"
+            className="lg:hidden ml-auto text-zinc-400 hover:text-white"
             onClick={() => setIsSidebarOpen(false)}
           >
-            <X size={20} />
+            <X size={24} />
           </button>
         </div>
         
-        {/* Navigation */}
-        <nav className="flex-1 mt-8 space-y-1.5 px-4 overflow-y-auto">
+        <nav className="flex-1 px-4 space-y-2">
           {navItems.map((item) => (
             <NavLink
               key={item.name}
@@ -87,94 +85,76 @@ const DeveloperLayout = () => {
               onClick={() => setIsSidebarOpen(false)}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative",
+                  "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative",
                   isActive 
-                    ? "bg-white text-black shadow-lg" 
-                    : "text-zinc-500 hover:text-white hover:bg-white/5"
+                    ? "bg-zinc-800 text-white" 
+                    : "text-zinc-400 hover:text-white hover:bg-zinc-900"
                 )
               }
             >
               {({ isActive }) => (
                 <>
-                  <div className="flex items-center gap-3">
-                    <item.icon size={18} className={cn(
-                      "transition-transform group-hover:scale-110",
-                      isActive ? "text-black" : "text-zinc-600"
-                    )} />
-                    {item.name}
-                  </div>
-                  {isActive && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-black rounded-full" />}
+                  <item.icon size={18} />
+                  {item.name}
+                  {isActive && (
+                    <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full" />
+                  )}
                 </>
               )}
             </NavLink>
           ))}
         </nav>
 
-        {/* Footer Actions */}
-        <div className="p-4 mb-4 border-t border-white/5 mt-auto">
+        <div className="p-4 border-t border-white/5">
+          <button 
+            onClick={() => setIsProfileOpen(true)}
+            className="flex items-center gap-3 px-4 py-3 w-full text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg text-sm font-medium transition-all mb-2"
+          >
+            <User size={18} />
+            My Profile
+          </button>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 w-full text-zinc-500 hover:text-rose-500 hover:bg-rose-500/5 rounded-xl text-sm font-medium transition-all"
+            className="flex items-center gap-3 px-4 py-3 w-full text-red-400 hover:text-red-300 hover:bg-zinc-900 rounded-lg text-sm font-medium transition-all"
           >
             <LogOut size={18} />
-            System Exit
+            Logout
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-h-screen w-full bg-zinc-50">
-        {/* Global Header */}
-        <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 px-6 flex items-center justify-between border-b border-zinc-200 bg-white/80 backdrop-blur-xl z-20">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden text-black"
-            >
-              <Menu size={20} />
-            </button>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">System Live</span>
-            </div>
-          </div>
+      <main className="flex-1 flex flex-col min-h-screen">
+        <header className="h-16 lg:h-20 bg-white border-b border-zinc-200 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-10">
+          <button 
+            className="lg:hidden p-2 text-zinc-600"
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            <Menu size={24} />
+          </button>
 
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setIsProfileOpen(true)}
-              className="flex items-center gap-4 hover:opacity-80 transition-opacity"
-            >
-              <div className="text-right hidden sm:block">
-                <p className="text-[10px] font-black text-black leading-none tracking-tight">
-                  {profile?.name || "Senior Developer"}
-                </p>
-                <p className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest mt-1">
-                  Security Level 4
-                </p>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-black text-white border border-zinc-100 overflow-hidden flex items-center justify-center font-bold text-[10px] shadow-sm">
-                {profile?.profileImage ? (
-                  <img src={profile.profileImage} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  profile?.name?.[0] || "D"
-                )}
-              </div>
-            </button>
+          <div className="flex items-center gap-4 ml-auto">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-bold text-zinc-900">{profile?.name || 'Developer'}</p>
+              <p className="text-[10px] text-zinc-500 font-medium">System Administrator</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-white font-bold text-sm border-2 border-white shadow-sm">
+              {profile?.name ? profile.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'DV'}
+            </div>
           </div>
         </header>
 
-        <ProfileModal 
-          isOpen={isProfileOpen}
-          onClose={() => setIsProfileOpen(false)}
-          profile={profile}
-          onSave={updateProfile}
-        />
-
-        {/* Page Content */}
-        <div className="pt-24 p-6 lg:p-10 flex-1 w-full overflow-y-auto">
+        <div className="p-4 lg:p-8 flex-1">
           <Outlet />
         </div>
       </main>
+
+      <ProfileModal 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
+        profile={profile}
+        onSave={updateProfile}
+      />
     </div>
   );
 };
