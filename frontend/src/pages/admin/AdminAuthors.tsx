@@ -102,16 +102,29 @@ const AdminAuthors = () => {
         qualification: u.qualification,
         regDate: u.regDate,
         status: u.status,
-        experience: u.experience
+        experience: u.experience,
+        rejectionReason: u.rejectionReason
       }));
 
     setReviewers([...storedReviewers, ...initialReviewers]);
   }, []);
 
   const handleStatusUpdate = (id: string, newStatus: ReviewerStatus, reason?: string) => {
-    setReviewers(prev => prev.map(rev => 
-      rev.id === id ? { ...rev, status: newStatus, rejectionReason: reason } : rev
-    ));
+    setReviewers(prev => {
+      const updated = prev.map(rev => 
+        rev.id === id ? { ...rev, status: newStatus, rejectionReason: reason } : rev
+      );
+      
+      // Update localStorage users list
+      const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const updatedUsers = storedUsers.map((u: any) => 
+        u.id === id ? { ...u, status: newStatus, rejectionReason: reason } : u
+      );
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
+      
+      return updated;
+    });
+
     if (selectedReviewer?.id === id) {
       setSelectedReviewer(prev => prev ? { ...prev, status: newStatus, rejectionReason: reason } : null);
     }
