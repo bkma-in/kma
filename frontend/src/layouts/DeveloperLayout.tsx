@@ -14,6 +14,7 @@ import { useNotification } from '../utils/NotificationContext';
 import { useProfile } from '../hooks/useProfile';
 import { useAuth } from '../context/AuthContext';
 import ProfileModal from '../components/ProfileModal';
+import GlobalFooter from '../components/GlobalFooter';
 
 const DeveloperLayout = () => {
   const { confirm, showToast } = useNotification();
@@ -147,6 +148,7 @@ const DeveloperLayout = () => {
         <div className="p-4 lg:p-8 flex-1">
           <Outlet />
         </div>
+        <GlobalFooter />
       </main>
 
       <ProfileModal 
