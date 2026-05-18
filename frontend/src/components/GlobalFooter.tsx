@@ -24,14 +24,15 @@ const GlobalFooter = ({ showSocials = false }: GlobalFooterProps) => {
             {showSocials && (
               <div className="flex justify-center md:justify-start gap-3 pt-1">
                 {[
-                  { Icon: Globe, url: "#" },
-                  { Icon: Mail, url: "#" },
-                  { Icon: Users, url: "#" },
-                  { Icon: Info, url: "#" }
+                  { Icon: Globe, url: "#", label: "Website" },
+                  { Icon: Mail, url: "#", label: "Email" },
+                  { Icon: Users, url: "#", label: "Team" },
+                  { Icon: Info, url: "#", label: "About" }
                 ].map((social, i) => (
                   <a 
                     key={i} 
-                    href={social.url} 
+                    href={social.url}
+                    aria-label={social.label}
                     className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-zinc-500 hover:text-white hover:border-white transition-all duration-300 bg-white/5 hover:bg-black group"
                   >
                     <social.Icon size={14} className="group-hover:scale-110 transition-transform" />
@@ -44,7 +45,7 @@ const GlobalFooter = ({ showSocials = false }: GlobalFooterProps) => {
           {/* Copyright (Center) */}
           <div className="flex flex-col items-center justify-center text-center md:col-span-2 lg:col-span-1 order-last lg:order-none pt-6 md:pt-4 lg:pt-0 border-t border-white/5 lg:border-t-0">
             <p className="text-xs sm:text-sm text-gray-400 font-medium tracking-wide">
-              © 2024 Kerala Mathematical Association.
+              © {new Date().getFullYear()} Kerala Mathematical Association.
             </p>
             <p className="text-xs text-zinc-500 font-normal tracking-wide mt-1">
               All Rights Reserved.
