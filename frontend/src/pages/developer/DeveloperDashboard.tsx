@@ -10,14 +10,28 @@ import {
   Zap
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { getReportedIssues } from '../../services/user.service';
 import type { Issue } from '../../types/issue';
 
 const DeveloperDashboard = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('kma_reported_issues') || '[]');
-    setIssues(stored);
+    const fetchIssues = async () => {
+      try {
+        setLoading(true);
+        const response = await getReportedIssues();
+        if (response.success) {
+          setIssues(response.issues);
+        }
+      } catch (error) {
+        console.error('Failed to fetch issues:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchIssues();
   }, []);
 
   const stats = [

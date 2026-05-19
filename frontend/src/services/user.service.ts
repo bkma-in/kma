@@ -22,3 +22,13 @@ export const reportIssue = async (formData: FormData) => {
   });
   return response.data;
 };
+
+export const getReportedIssues = async () => {
+  const response = await api.get('/users/reported-issues');
+  return response.data;
+};
+
+export const updateIssueStatus = async (issueId: string, status: string) => {
+  const response = await api.patch(`/users/reported-issues/${issueId}/status`, { status });
+  return response.data;
+};

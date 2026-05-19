@@ -14,35 +14,58 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
+import { getReportedIssues, updateIssueStatus as updateIssueStatusAPI } from '../../services/user.service';
 import type { Issue, IssueStatus } from '../../types/issue';
 
 const DeveloperIssues = () => {
   const { showToast } = useNotification();
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<IssueStatus | 'All'>('All');
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('kma_reported_issues') || '[]');
-    setIssues(stored);
+    fetchIssues();
   }, []);
 
-  const updateIssueStatus = (id: string, newStatus: IssueStatus) => {
-    const updatedIssues = issues.map(issue => 
-      issue.id === id ? { ...issue, status: newStatus } : issue
-    );
-    setIssues(updatedIssues);
-    localStorage.setItem('kma_reported_issues', JSON.stringify(updatedIssues));
-    
-    if (selectedIssue?.id === id) {
-      setSelectedIssue({ ...selectedIssue, status: newStatus });
+  const fetchIssues = async () => {
+    try {
+      setLoading(true);
+      const response = await getReportedIssues();
+      if (response.success) {
+        setIssues(response.issues);
+      }
+    } catch (error) {
+      console.error('Failed to fetch issues:', error);
+      showToast('Failed to load issues', 'error');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (newStatus === 'Resolved') {
-      showToast('Issue marked as Resolved', 'success');
-    } else {
-      showToast(`Status updated to ${newStatus}`, 'info');
+  const updateIssueStatus = async (id: string, newStatus: IssueStatus) => {
+    try {
+      const response = await updateIssueStatusAPI(id, newStatus);
+      if (response.success) {
+        const updatedIssues = issues.map(issue => 
+          issue.id === id ? { ...issue, status: newStatus } : issue
+        );
+        setIssues(updatedIssues);
+
+        if (selectedIssue?.id === id) {
+          setSelectedIssue({ ...selectedIssue, status: newStatus });
+        }
+
+        if (newStatus === 'Resolved') {
+          showToast('Issue marked as Resolved', 'success');
+        } else {
+          showToast(`Status updated to ${newStatus}`, 'info');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update issue status:', error);
+      showToast('Failed to update status', 'error');
     }
   };
 

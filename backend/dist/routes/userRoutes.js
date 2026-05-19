@@ -120,6 +120,50 @@ router.post('/report-issue', authMiddleware_1.requireAuth, uploadMiddleware_1.up
         res.status(500).json({ error: 'Failed to report issue' });
     }
 });
+// Get All Reported Issues (for Developer Dashboard)
+router.get('/reported-issues', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const snapshot = await firebase_1.db.collection('reported_issues').orderBy('createdAt', 'desc').get();
+        const issues = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                // Normalize Firestore Timestamps to ISO strings for the frontend
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+                updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+            };
+        });
+        res.json({ success: true, issues });
+    }
+    catch (error) {
+        console.error('Get reported issues error:', error);
+        res.status(500).json({ error: 'Failed to fetch reported issues' });
+    }
+});
+// Update Reported Issue Status (for Developer Dashboard)
+router.patch('/reported-issues/:id/status', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const id = req.params.id;
+        const { status } = req.body;
+        const validStatuses = ['Open', 'In Progress', 'Resolved'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+        }
+        const issueRef = firebase_1.db.collection('reported_issues').doc(id);
+        const issueDoc = await issueRef.get();
+        if (!issueDoc.exists) {
+            return res.status(404).json({ error: 'Issue not found' });
+        }
+        await issueRef.update({ status, updatedAt: new Date() });
+        const updated = { ...issueDoc.data(), status, updatedAt: new Date().toISOString() };
+        res.json({ success: true, issue: updated });
+    }
+    catch (error) {
+        console.error('Update issue status error:', error);
+        res.status(500).json({ error: 'Failed to update issue status' });
+    }
+});
 // Search Users (Registered users only)
 router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
     try {
