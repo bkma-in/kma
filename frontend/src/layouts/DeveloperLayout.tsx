@@ -22,9 +22,10 @@ const DeveloperLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const userName = profile?.name || localStorage.getItem('userName') || 'Developer User';
-  const userInitials = profile?.name 
-    ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : (localStorage.getItem('userName') || 'DV').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  const sourceName = profile?.name || localStorage.getItem('userName') || 'DV';
+  const userInitials = sourceName.includes(' ')
+    ? sourceName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+    : sourceName.slice(0, 2).toUpperCase();
 
   const handleLogout = () => {
     confirm({
@@ -68,6 +69,7 @@ const DeveloperLayout = () => {
           <button 
             className="lg:hidden text-zinc-400 hover:text-white absolute right-4 top-1/2 -translate-y-1/2"
             onClick={() => setIsSidebarOpen(false)}
+            aria-label="Close sidebar"
           >
             <X size={24} />
           </button>
