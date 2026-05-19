@@ -39,20 +39,6 @@ The system features a role-based architecture with dedicated dashboards for Auth
 
 ---
 
-## 📁 Project Structure
-```
-src/
-├── assets/ # Static files
-├── components/ # Reusable UI components
-├── layouts/ # Role-based layouts
-├── pages/ # Main application views
-├── services/ # API/service layer
-├── utils/ # Helper functions
-└── App.tsx # Routing configuration
-```
-
----
-
 ## 🧹 Project Improvements
 
 - ✅ Removed Vue files → standardized to React/TypeScript
