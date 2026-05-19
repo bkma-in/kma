@@ -48,14 +48,11 @@ const DeveloperIssues = () => {
     try {
       const response = await updateIssueStatusAPI(id, newStatus);
       if (response.success) {
-        const updatedIssues = issues.map(issue => 
+        setIssues(prev => prev.map(issue => 
           issue.id === id ? { ...issue, status: newStatus } : issue
-        );
-        setIssues(updatedIssues);
+        ));
 
-        if (selectedIssue?.id === id) {
-          setSelectedIssue({ ...selectedIssue, status: newStatus });
-        }
+        setSelectedIssue(prev => prev && prev.id === id ? { ...prev, status: newStatus } : prev);
 
         if (newStatus === 'Resolved') {
           showToast('Issue marked as Resolved', 'success');
