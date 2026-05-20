@@ -247,7 +247,8 @@ const DeveloperNotifications = () => {
                 <button
                   onClick={() => {
                     markAsRead(notification.id);
-                    navigate('/dev/issues');
+                    const path = notification.type === 'system' ? '/dev/system-logs' : '/dev/issues';
+                    navigate(path);
                   }}
                   className={cn(
                     'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-sm',

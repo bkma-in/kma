@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 import logo from '../assets/logo.png';
 import ProfileModal from './ProfileModal';
@@ -25,6 +25,12 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { profile, updateProfile } = useProfile();
 
+  useEffect(() => {
+    if (!showProfile) {
+      setIsProfileOpen(false);
+    }
+  }, [showProfile]);
+
   // Use the profile data from hook if available, fallback to props
   const displayName = profile?.name || userName || 'User';
   const displayInitials = profile?.name 
@@ -39,6 +45,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           <button
             onClick={onMenuClick}
             className="lg:hidden text-black hover:text-zinc-600 transition-colors p-2 -ml-2"
+            aria-label="Toggle navigation menu"
           >
             <Menu size={20} />
           </button>
@@ -84,12 +91,14 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
         </div>
       </header>
 
-      <ProfileModal 
-        isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
-        profile={profile}
-        onSave={updateProfile}
-      />
+      {showProfile && (
+        <ProfileModal 
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+          profile={profile}
+          onSave={updateProfile}
+        />
+      )}
     </>
   );
 };
