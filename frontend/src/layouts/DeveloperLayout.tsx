@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Bug, 
+  Bell,
   LogOut, 
   X
 } from 'lucide-react';
@@ -47,6 +48,7 @@ const DeveloperLayout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/dev/dashboard', end: true, icon: LayoutDashboard },
     { name: 'Issues List', path: '/dev/issues', icon: Bug },
+    { name: 'Notifications', path: '/dev/notifications', icon: Bell },
   ];
 
   return (
