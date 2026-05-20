@@ -65,3 +65,11 @@ The system features a role-based architecture with dedicated dashboards for Auth
 - Article analytics and recommendations
 
 ---
+
+© 2026 KMA Article Publishing System. All Rights Reserved.
+
+This project, including its source code, UI/UX design, architecture, branding, and associated materials, is protected under applicable copyright laws.
+
+Unauthorized cloning, distribution, modification, or commercial use of any part of this project without prior written permission is strictly prohibited.
+
+---
