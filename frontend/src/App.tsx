@@ -23,6 +23,7 @@ import ReviewerNotifications from './pages/reviewer/ReviewerNotifications';
 import DeveloperLayout from './layouts/DeveloperLayout';
 import DeveloperDashboard from './pages/developer/DeveloperDashboard';
 import DeveloperIssues from './pages/developer/DeveloperIssues';
+import DeveloperNotifications from './pages/developer/DeveloperNotifications';
 import AcceptInvitation from './pages/AcceptInvitation';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -168,6 +169,7 @@ function DeveloperRoutes() {
       <Route element={<DeveloperLayout />}>
         <Route path="dashboard" element={<DeveloperDashboard />} />
         <Route path="issues" element={<DeveloperIssues />} />
+        <Route path="notifications" element={<DeveloperNotifications />} />
       </Route>
     </Routes>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 import logo from '../assets/logo.png';
 import ProfileModal from './ProfileModal';
@@ -11,6 +11,7 @@ interface GlobalHeaderProps {
   userInitials?: string;
   portalName?: string;
   rightActions?: React.ReactNode;
+  showProfile?: boolean;
 }
 
 const GlobalHeader: React.FC<GlobalHeaderProps> = ({ 
@@ -18,10 +19,17 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   userName, 
   userInitials, 
   portalName = 'USER PORTAL', 
-  rightActions 
+  rightActions,
+  showProfile = true
 }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { profile, updateProfile } = useProfile();
+
+  useEffect(() => {
+    if (!showProfile) {
+      setIsProfileOpen(false);
+    }
+  }, [showProfile]);
 
   // Use the profile data from hook if available, fallback to props
   const displayName = profile?.name || userName || 'User';
@@ -37,6 +45,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           <button
             onClick={onMenuClick}
             className="lg:hidden text-black hover:text-zinc-600 transition-colors p-2 -ml-2"
+            aria-label="Toggle navigation menu"
           >
             <Menu size={20} />
           </button>
@@ -59,33 +68,37 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           </div>
           
           {/* User Profile - Compact */}
-          <button 
-            onClick={() => setIsProfileOpen(true)}
-            className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-full bg-zinc-50 border border-zinc-100 hover:bg-zinc-100 transition-all group"
-          >
-            <div className="hidden md:block text-right">
-              <p className="text-[10px] font-bold text-black leading-none">{displayName}</p>
-              <p className="text-[7px] text-zinc-400 font-bold tracking-wider mt-0.5 uppercase">
-                {portalName}
-              </p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-[10px] shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
-              {profile?.profileImage ? (
-                <img src={profile.profileImage} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                displayInitials
-              )}
-            </div>
-          </button>
+          {showProfile && (
+            <button 
+              onClick={() => setIsProfileOpen(true)}
+              className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-full bg-zinc-50 border border-zinc-100 hover:bg-zinc-100 transition-all group"
+            >
+              <div className="hidden md:block text-right">
+                <p className="text-[10px] font-bold text-black leading-none">{displayName}</p>
+                <p className="text-[7px] text-zinc-400 font-bold tracking-wider mt-0.5 uppercase">
+                  {portalName}
+                </p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-[10px] shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
+                {profile?.profileImage ? (
+                  <img src={profile.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  displayInitials
+                )}
+              </div>
+            </button>
+          )}
         </div>
       </header>
 
-      <ProfileModal 
-        isOpen={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
-        profile={profile}
-        onSave={updateProfile}
-      />
+      {showProfile && (
+        <ProfileModal 
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+          profile={profile}
+          onSave={updateProfile}
+        />
+      )}
     </>
   );
 };
