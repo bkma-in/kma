@@ -3,24 +3,27 @@ import { Globe, Mail, Users, Info } from 'lucide-react';
 
 interface GlobalFooterProps {
   showSocials?: boolean;
+  showTaglines?: boolean;
 }
 
-const GlobalFooter = ({ showSocials = false }: GlobalFooterProps) => {
+const GlobalFooter = ({ showSocials = false, showTaglines = true }: GlobalFooterProps) => {
   return (
     <footer className="w-full bg-black text-white py-8 px-4 sm:px-6 border-t border-white/5 mt-auto">
       <div className="max-w-7xl mx-auto w-full">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-center gap-8 lg:gap-6">
           {/* Brand Tagline & Social Icons (Left) */}
           <div className="flex flex-col items-center md:items-start gap-2.5 text-center md:text-left">
-            <div className="text-xs sm:text-sm text-gray-400 font-medium tracking-wide leading-relaxed hover:text-zinc-200 transition-colors duration-300 space-y-1 w-full md:w-fit">
-              <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-                <span>• Connecting Researchers</span>
-                <span>• Publishing Knowledge</span>
+            {showTaglines && (
+              <div className="text-xs sm:text-sm text-gray-400 font-medium tracking-wide leading-relaxed hover:text-zinc-200 transition-colors duration-300 space-y-1 w-full md:w-fit">
+                <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                  <span>• Connecting Researchers</span>
+                  <span>• Publishing Knowledge</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <span>• Building Innovation</span>
+                </div>
               </div>
-              <div className="flex items-center justify-center gap-2">
-                <span>• Building Innovation</span>
-              </div>
-            </div>
+            )}
             {showSocials && (
               <div className="flex justify-center md:justify-start gap-3 pt-1">
                 {[
