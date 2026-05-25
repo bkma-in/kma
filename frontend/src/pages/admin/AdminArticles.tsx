@@ -49,7 +49,7 @@ interface Article {
   category: string;
   abstract: string;
   status: ArticleStatus;
-  assignedReviewer: string | null;
+  assignedReviewers: string[];
   lastUpdated: string;
   versions: Version[];
   reviewerFeedback?: {
@@ -92,6 +92,11 @@ const AdminArticles = () => {
   const [rejectionReasonText, setRejectionReasonText] = useState('');
   const [rejectionError, setRejectionError] = useState<string | null>(null);
 
+  // Multi-Reviewer Selection and Confirmation states
+  const [selectedReviewersForAssigning, setSelectedReviewersForAssigning] = useState<string[]>([]);
+  const [isConfirmingAssignment, setIsConfirmingAssignment] = useState(false);
+  const [assignmentValidationError, setAssignmentValidationError] = useState<string | null>(null);
+
   const [articles, setArticles] = useState<Article[]>([
     {
       id: 'KMA-2024-001',
@@ -100,7 +105,7 @@ const AdminArticles = () => {
       category: 'Biomathematics',
       abstract: 'A longitudinal study on the efficacy of CNNs in detecting early-stage retinal deterioration through automated scan analysis. We propose a novel architecture that achieves 98.4% diagnostic accuracy on open-source datasets, outlining details on hyperparameter tuning and model weights.',
       status: 'Submitted',
-      assignedReviewer: null,
+      assignedReviewers: [],
       lastUpdated: '2024-03-20',
       versions: [{ version: 1, uploadedBy: 'Author', timestamp: '2024-03-20', fileName: 'neural_networks_diagnostic.pdf' }]
     },
@@ -111,7 +116,7 @@ const AdminArticles = () => {
       category: 'Quantum Computing',
       abstract: 'This research explores how existing cryptographic protocols can be strengthened against Shor\'s algorithm. We present a lattice-based implementation suitable for low-power embedded processors, demonstrating resistance to chosen-ciphertext attacks.',
       status: 'Submitted',
-      assignedReviewer: null,
+      assignedReviewers: [],
       lastUpdated: '2024-03-18',
       versions: [{ version: 1, uploadedBy: 'Author', timestamp: '2024-03-18', fileName: 'quantum_cryptography.docx' }]
     },
@@ -122,7 +127,7 @@ const AdminArticles = () => {
       category: 'Topology',
       abstract: 'Applying persistent homology to identify core influencer clusters. By filtering noise and computing high-dimensional topological invariants, we map graph structures to identify critical information bridges.',
       status: 'Under Review',
-      assignedReviewer: 'Prof. Gauss',
+      assignedReviewers: ['Prof. Gauss'],
       lastUpdated: '2024-03-15',
       versions: [{ version: 1, uploadedBy: 'Author', timestamp: '2024-03-15', fileName: 'topological_social_networks.pdf' }]
     },
@@ -133,7 +138,7 @@ const AdminArticles = () => {
       category: 'Applied Math',
       abstract: 'Solving the boundary layer equations for non-Newtonian fluids in porous structures. This study introduces a semi-analytical solver using homotopical perturbation techniques.',
       status: 'Approved',
-      assignedReviewer: 'Dr. Emmy Noether',
+      assignedReviewers: ['Dr. Emmy Noether'],
       lastUpdated: '2024-03-10',
       versions: [{ version: 1, uploadedBy: 'Author', timestamp: '2024-03-10', fileName: 'fluid_dynamics_boundary.docx' }],
       reviewerFeedback: {
@@ -148,7 +153,7 @@ const AdminArticles = () => {
       category: 'Number Theory',
       abstract: 'Analyzing the coefficients of weight 2 modular forms over p-adic fields. We present computational proofs for the congruences predicted by the standard conjectures.',
       status: 'Desk Rejected',
-      assignedReviewer: null,
+      assignedReviewers: [],
       lastUpdated: '2024-03-08',
       versions: [{ version: 1, uploadedBy: 'Author', timestamp: '2024-03-08', fileName: 'padic_modular_forms.pdf' }],
       rejectionReason: 'The submitted document is missing the required mathematical proof appendix and formatting does not follow KMA LaTeX guidelines.'
@@ -158,12 +163,19 @@ const AdminArticles = () => {
   const [isAdminNoteModalOpen, setIsAdminNoteModalOpen] = useState(false);
   const [adminNote, setAdminNote] = useState('');
 
-  const availableReviewers = [
-    'Prof. Alan Turing',
-    'Dr. James Wilson',
-    'Dr. Jane Smith',
-    'Prof. Gauss',
-    'Dr. Emmy Noether'
+  interface Reviewer {
+    name: string;
+    expertise: string;
+    availability: 'Available' | 'Busy' | 'On Leave';
+  }
+
+  const availableReviewers: Reviewer[] = [
+    { name: 'Prof. Alan Turing', expertise: 'Quantum Computing / Logic', availability: 'Available' },
+    { name: 'Dr. James Wilson', expertise: 'Biomathematics / Neural Networks', availability: 'Available' },
+    { name: 'Dr. Jane Smith', expertise: 'Algebra / Cryptography', availability: 'Busy' },
+    { name: 'Prof. Gauss', expertise: 'Number Theory / Geometry', availability: 'Available' },
+    { name: 'Dr. Emmy Noether', expertise: 'Abstract Algebra / Physics', availability: 'On Leave' },
+    { name: 'Prof. Leonhard Euler', expertise: 'Graph Theory / Calculus', availability: 'Busy' }
   ];
 
   const getStatusStyles = (status: string) => {
@@ -212,13 +224,13 @@ const AdminArticles = () => {
     }
   };
 
-  const assignReviewer = (id: string, reviewer: string) => {
-    setArticles(prev => prev.map(a => a.id === id ? { ...a, assignedReviewer: reviewer, status: 'Sent to Reviewer' } : a));
+  const assignReviewers = (id: string, reviewers: string[]) => {
+    setArticles(prev => prev.map(a => a.id === id ? { ...a, assignedReviewers: reviewers, status: 'Under Review' } : a));
     if (selectedArticle?.id === id) {
-      setSelectedArticle(prev => prev ? { ...prev, assignedReviewer: reviewer, status: 'Sent to Reviewer' } : null);
+      setSelectedArticle(prev => prev ? { ...prev, assignedReviewers: reviewers, status: 'Under Review' } : null);
     }
     setIsAssigning(false);
-    showToast(`Assigned to ${reviewer}`, 'success');
+    showToast("Reviewers assigned successfully.", 'success');
   };
 
   return (
@@ -298,13 +310,25 @@ const AdminArticles = () => {
                     {article.author}
                   </td>
                   <td className="px-6 py-5">
-                    <span className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                      getStatusStyles(article.status)
-                    )}>
-                      {getStatusIcon(article.status)}
-                      {article.status}
-                    </span>
+                    <div className="space-y-2">
+                      <span className={cn(
+                        "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+                        getStatusStyles(article.status)
+                      )}>
+                        {getStatusIcon(article.status)}
+                        {article.status}
+                      </span>
+                      {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
+                        <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider space-y-0.5 pl-1">
+                          <span className="text-[8px] text-zinc-400 font-black tracking-widest block uppercase">Assigned:</span>
+                          {article.assignedReviewers.map(r => (
+                            <div key={r} className="truncate max-w-[150px]">{r}</div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-[8px] text-zinc-400 italic pl-1">No reviewers assigned</div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-5">
                     <p className="text-[10px] text-zinc-500 font-medium line-clamp-1 italic max-w-[200px]">
@@ -448,8 +472,16 @@ const AdminArticles = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">Assigned To</p>
-                        <p className="text-xs font-bold">{selectedArticle.assignedReviewer}</p>
+                        <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Assigned Reviewers</p>
+                        {selectedArticle.assignedReviewers && selectedArticle.assignedReviewers.length > 0 ? (
+                          <div className="space-y-0.5">
+                            {selectedArticle.assignedReviewers.map(r => (
+                              <p key={r} className="text-xs font-bold">{r}</p>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs font-bold text-zinc-400 italic">None</p>
+                        )}
                       </div>
                     </div>
 
@@ -475,36 +507,21 @@ const AdminArticles = () => {
                 {/* Assignment UI (Restored) */}
                 {selectedArticle.status === 'Submitted' && (
                   <div className="space-y-4">
-                    {!isAssigning ? (
-                      <button 
-                        onClick={() => setIsAssigning(true)}
-                        className="w-full flex items-center justify-center gap-3 py-5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
-                      >
-                        <UserCheck size={18} />
-                        ASSIGN REVIEWER
-                      </button>
-                    ) : (
-                      <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-200 animate-in fade-in slide-in-from-top-2">
-                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4">Select Academic Reviewer</p>
-                        <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                          {availableReviewers.map(reviewer => (
-                            <button
-                              key={reviewer}
-                              onClick={() => assignReviewer(selectedArticle.id, reviewer)}
-                              className="w-full py-3 px-4 text-left text-xs font-bold text-zinc-600 hover:bg-black hover:text-white rounded-xl transition-all border border-zinc-100 hover:border-black"
-                            >
-                              {reviewer}
-                            </button>
-                          ))}
-                        </div>
-                        <button 
-                          onClick={() => setIsAssigning(false)}
-                          className="w-full mt-4 py-2 text-[9px] font-black text-zinc-400 hover:text-rose-600 uppercase tracking-widest transition-colors"
-                        >
-                          Cancel Assignment
-                        </button>
-                      </div>
-                    )}
+                    <button 
+                      onClick={() => {
+                        setIsDetailsOpen(false);
+                        setPreviewArticle(selectedArticle);
+                        setIsPreviewOpen(true);
+                        setIsAssigningFromPreview(true);
+                        setIsRejectingFromPreview(false);
+                        setRejectionReasonText('');
+                        setRejectionError(null);
+                      }}
+                      className="w-full flex items-center justify-center gap-3 py-5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                    >
+                      <UserCheck size={18} />
+                      ASSIGN REVIEWER
+                    </button>
                   </div>
                 )}
 
@@ -842,45 +859,151 @@ const AdminArticles = () => {
 
             {/* REVIEWER ASSIGNMENT OVERLAY MODAL */}
             {isAssigningFromPreview && (
-              <div className="absolute inset-0 z-[160] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-                <div className="bg-zinc-900 border border-white/10 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                  <div className="px-8 py-6 border-b border-white/5 bg-zinc-950 flex items-center justify-between">
+              <div className="absolute inset-0 z-[160] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+                <div className="bg-zinc-900 border border-white/10 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+                  {/* Overlay Header */}
+                  <div className="px-6 py-5 border-b border-white/5 bg-zinc-950 flex items-center justify-between shrink-0">
                     <div>
-                      <h3 className="text-lg font-bold text-white uppercase tracking-tight">Select Reviewer</h3>
-                      <p className="text-xs text-zinc-500 mt-0.5">Assign this manuscript to an expert reviewer.</p>
+                      <h3 className="text-lg font-bold text-white uppercase tracking-tight">Select Reviewers</h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">Select between 1 and 5 reviewers for this manuscript.</p>
                     </div>
                     <button 
-                      onClick={() => setIsAssigningFromPreview(false)}
+                      onClick={() => {
+                        setIsAssigningFromPreview(false);
+                        setAssignmentValidationError(null);
+                      }}
                       className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white"
                     >
                       <X size={16} />
                     </button>
                   </div>
-                  <div className="p-8 space-y-6">
-                    <div className="grid grid-cols-1 gap-2 max-h-56 overflow-y-auto pr-2 custom-scrollbar">
-                      {availableReviewers.map(reviewer => (
-                        <button
-                          key={reviewer}
-                          onClick={() => {
-                            setArticles(prev => prev.map(a => a.id === previewArticle.id ? { ...a, assignedReviewer: reviewer, status: 'Under Review' } : a));
-                            setIsAssigningFromPreview(false);
-                            setIsPreviewOpen(false);
-                            showToast(`Assigned to ${reviewer}`, 'success');
-                          }}
-                          className="w-full py-3.5 px-4 text-left text-xs font-bold text-zinc-300 hover:bg-zinc-800 hover:text-white rounded-xl transition-all border border-white/5 hover:border-zinc-700 shadow-sm flex items-center justify-between"
-                        >
-                          <span>{reviewer}</span>
-                          <UserCheck size={14} className="text-zinc-500" />
-                        </button>
-                      ))}
+
+                  {/* Scrollable list content */}
+                  <div className="p-6 overflow-y-auto flex-1 space-y-4 custom-scrollbar">
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {availableReviewers.map(reviewer => {
+                        const isSelected = selectedReviewersForAssigning.includes(reviewer.name);
+                        return (
+                          <div
+                            key={reviewer.name}
+                            onClick={() => {
+                              setAssignmentValidationError(null);
+                              setSelectedReviewersForAssigning(prev => 
+                                prev.includes(reviewer.name)
+                                  ? prev.filter(r => r !== reviewer.name)
+                                  : [...prev, reviewer.name]
+                              );
+                            }}
+                            className={cn(
+                              "w-full p-4 rounded-2xl transition-all border flex items-center justify-between gap-4 cursor-pointer text-left",
+                              isSelected
+                                ? "bg-white/10 border-white/30 text-white"
+                                : "bg-white/5 border-white/5 text-zinc-300 hover:bg-white/10 hover:border-white/10"
+                            )}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <input 
+                                type="checkbox" 
+                                checked={isSelected}
+                                onChange={() => {}} // Handled by parent click
+                                className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-blue-600 focus:ring-0 focus:ring-offset-0 cursor-pointer shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold truncate text-white">{reviewer.name}</p>
+                                <p className="text-[10px] text-zinc-500 font-medium truncate mt-0.5">{reviewer.expertise}</p>
+                              </div>
+                            </div>
+
+                            <span className={cn(
+                              "px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border shrink-0",
+                              reviewer.availability === 'Available' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/30' :
+                              reviewer.availability === 'Busy' ? 'bg-amber-950/40 text-amber-400 border-amber-800/30' :
+                              'bg-rose-950/40 text-rose-400 border-rose-800/30'
+                            )}>
+                              {reviewer.availability}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <button 
-                      onClick={() => setIsAssigningFromPreview(false)}
-                      className="w-full py-3 bg-zinc-800 text-zinc-400 hover:text-white rounded-xl text-xs font-bold transition-all uppercase"
-                    >
-                      Cancel
-                    </button>
                   </div>
+
+                  {/* Inline validation and footer actions */}
+                  <div className="p-6 border-t border-white/5 bg-zinc-950/60 shrink-0 space-y-4">
+                    {assignmentValidationError && (
+                      <p className="text-[10px] font-bold text-rose-500 px-1 text-center animate-pulse">
+                        {assignmentValidationError}
+                      </p>
+                    )}
+
+                    <div className="flex gap-4">
+                      <button 
+                        onClick={() => {
+                          setIsAssigningFromPreview(false);
+                          setAssignmentValidationError(null);
+                        }}
+                        className="flex-1 py-4 bg-zinc-800 text-zinc-400 hover:text-white rounded-2xl font-bold text-xs tracking-widest transition-all border border-white/5 uppercase"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (selectedReviewersForAssigning.length === 0) {
+                            setAssignmentValidationError("At least one reviewer is required.");
+                            return;
+                          }
+                          if (selectedReviewersForAssigning.length > 5) {
+                            setAssignmentValidationError("Maximum 5 reviewers allowed.");
+                            return;
+                          }
+                          setIsConfirmingAssignment(true);
+                        }}
+                        className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs tracking-widest transition-all shadow-lg shadow-emerald-600/20 uppercase"
+                      >
+                        Assign Reviewers
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* CONFIRMATION POPUP OVERLAY */}
+                  {isConfirmingAssignment && (
+                    <div className="absolute inset-0 z-[170] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+                      <div className="bg-zinc-900 border border-white/10 w-full max-w-sm rounded-[2rem] shadow-2xl p-6 space-y-6 text-center animate-in zoom-in-95 duration-200">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mx-auto">
+                          <UserCheck size={24} />
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="text-base font-bold text-white uppercase tracking-tight">Confirm Assignment</h4>
+                          <p className="text-xs text-zinc-400 leading-relaxed">
+                            {selectedReviewersForAssigning.length === 1
+                              ? `Are you sure you want to assign ${selectedReviewersForAssigning[0]} as reviewer?`
+                              : `Are you sure you want to assign ${selectedReviewersForAssigning.length} reviewers to this manuscript?`
+                            }
+                          </p>
+                        </div>
+                        <div className="flex gap-3">
+                          <button 
+                            onClick={() => setIsConfirmingAssignment(false)}
+                            className="flex-1 py-3 bg-zinc-800 text-zinc-400 hover:text-white rounded-xl text-[10px] font-black tracking-widest transition-all uppercase border border-white/5"
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            onClick={() => {
+                              assignReviewers(previewArticle.id, selectedReviewersForAssigning);
+                              setIsConfirmingAssignment(false);
+                              setIsAssigningFromPreview(false);
+                              setIsPreviewOpen(false);
+                            }}
+                            className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black tracking-widest transition-all shadow-md shadow-emerald-600/10 uppercase"
+                          >
+                            Confirm
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               </div>
             )}
