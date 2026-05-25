@@ -352,6 +352,7 @@ const AdminArticles = () => {
                             setIsRejectingFromPreview(false);
                             setRejectionReasonText('');
                             setRejectionError(null);
+                            setSelectedReviewersForAssigning([]);
                           }}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-blue-700 transition-all uppercase"
                         >
@@ -518,6 +519,7 @@ const AdminArticles = () => {
                         setRejectionReasonText('');
                         setRejectionError(null);
                         setReviewerSearchTerm('');
+                        setSelectedReviewersForAssigning([]);
                       }}
                       className="w-full flex items-center justify-center gap-3 py-5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
                     >
@@ -927,7 +929,7 @@ const AdminArticles = () => {
                               <input 
                                 type="checkbox" 
                                 checked={isSelected}
-                                onChange={() => {}} // Handled by parent click
+                                readOnly
                                 className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-blue-600 focus:ring-0 focus:ring-offset-0 cursor-pointer shrink-0"
                               />
                               <div className="min-w-0">
@@ -1017,6 +1019,7 @@ const AdminArticles = () => {
                               setIsConfirmingAssignment(false);
                               setIsAssigningFromPreview(false);
                               setIsPreviewOpen(false);
+                              setSelectedReviewersForAssigning([]);
                             }}
                             className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black tracking-widest transition-all shadow-md shadow-emerald-600/10 uppercase"
                           >
@@ -1093,6 +1096,7 @@ const AdminArticles = () => {
                           }
                           
                           setArticles(prev => prev.map(a => a.id === previewArticle.id ? { ...a, status: 'Desk Rejected', rejectionReason: rejectionReasonText } : a));
+                          setRejectionReasonText('');
                           setIsRejectingFromPreview(false);
                           setIsPreviewOpen(false);
                           
