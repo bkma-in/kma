@@ -96,6 +96,7 @@ const AdminArticles = () => {
   const [selectedReviewersForAssigning, setSelectedReviewersForAssigning] = useState<string[]>([]);
   const [isConfirmingAssignment, setIsConfirmingAssignment] = useState(false);
   const [assignmentValidationError, setAssignmentValidationError] = useState<string | null>(null);
+  const [reviewerSearchTerm, setReviewerSearchTerm] = useState('');
 
   const [articles, setArticles] = useState<Article[]>([
     {
@@ -516,6 +517,7 @@ const AdminArticles = () => {
                         setIsRejectingFromPreview(false);
                         setRejectionReasonText('');
                         setRejectionError(null);
+                        setReviewerSearchTerm('');
                       }}
                       className="w-full flex items-center justify-center gap-3 py-5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
                     >
@@ -849,7 +851,10 @@ const AdminArticles = () => {
               </button>
               
               <button 
-                onClick={() => setIsAssigningFromPreview(true)}
+                onClick={() => {
+                  setIsAssigningFromPreview(true);
+                  setReviewerSearchTerm('');
+                }}
                 className="px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black tracking-widest transition-all shadow-xl shadow-emerald-600/10 active:scale-95 uppercase flex items-center justify-center gap-2"
               >
                 <UserCheck size={16} />
@@ -871,6 +876,7 @@ const AdminArticles = () => {
                       onClick={() => {
                         setIsAssigningFromPreview(false);
                         setAssignmentValidationError(null);
+                        setReviewerSearchTerm('');
                       }}
                       className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white"
                     >
@@ -878,10 +884,26 @@ const AdminArticles = () => {
                     </button>
                   </div>
 
+                  {/* Search Bar */}
+                  <div className="px-6 py-4 border-b border-white/5 bg-zinc-950/50">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                      <input 
+                        type="text" 
+                        placeholder="Search reviewers by name or expertise..."
+                        value={reviewerSearchTerm}
+                        onChange={(e) => setReviewerSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 outline-none transition-all placeholder:text-zinc-600"
+                      />
+                    </div>
+                  </div>
+
                   {/* Scrollable list content */}
                   <div className="p-6 overflow-y-auto flex-1 space-y-4 custom-scrollbar">
                     <div className="grid grid-cols-1 gap-2.5">
-                      {availableReviewers.map(reviewer => {
+                      {availableReviewers
+                        .filter(r => r.name.toLowerCase().includes(reviewerSearchTerm.toLowerCase()) || r.expertise.toLowerCase().includes(reviewerSearchTerm.toLowerCase()))
+                        .map(reviewer => {
                         const isSelected = selectedReviewersForAssigning.includes(reviewer.name);
                         return (
                           <div
@@ -941,6 +963,7 @@ const AdminArticles = () => {
                         onClick={() => {
                           setIsAssigningFromPreview(false);
                           setAssignmentValidationError(null);
+                          setReviewerSearchTerm('');
                         }}
                         className="flex-1 py-4 bg-zinc-800 text-zinc-400 hover:text-white rounded-2xl font-bold text-xs tracking-widest transition-all border border-white/5 uppercase"
                       >
