@@ -338,10 +338,8 @@ const AdminArticles = () => {
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-black transition-all" title="Download">
-                        <Download size={18} />
-                      </button>
                       
+
                       {/* Contextual Action Button */}
                       {article.status === 'Submitted' && (
                         <button 
