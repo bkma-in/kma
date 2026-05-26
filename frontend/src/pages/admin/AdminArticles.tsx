@@ -338,12 +338,10 @@ const AdminArticles = () => {
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-black transition-all" title="Download">
-                        <Download size={18} />
-                      </button>
                       
+
                       {/* Contextual Action Button */}
-                      {article.status === 'Submitted' && (
+                      {article.status === 'Submitted' ? (
                         <button 
                           onClick={() => {
                             setPreviewArticle(article);
@@ -357,6 +355,22 @@ const AdminArticles = () => {
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-blue-700 transition-all uppercase"
                         >
                           Review Submission
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => {
+                            setPreviewArticle(article);
+                            setIsPreviewOpen(true);
+                            setIsAssigningFromPreview(false);
+                            setIsRejectingFromPreview(false);
+                            setRejectionReasonText('');
+                            setRejectionError(null);
+                            setSelectedReviewersForAssigning([]);
+                          }}
+                          className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-blue-600 transition-all" 
+                          title="Preview Manuscript"
+                        >
+                          <Eye size={18} />
                         </button>
                       )}
                       {article.status === 'Approved' && (
@@ -843,26 +857,28 @@ const AdminArticles = () => {
             </div>
 
             {/* Modal Footer - Sticky Action Buttons */}
-            <div className="px-6 py-5 sm:px-8 sm:py-6 border-t border-white/5 bg-zinc-950 flex items-center justify-between gap-4 shrink-0">
-              <button 
-                onClick={() => setIsRejectingFromPreview(true)}
-                className="px-6 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-black tracking-widest transition-all shadow-xl shadow-rose-600/10 active:scale-95 uppercase flex items-center justify-center gap-2"
-              >
-                <XCircle size={16} />
-                Reject On Desk
-              </button>
-              
-              <button 
-                onClick={() => {
-                  setIsAssigningFromPreview(true);
-                  setReviewerSearchTerm('');
-                }}
-                className="px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black tracking-widest transition-all shadow-xl shadow-emerald-600/10 active:scale-95 uppercase flex items-center justify-center gap-2"
-              >
-                <UserCheck size={16} />
-                Assign Reviewer
-              </button>
-            </div>
+            {previewArticle.status === 'Submitted' && (
+              <div className="px-6 py-5 sm:px-8 sm:py-6 border-t border-white/5 bg-zinc-950 flex items-center justify-between gap-4 shrink-0">
+                <button 
+                  onClick={() => setIsRejectingFromPreview(true)}
+                  className="px-6 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-black tracking-widest transition-all shadow-xl shadow-rose-600/10 active:scale-95 uppercase flex items-center justify-center gap-2"
+                >
+                  <XCircle size={16} />
+                  Reject On Desk
+                </button>
+                
+                <button 
+                  onClick={() => {
+                    setIsAssigningFromPreview(true);
+                    setReviewerSearchTerm('');
+                  }}
+                  className="px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black tracking-widest transition-all shadow-xl shadow-emerald-600/10 active:scale-95 uppercase flex items-center justify-center gap-2"
+                >
+                  <UserCheck size={16} />
+                  Assign Reviewer
+                </button>
+              </div>
+            )}
 
             {/* REVIEWER ASSIGNMENT OVERLAY MODAL */}
             {isAssigningFromPreview && (
