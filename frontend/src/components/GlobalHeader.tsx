@@ -91,7 +91,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
         </div>
       </header>
 
-      {showProfile && (
+      {showProfile && isProfileOpen && (
         <ProfileModal 
           isOpen={isProfileOpen}
           onClose={() => setIsProfileOpen(false)}

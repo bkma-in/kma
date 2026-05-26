@@ -535,7 +535,7 @@ const LandingPage: React.FC = () => {
           </div>
 
           {/* Bottom Row: Global Footer Component */}
-          <GlobalFooter showSocials={true} />
+          <GlobalFooter showSocials={true} showTaglines={false} />
         </div>
       </footer>
     </div>
