@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, Mail, GraduationCap, Briefcase, Loader2, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { addReviewer } from '../../services/user.service';
 
 interface AddReviewerModalProps {
   isOpen: boolean;
@@ -21,42 +22,24 @@ const AddReviewerModal: React.FC<AddReviewerModalProps> = ({ isOpen, onClose, on
 
   if (!isOpen) return null;
 
-  const generateTempPassword = () => {
-    return Math.random().toString(36).slice(-8) + '!' + Math.floor(Math.random() * 100);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      const password = generateTempPassword();
-      const newReviewer = {
-        id: `REV-${Math.floor(Math.random() * 900) + 100}`,
-        ...formData,
-        role: 'reviewer',
-        status: 'Active',
-        is_temp_password: true,
-        regDate: new Date().toISOString().split('T')[0],
-        password: password // In real app, this would be hashed on backend
-      };
-
-      setTempPassword(password);
+    try {
+      const response = await addReviewer(formData);
+      if (response.success) {
+        setTempPassword(response.tempPassword);
+        setIsSuccess(true);
+        onSuccess(response.reviewer);
+      }
+    } catch (error: any) {
+      console.error('Failed to create reviewer:', error);
+      alert(error.response?.data?.error || 'Failed to create reviewer user.');
+    } finally {
       setIsLoading(false);
-      setIsSuccess(true);
-      
-      // Simulate sending email
-      console.log('Sending Onboarding Email to:', formData.email);
-      console.log('Content: Welcome! Your temporary password is:', password);
-
-      // Add to simulated database
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      users.push(newReviewer);
-      localStorage.setItem('users', JSON.stringify(users));
-
-      onSuccess(newReviewer);
-    }, 1500);
+    }
   };
 
   const handleClose = () => {

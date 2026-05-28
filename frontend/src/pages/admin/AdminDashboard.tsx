@@ -19,38 +19,47 @@ import {
 import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
 import { getArticles } from '../../services/article.service';
+import { getReviewers } from '../../services/user.service';
 import { useProfile } from '../../hooks/useProfile';
 
 const AdminDashboard = () => {
   const { profile } = useProfile();
   const [articles, setArticles] = useState<any[]>([]);
+  const [reviewerRequestsCount, setReviewerRequestsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchArticles = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getArticles();
-        if (response.success) {
-          setArticles(response.articles);
+        const [articlesRes, reviewersRes] = await Promise.all([
+          getArticles(),
+          getReviewers()
+        ]);
+        if (articlesRes.success) {
+          setArticles(articlesRes.articles);
+        }
+        if (reviewersRes.success) {
+          const pending = reviewersRes.reviewers.filter((r: any) => r.status === 'Pending');
+          setReviewerRequestsCount(pending.length);
         }
       } catch (error) {
-        console.error('Failed to fetch articles:', error);
+        console.error('Failed to fetch dashboard data:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchArticles();
+    fetchData();
   }, []);
 
   const pendingAdminCount = articles.filter(a => a.status === 'submitted').length;
-  const reviewerRequestsCount = articles.filter(a => a.status === 'under_review').length;
+  const underReviewCount = articles.filter(a => a.status === 'under_review').length;
 
   const stats = [
     { label: 'Total Articles', value: articles.length.toString(), icon: FileText, color: 'text-zinc-600', bg: 'bg-zinc-100', path: '/admin-dashboard/articles?status=All' },
     { label: 'Decision Required', value: pendingAdminCount.toString(), icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50', path: '/admin-dashboard/articles?status=Submitted' },
-    { label: 'Under Review', value: reviewerRequestsCount.toString(), icon: History, color: 'text-amber-600', bg: 'bg-amber-50', path: '/admin-dashboard/articles?status=All' },
-    { label: 'Approved', value: articles.filter(a => a.status === 'accepted').length.toString(), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/admin-dashboard/articles?status=Approved' },
-    { label: 'Rejected', value: articles.filter(a => a.status === 'rejected').length.toString(), icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50', path: '/admin-dashboard/articles?status=Rejected' },
+    { label: 'Under Review', value: underReviewCount.toString(), icon: History, color: 'text-amber-600', bg: 'bg-amber-50', path: '/admin-dashboard/articles?status=All' },
+    { label: 'Approved', value: articles.filter(a => a.status === 'accepted' || a.status === 'published').length.toString(), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/admin-dashboard/articles?status=Approved' },
+    { label: 'Rejected', value: articles.filter(a => a.status === 'rejected' || a.status === 'desk_rejected').length.toString(), icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50', path: '/admin-dashboard/articles?status=Rejected' },
   ];
 
   const activities = articles.slice(0, 4).map(a => ({

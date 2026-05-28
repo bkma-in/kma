@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../config/firebase';
+import { db, auth } from '../config/firebase';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/authMiddleware';
 import { upload } from '../middleware/uploadMiddleware';
 import { uploadImage, deleteImage } from '../services/cloudinaryService';
@@ -226,6 +226,129 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Search users error:', error);
     res.status(500).json({ error: 'Failed to search users' });
+  }
+});
+
+// Helper to generate temporary password
+const generateTempPassword = () => {
+  return Math.random().toString(36).slice(-8) + '!' + Math.floor(Math.random() * 100);
+};
+
+// Admin: Get all reviewers
+router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+  try {
+    const snapshot = await db.collection('users').where('role', '==', 'reviewer').get();
+    const reviewers = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name,
+        email: data.email,
+        qualification: data.qualification || '',
+        experience: data.experience || '',
+        regDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
+        status: data.status || 'Pending',
+        rejectionReason: data.rejectionReason || ''
+      };
+    });
+
+    // In-memory sort by regDate descending
+    reviewers.sort((a, b) => new Date(b.regDate).getTime() - new Date(a.regDate).getTime());
+
+    res.json({ success: true, reviewers });
+  } catch (error) {
+    console.error('Get reviewers error:', error);
+    res.status(500).json({ error: 'Failed to fetch reviewers' });
+  }
+});
+
+// Admin: Update reviewer status (Approve/Reject)
+router.patch('/reviewers/:id/status', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+  try {
+    const id = req.params.id as string;
+    const { status, rejectionReason } = req.body;
+
+    const validStatuses = ['Approved', 'Rejected', 'Pending'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const userRef = db.collection('users').doc(id);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'Reviewer not found' });
+    }
+
+    const updateData: any = {
+      status,
+      updatedAt: new Date()
+    };
+
+    if (status === 'Rejected') {
+      updateData.rejectionReason = rejectionReason || '';
+    } else {
+      updateData.rejectionReason = '';
+    }
+
+    await userRef.update(updateData);
+
+    res.json({ success: true, reviewer: { ...userDoc.data(), ...updateData, id } });
+  } catch (error) {
+    console.error('Update reviewer status error:', error);
+    res.status(500).json({ error: 'Failed to update reviewer status' });
+  }
+});
+
+// Admin: Create pre-approved reviewer user
+router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+  try {
+    const { name, email, qualification, experience } = req.body;
+
+    if (!name || !email || !qualification || !experience) {
+      return res.status(400).json({ error: 'All fields (name, email, qualification, experience) are required' });
+    }
+
+    const tempPassword = generateTempPassword();
+
+    // 1. Create user in Firebase Auth
+    const userRecord = await auth.createUser({
+      email,
+      password: tempPassword,
+      displayName: name
+    });
+
+    // 2. Create user document in Firestore
+    const userData = {
+      uid: userRecord.uid,
+      name,
+      email,
+      role: 'reviewer',
+      status: 'Approved',
+      qualification,
+      experience,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    await db.collection('users').doc(userRecord.uid).set(userData);
+
+    res.json({ 
+      success: true, 
+      reviewer: {
+        id: userRecord.uid,
+        name,
+        email,
+        qualification,
+        experience,
+        regDate: userData.createdAt.toISOString(),
+        status: 'Approved'
+      }, 
+      tempPassword 
+    });
+  } catch (error: any) {
+    console.error('Create reviewer error:', error);
+    res.status(500).json({ error: error.message || 'Failed to create reviewer user' });
   }
 });
 

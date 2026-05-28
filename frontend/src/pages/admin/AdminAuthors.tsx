@@ -18,11 +18,13 @@ import {
   Plus,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import AddReviewerModal from '../../components/admin/AddReviewerModal';
 import { useNotification } from '../../utils/NotificationContext';
+import { getReviewers, updateReviewerStatus } from '../../services/user.service';
 
 // Types
 type ReviewerStatus = 'Pending' | 'Approved' | 'Rejected';
@@ -39,7 +41,7 @@ interface Reviewer {
 }
 
 const AdminAuthors = () => {
-  const { confirm, showToast } = useNotification();
+  const { showToast } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReviewerStatus | 'All'>('All');
   const [selectedReviewer, setSelectedReviewer] = useState<Reviewer | null>(null);
@@ -51,84 +53,42 @@ const AdminAuthors = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectionError, setRejectionError] = useState('');
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initialReviewers: Reviewer[] = [
-      { 
-        id: 'REV-102', 
-        name: 'Dr. Aris Thorne', 
-        email: 'aris.thorne@quantum.edu', 
-        qualification: 'Ph.D. in Theoretical Physics', 
-        regDate: '2024-03-20', 
-        status: 'Pending',
-        experience: '15+ years in quantum entanglement research. Editorial board member of JQP.'
-      },
-      { 
-        id: 'REV-105', 
-        name: 'Prof. Elena Sterling', 
-        email: 'elena.s@topology.org', 
-        qualification: 'D.Sc. in Mathematics', 
-        regDate: '2024-03-18', 
-        status: 'Approved',
-        experience: 'Director of Topology Research Institute. 50+ published peer-reviewed articles.'
-      },
-      { 
-        id: 'REV-108', 
-        name: 'Michael Chang', 
-        email: 'm.chang@cyber-sec.net', 
-        qualification: 'M.S. in Cryptography', 
-        regDate: '2024-03-15', 
-        status: 'Pending',
-        experience: 'Lead researcher at Global Security Labs. Focus on lattice-based cryptography.'
-      },
-      { 
-        id: 'REV-110', 
-        name: 'Sarah Jenkins', 
-        email: 's.jenkins@bio-math.com', 
-        qualification: 'Ph.D. in Biomathematics', 
-        regDate: '2024-03-10', 
-        status: 'Rejected',
-        experience: 'Previous tenure at CDC modeling infectious diseases.'
+    const fetchReviewersList = async () => {
+      try {
+        const response = await getReviewers();
+        if (response.success) {
+          setReviewers(response.reviewers);
+        }
+      } catch (error) {
+        console.error('Failed to load reviewers:', error);
+        showToast('Failed to load reviewers list.', 'error');
+      } finally {
+        setLoading(false);
       }
-    ];
-
-    const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    const storedReviewers = storedUsers
-      .filter((u: any) => u.role === 'reviewer')
-      .map((u: any) => ({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        qualification: u.qualification,
-        regDate: u.regDate,
-        status: u.status,
-        experience: u.experience,
-        rejectionReason: u.rejectionReason
-      }));
-
-    setReviewers([...storedReviewers, ...initialReviewers]);
+    };
+    fetchReviewersList();
   }, []);
 
-  const handleStatusUpdate = (id: string, newStatus: ReviewerStatus, reason?: string) => {
-    setReviewers(prev => {
-      const updated = prev.map(rev => 
-        rev.id === id ? { ...rev, status: newStatus, rejectionReason: reason } : rev
-      );
-      
-      // Update localStorage users list
-      const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
-      const updatedUsers = storedUsers.map((u: any) => 
-        u.id === id ? { ...u, status: newStatus, rejectionReason: reason } : u
-      );
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-      
-      return updated;
-    });
-
-    if (selectedReviewer?.id === id) {
-      setSelectedReviewer(prev => prev ? { ...prev, status: newStatus, rejectionReason: reason } : null);
+  const handleStatusUpdate = async (id: string, newStatus: ReviewerStatus, reason?: string) => {
+    try {
+      const response = await updateReviewerStatus(id, newStatus, reason);
+      if (response.success) {
+        setReviewers(prev => prev.map(rev => 
+          rev.id === id ? { ...rev, status: newStatus, rejectionReason: reason } : rev
+        ));
+        
+        if (selectedReviewer?.id === id) {
+          setSelectedReviewer(prev => prev ? { ...prev, status: newStatus, rejectionReason: reason } : null);
+        }
+        showToast(`Reviewer ${newStatus.toLowerCase()} successfully`, newStatus === 'Approved' ? 'success' : 'error');
+      }
+    } catch (error: any) {
+      console.error('Failed to update reviewer status:', error);
+      showToast(error.response?.data?.error || 'Failed to update status', 'error');
     }
-    showToast(`Reviewer ${newStatus.toLowerCase()} successfully`, newStatus === 'Approved' ? 'success' : 'error');
   };
 
   const initiateStatusUpdate = (id: string, newStatus: ReviewerStatus) => {
@@ -173,6 +133,14 @@ const AdminAuthors = () => {
     setSelectedReviewer(reviewer);
     setIsModalOpen(true);
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="animate-spin text-zinc-300" size={48} />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-in fade-in duration-500 max-w-7xl mx-auto px-4">

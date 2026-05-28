@@ -5,7 +5,6 @@ import {
   Filter, 
   FileText, 
   Download, 
-  UserPlus, 
   Send, 
   RotateCcw, 
   UploadCloud, 
@@ -17,10 +16,13 @@ import {
   X,
   MessageSquare,
   AlertCircle,
-  UserCheck
+  UserCheck,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
+import { getArticles, assignReviewers as assignReviewersService, updateArticleStatus } from '../../services/article.service';
+import { getReviewers } from '../../services/user.service';
 
 // Types
 type ArticleStatus = 
@@ -82,7 +84,6 @@ const AdminArticles = () => {
 
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isAssigning, setIsAssigning] = useState(false);
 
   // Manuscript Preview System States
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
@@ -98,86 +99,76 @@ const AdminArticles = () => {
   const [assignmentValidationError, setAssignmentValidationError] = useState<string | null>(null);
   const [reviewerSearchTerm, setReviewerSearchTerm] = useState('');
 
-  const [articles, setArticles] = useState<Article[]>([
-    {
-      id: 'KMA-2024-001',
-      title: 'Neural Networks in Modern Diagnostic Medicine',
-      author: 'Dr. Sarah Jenkins',
-      category: 'Biomathematics',
-      abstract: 'A longitudinal study on the efficacy of CNNs in detecting early-stage retinal deterioration through automated scan analysis. We propose a novel architecture that achieves 98.4% diagnostic accuracy on open-source datasets, outlining details on hyperparameter tuning and model weights.',
-      status: 'Submitted',
-      assignedReviewers: [],
-      lastUpdated: '2024-03-20',
-      versions: [{ version: 1, uploadedBy: 'Author', timestamp: '2024-03-20', fileName: 'neural_networks_diagnostic.pdf' }]
-    },
-    {
-      id: 'KMA-2024-002',
-      title: 'Advanced Cryptography Protocols in Quantum Systems',
-      author: 'Michael Chang',
-      category: 'Quantum Computing',
-      abstract: 'This research explores how existing cryptographic protocols can be strengthened against Shor\'s algorithm. We present a lattice-based implementation suitable for low-power embedded processors, demonstrating resistance to chosen-ciphertext attacks.',
-      status: 'Submitted',
-      assignedReviewers: [],
-      lastUpdated: '2024-03-18',
-      versions: [{ version: 1, uploadedBy: 'Author', timestamp: '2024-03-18', fileName: 'quantum_cryptography.docx' }]
-    },
-    {
-      id: 'KMA-2024-003',
-      title: 'Topological Data Analysis in Social Networks',
-      author: 'Prof. Elena Sterling',
-      category: 'Topology',
-      abstract: 'Applying persistent homology to identify core influencer clusters. By filtering noise and computing high-dimensional topological invariants, we map graph structures to identify critical information bridges.',
-      status: 'Under Review',
-      assignedReviewers: ['Prof. Gauss'],
-      lastUpdated: '2024-03-15',
-      versions: [{ version: 1, uploadedBy: 'Author', timestamp: '2024-03-15', fileName: 'topological_social_networks.pdf' }]
-    },
-    {
-      id: 'KMA-2024-004',
-      title: 'Fluid Dynamics and Boundary Layer Equations',
-      author: 'Dr. S. Raman',
-      category: 'Applied Math',
-      abstract: 'Solving the boundary layer equations for non-Newtonian fluids in porous structures. This study introduces a semi-analytical solver using homotopical perturbation techniques.',
-      status: 'Approved',
-      assignedReviewers: ['Dr. Emmy Noether'],
-      lastUpdated: '2024-03-10',
-      versions: [{ version: 1, uploadedBy: 'Author', timestamp: '2024-03-10', fileName: 'fluid_dynamics_boundary.docx' }],
-      reviewerFeedback: {
-        remarks: 'Excellent mathematical derivation. The convergence rates are verified and the physical model is sound.',
-        recommendation: 'Approved'
-      }
-    },
-    {
-      id: 'KMA-2024-005',
-      title: 'P-Adic Numbers and Modular Forms',
-      author: 'Prof. Alan Turing',
-      category: 'Number Theory',
-      abstract: 'Analyzing the coefficients of weight 2 modular forms over p-adic fields. We present computational proofs for the congruences predicted by the standard conjectures.',
-      status: 'Desk Rejected',
-      assignedReviewers: [],
-      lastUpdated: '2024-03-08',
-      versions: [{ version: 1, uploadedBy: 'Author', timestamp: '2024-03-08', fileName: 'padic_modular_forms.pdf' }],
-      rejectionReason: 'The submitted document is missing the required mathematical proof appendix and formatting does not follow KMA LaTeX guidelines.'
-    }
-  ]);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [availableReviewers, setAvailableReviewers] = useState<Reviewer[]>([]);
 
   const [isAdminNoteModalOpen, setIsAdminNoteModalOpen] = useState(false);
   const [adminNote, setAdminNote] = useState('');
 
   interface Reviewer {
+    uid: string;
     name: string;
     expertise: string;
     availability: 'Available' | 'Busy' | 'On Leave';
   }
 
-  const availableReviewers: Reviewer[] = [
-    { name: 'Prof. Alan Turing', expertise: 'Quantum Computing / Logic', availability: 'Available' },
-    { name: 'Dr. James Wilson', expertise: 'Biomathematics / Neural Networks', availability: 'Available' },
-    { name: 'Dr. Jane Smith', expertise: 'Algebra / Cryptography', availability: 'Busy' },
-    { name: 'Prof. Gauss', expertise: 'Number Theory / Geometry', availability: 'Available' },
-    { name: 'Dr. Emmy Noether', expertise: 'Abstract Algebra / Physics', availability: 'On Leave' },
-    { name: 'Prof. Leonhard Euler', expertise: 'Graph Theory / Calculus', availability: 'Busy' }
-  ];
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [articlesRes, reviewersRes] = await Promise.all([
+          getArticles(),
+          getReviewers()
+        ]);
+        
+        if (articlesRes.success) {
+          const backendToFrontendStatusMap: Record<string, ArticleStatus> = {
+            'submitted': 'Submitted',
+            'revision_requested': 'Needs Improvement',
+            'accepted': 'Approved',
+            'published': 'Published',
+            'rejected': 'Rejected',
+            'under_review': 'Under Review',
+            'desk_rejected': 'Desk Rejected'
+          };
+          
+          const mappedArticles = articlesRes.articles.map((a: any) => ({
+            id: a.articleId || a.id,
+            title: a.title,
+            author: a.authors?.find((au: any) => au.role === 'submitter')?.name || a.author || 'Author',
+            category: a.category || 'Mathematics',
+            abstract: a.abstract || '',
+            status: backendToFrontendStatusMap[a.status] || 'Submitted',
+            assignedReviewers: a.assignedReviewers || [],
+            lastUpdated: a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : 'N/A',
+            versions: a.versions || [{ version: 1, uploadedBy: 'Author', timestamp: a.createdAt, fileName: a.pdfName || 'manuscript.pdf' }],
+            rejectionReason: a.rejectionReason,
+            adminNote: a.adminNote,
+            reviewerFeedback: a.reviewerFeedback
+          }));
+          setArticles(mappedArticles);
+        }
+        
+        if (reviewersRes.success) {
+          const approvedReviewers = reviewersRes.reviewers
+            .filter((r: any) => r.status === 'Approved')
+            .map((r: any) => ({
+              uid: r.id,
+              name: r.name,
+              expertise: r.qualification || 'Expert Reviewer',
+              availability: 'Available'
+            }));
+          setAvailableReviewers(approvedReviewers);
+        }
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+        showToast('Failed to load manuscripts and reviewers data.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const getStatusStyles = (status: string) => {
     switch (status) {
@@ -218,21 +209,67 @@ const AdminArticles = () => {
     setIsDetailsOpen(true);
   };
 
-  const updateStatus = (id: string, status: ArticleStatus) => {
-    setArticles(prev => prev.map(a => a.id === id ? { ...a, status } : a));
-    if (selectedArticle?.id === id) {
-      setSelectedArticle(prev => prev ? { ...prev, status } : null);
+  const updateStatus = async (id: string, status: ArticleStatus, extraData?: any) => {
+    try {
+      const backendStatusMap: Record<string, string> = {
+        'Submitted': 'submitted',
+        'Needs Improvement': 'revision_requested',
+        'Approved': 'accepted',
+        'Published': 'published',
+        'Rejected': 'rejected',
+        'Under Review': 'under_review',
+        'Desk Rejected': 'desk_rejected'
+      };
+      
+      const backendStatus = backendStatusMap[status] || status.toLowerCase();
+      
+      const response = await updateArticleStatus(id, backendStatus, extraData);
+      if (response.success) {
+        setArticles(prev => prev.map(a => a.id === id ? { ...a, status, ...extraData } : a));
+        if (selectedArticle?.id === id) {
+          setSelectedArticle(prev => prev ? { ...prev, status, ...extraData } : null);
+        }
+        showToast(`Status updated successfully.`, 'success');
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      showToast("Failed to update status.", 'error');
     }
   };
 
-  const assignReviewers = (id: string, reviewers: string[]) => {
-    setArticles(prev => prev.map(a => a.id === id ? { ...a, assignedReviewers: reviewers, status: 'Under Review' } : a));
-    if (selectedArticle?.id === id) {
-      setSelectedArticle(prev => prev ? { ...prev, assignedReviewers: reviewers, status: 'Under Review' } : null);
+  const assignReviewers = async (id: string, reviewers: string[]) => {
+    try {
+      const reviewerIds = reviewers.map(name => {
+        const rev = availableReviewers.find(r => r.name === name);
+        return rev ? (rev as any).uid : null;
+      }).filter(Boolean);
+
+      if (reviewerIds.length === 0) {
+        showToast("No valid reviewers selected.", 'error');
+        return;
+      }
+
+      const response = await assignReviewersService(id, reviewerIds, reviewers);
+      if (response.success) {
+        setArticles(prev => prev.map(a => a.id === id ? { ...a, assignedReviewers: reviewers, status: 'Under Review' } : a));
+        if (selectedArticle?.id === id) {
+          setSelectedArticle(prev => prev ? { ...prev, assignedReviewers: reviewers, status: 'Under Review' } : null);
+        }
+        showToast("Reviewers assigned successfully.", 'success');
+      }
+    } catch (error) {
+      console.error('Failed to assign reviewers:', error);
+      showToast("Failed to assign reviewers.", 'error');
     }
-    setIsAssigning(false);
-    showToast("Reviewers assigned successfully.", 'success');
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <Loader2 className="animate-spin text-zinc-300" size={48} />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-in fade-in duration-500 max-w-7xl mx-auto">
@@ -1111,15 +1148,10 @@ const AdminArticles = () => {
                             return;
                           }
                           
-                          setArticles(prev => prev.map(a => a.id === previewArticle.id ? { ...a, status: 'Desk Rejected', rejectionReason: rejectionReasonText } : a));
+                          updateStatus(previewArticle.id, 'Desk Rejected', { rejectionReason: rejectionReasonText });
                           setRejectionReasonText('');
                           setIsRejectingFromPreview(false);
                           setIsPreviewOpen(false);
-                          
-                          showToast('Article desk rejected.', 'error');
-                          setTimeout(() => {
-                            showToast('Your manuscript was rejected during initial screening.', 'info');
-                          }, 1000);
                         }}
                         className="flex-1 py-4 bg-rose-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/20"
                       >
