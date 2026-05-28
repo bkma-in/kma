@@ -140,28 +140,37 @@ router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)
 router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const { role, uid } = req.user;
-        let query = firebase_1.db.collection('articles');
+        let articles = [];
         if (role === 'author') {
-            // Search in participantIds which includes submitter and co-authors
-            query = query.where('participantIds', 'array-contains', uid);
+            const snapshot = await firebase_1.db.collection('articles').where('participantIds', 'array-contains', uid).get();
+            articles = snapshot.docs.map(doc => doc.data());
         }
         else if (role === 'reviewer') {
-            query = query.where('reviewerId', '==', uid);
+            // Get articles where user is one of the assigned reviewerIds
+            const snapshotByArray = await firebase_1.db.collection('articles').where('reviewerIds', 'array-contains', uid).get();
+            // Also fallback for legacy reviewerId
+            const snapshotBySingle = await firebase_1.db.collection('articles').where('reviewerId', '==', uid).get();
+            const articleMap = new Map();
+            snapshotByArray.docs.forEach(doc => articleMap.set(doc.id, doc.data()));
+            snapshotBySingle.docs.forEach(doc => articleMap.set(doc.id, doc.data()));
+            articles = Array.from(articleMap.values());
         }
-        if (role === 'reader') {
-            query = query.where('status', '==', 'accepted');
+        else if (role === 'reader') {
+            const snapshot = await firebase_1.db.collection('articles').where('status', '==', 'accepted').get();
+            articles = snapshot.docs.map(doc => doc.data());
         }
-        // Note: We removed orderBy('createdAt', 'desc') here to avoid a composite index requirement 
-        // for the 'participantIds' array-contains filter. We'll sort in memory.
-        const snapshot = await query.get();
-        let articles = snapshot.docs.map(doc => {
-            const data = doc.data();
+        else if (role === 'admin') {
+            const snapshot = await firebase_1.db.collection('articles').get();
+            articles = snapshot.docs.map(doc => doc.data());
+        }
+        // Standard mapping and sorting
+        articles = articles.map(data => {
             // Legacy mapping
             if (!data.authors && data.authorId) {
                 data.authors = [
                     {
                         userId: data.authorId,
-                        name: 'Original Author', // We don't have the name here easily, but we can map it
+                        name: 'Original Author',
                         email: '',
                         role: 'submitter',
                         accepted: true,
@@ -176,6 +185,54 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
             const timeA = a.createdAt?._seconds || 0;
             const timeB = b.createdAt?._seconds || 0;
             return timeB - timeA;
+        });
+        // Double-blind data stripping based on role
+        articles = articles.map(art => {
+            const sanitized = { ...art };
+            if (role === 'reviewer') {
+                // Strip Author details (Reviewers cannot know the Author)
+                delete sanitized.authorId;
+                delete sanitized.authors;
+                delete sanitized.participantIds;
+                if (sanitized.author) {
+                    sanitized.author = 'Anonymous Author';
+                }
+                // Only expose their own review feedback
+                if (sanitized.reviews) {
+                    sanitized.reviewerFeedback = sanitized.reviews[uid] || null;
+                    delete sanitized.reviews;
+                }
+            }
+            else if (role === 'author') {
+                // Strip Reviewer details (Authors cannot know the Reviewers)
+                delete sanitized.reviewerId;
+                delete sanitized.reviewerIds;
+                delete sanitized.assignedReviewers;
+                // Anonymize the reviews
+                if (sanitized.reviews) {
+                    const anonymousReviews = {};
+                    let idx = 1;
+                    for (const key of Object.keys(sanitized.reviews)) {
+                        const review = sanitized.reviews[key];
+                        anonymousReviews[`Reviewer ${idx}`] = {
+                            remarks: review.remarks,
+                            recommendation: review.recommendation,
+                            reviewedFile: review.reviewedFile,
+                            updatedAt: review.updatedAt
+                        };
+                        idx++;
+                    }
+                    sanitized.reviews = anonymousReviews;
+                }
+                // Anonymize legacy reviewerFeedback
+                if (sanitized.reviewerFeedback) {
+                    sanitized.reviewerFeedback = {
+                        remarks: sanitized.reviewerFeedback.remarks,
+                        recommendation: sanitized.reviewerFeedback.recommendation
+                    };
+                }
+            }
+            return sanitized;
         });
         res.json({ success: true, articles });
     }
@@ -402,22 +459,24 @@ router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRol
 router.patch('/:id/assign', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
     try {
         const id = req.params.id;
-        const { reviewerId } = req.body;
-        // Use transaction for atomic update
-        await firebase_1.db.runTransaction(async (transaction) => {
-            const articleRef = firebase_1.db.collection('articles').doc(id);
-            const articleDoc = await transaction.get(articleRef);
-            if (!articleDoc.exists) {
-                throw new Error('Article not found');
-            }
-            transaction.update(articleRef, {
-                reviewerId,
-                status: 'under_review',
-                updatedAt: new Date()
-            });
+        const { reviewerIds, reviewerNames } = req.body;
+        if (!reviewerIds || !Array.isArray(reviewerIds) || reviewerIds.length === 0) {
+            return res.status(400).json({ error: 'At least one reviewer ID is required' });
+        }
+        const articleRef = firebase_1.db.collection('articles').doc(id);
+        const doc = await articleRef.get();
+        if (!doc.exists) {
+            return res.status(404).json({ error: 'Article not found' });
+        }
+        await articleRef.update({
+            reviewerIds: reviewerIds,
+            assignedReviewers: reviewerNames || [],
+            // For backward compatibility:
+            reviewerId: reviewerIds[0],
+            status: 'under_review',
+            updatedAt: new Date()
         });
-        // Optional: Email reviewer about assignment
-        res.json({ success: true, message: 'Reviewer assigned successfully' });
+        res.json({ success: true, message: 'Reviewers assigned successfully' });
     }
     catch (error) {
         console.error('Assign reviewer error:', error);
@@ -428,13 +487,37 @@ router.patch('/:id/assign', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
 router.patch('/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin', 'reviewer']), async (req, res) => {
     try {
         const id = req.params.id;
-        const { status } = req.body; // e.g. "accepted", "rejected", "revision_requested"
+        const { role, uid } = req.user;
+        const { status, rejectionReason, adminNote, remarks, recommendation, reviewedFile } = req.body;
         const articleRef = firebase_1.db.collection('articles').doc(id);
-        await articleRef.update({
-            status,
-            updatedAt: new Date()
-        });
-        // Optional: Trigger email to author about decision
+        const doc = await articleRef.get();
+        if (!doc.exists) {
+            return res.status(404).json({ error: 'Article not found' });
+        }
+        if (role === 'reviewer') {
+            // Reviewer logs their own feedback in the 'reviews' map
+            await articleRef.update({
+                [`reviews.${uid}`]: {
+                    remarks: remarks || '',
+                    recommendation: recommendation || '',
+                    reviewedFile: reviewedFile || null,
+                    updatedAt: new Date()
+                },
+                updatedAt: new Date()
+            });
+        }
+        else if (role === 'admin') {
+            // Admin updates article overall status/finalizes decision
+            const updateData = {
+                status,
+                updatedAt: new Date()
+            };
+            if (rejectionReason !== undefined)
+                updateData.rejectionReason = rejectionReason;
+            if (adminNote !== undefined)
+                updateData.adminNote = adminNote;
+            await articleRef.update(updateData);
+        }
         res.json({ success: true, message: 'Status updated successfully' });
     }
     catch (error) {

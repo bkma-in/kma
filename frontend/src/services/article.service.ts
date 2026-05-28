@@ -33,3 +33,13 @@ export const updateArticle = async (id: string, formData: FormData) => {
   });
   return response.data;
 };
+
+export const assignReviewers = async (id: string, reviewerIds: string[], reviewerNames: string[]) => {
+  const response = await api.patch(`/articles/${id}/assign`, { reviewerIds, reviewerNames });
+  return response.data;
+};
+
+export const updateArticleStatus = async (id: string, status: string, extraData?: { rejectionReason?: string; adminNote?: string }) => {
+  const response = await api.patch(`/articles/${id}/status`, { status, ...extraData });
+  return response.data;
+};

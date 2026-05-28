@@ -35,15 +35,22 @@ const Notifications = () => {
 
     const q = query(
       collection(db, 'notifications'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', user.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map(doc => ({
+      let notifs = snapshot.docs.map(doc => ({
         ...doc.data(),
         notificationId: doc.id
-      }));
+      })) as any[];
+      
+      // Sort in memory to avoid needing a composite index
+      notifs.sort((a: any, b: any) => {
+        const timeA = a.createdAt?._seconds || (typeof a.createdAt === 'number' ? a.createdAt / 1000 : 0);
+        const timeB = b.createdAt?._seconds || (typeof b.createdAt === 'number' ? b.createdAt / 1000 : 0);
+        return timeB - timeA;
+      });
+
       setNotifications(notifs);
       setLoading(false);
 

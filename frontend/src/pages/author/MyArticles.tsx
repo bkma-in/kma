@@ -139,7 +139,7 @@ const MyArticles = () => {
             const d = new Date(val);
             return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
           })(),
-          status: a.status === 'draft' ? 'Draft' : mapStatus(a.status),
+          status: (a.status === 'draft' ? 'Draft' : mapStatus(a.status)) as Status | 'Draft',
           abstract: a.abstract,
           versions: a.revisionHistory ? 
             a.revisionHistory.map((v: any, i: number) => ({
@@ -190,7 +190,7 @@ const MyArticles = () => {
         
         // 3 & 4. Pending: Visible only if the article is still a Draft
         // If the article is no longer a draft (e.g. submitted), it is too late and should be hidden.
-        if (a.status !== 'Draft' && a.status !== 'draft') return false;
+        if (a.status !== 'Draft') return false;
         
         return true;
       });
