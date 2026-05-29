@@ -158,10 +158,11 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       const snapshot = await db.collection('articles').where('participantIds', 'array-contains', uid).get();
       articles = snapshot.docs.map(doc => doc.data());
     } else if (role === 'reviewer') {
-      // Get articles where user is one of the assigned reviewerIds
-      const snapshotByArray = await db.collection('articles').where('reviewerIds', 'array-contains', uid).get();
-      // Also fallback for legacy reviewerId
-      const snapshotBySingle = await db.collection('articles').where('reviewerId', '==', uid).get();
+      // Get articles where user is one of the assigned reviewerIds concurrently
+      const [snapshotByArray, snapshotBySingle] = await Promise.all([
+        db.collection('articles').where('reviewerIds', 'array-contains', uid).get(),
+        db.collection('articles').where('reviewerId', '==', uid).get()
+      ]);
       
       const articleMap = new Map();
       snapshotByArray.docs.forEach(doc => articleMap.set(doc.id, doc.data()));

@@ -1,6 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import { config } from './config/env';
+import { runMigrations } from './services/migrationService';
+
+// Run migrations in background
+runMigrations().catch(err => console.error('Startup migration error:', err));
 
 // Import Routes
 import authRoutes from './routes/authRoutes';

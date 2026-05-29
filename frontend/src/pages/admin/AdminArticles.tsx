@@ -23,6 +23,7 @@ import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { getArticles, assignReviewers as assignReviewersService, updateArticleStatus } from '../../services/article.service';
 import { getReviewers } from '../../services/user.service';
+import { formatDate } from '../../utils/dateHelpers';
 
 // Types
 type ArticleStatus = 
@@ -140,8 +141,11 @@ const AdminArticles = () => {
             abstract: a.abstract || '',
             status: backendToFrontendStatusMap[a.status] || 'Submitted',
             assignedReviewers: a.assignedReviewers || [],
-            lastUpdated: a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : 'N/A',
-            versions: a.versions || [{ version: 1, uploadedBy: 'Author', timestamp: a.createdAt, fileName: a.pdfName || 'manuscript.pdf' }],
+            lastUpdated: formatDate(a.updatedAt || a.createdAt),
+            versions: (a.versions || [{ version: 1, uploadedBy: 'Author', timestamp: a.createdAt, fileName: a.pdfName || 'manuscript.pdf' }]).map((v: any) => ({
+              ...v,
+              timestamp: formatDate(v.timestamp || a.createdAt)
+            })),
             rejectionReason: a.rejectionReason,
             adminNote: a.adminNote,
             reviewerFeedback: a.reviewerFeedback

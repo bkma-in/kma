@@ -21,6 +21,7 @@ import { NavLink } from 'react-router-dom';
 import { getArticles } from '../../services/article.service';
 import { getReviewers } from '../../services/user.service';
 import { useProfile } from '../../hooks/useProfile';
+import { formatDate } from '../../utils/dateHelpers';
 
 const AdminDashboard = () => {
   const { profile } = useProfile();
@@ -68,7 +69,7 @@ const AdminDashboard = () => {
            a.status === 'revision_requested' ? 'Revision Requested' :
            a.status === 'accepted' ? 'Article Published' : 'Status Updated',
     detail: a.title,
-    time: new Date(a.createdAt).toLocaleDateString(),
+    time: formatDate(a.createdAt),
     type: a.status === 'submitted' ? 'submission' :
           a.status === 'under_review' ? 'assignment' :
           a.status === 'revision_requested' ? 'revision' : 'published'

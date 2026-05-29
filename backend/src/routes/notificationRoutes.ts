@@ -13,17 +13,11 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
 
     const snapshot = await db.collection('notifications')
       .where('userId', '==', uid)
+      .orderBy('createdAt', 'desc')
       .limit(limitNum)
       .get();
 
-    let notifications = snapshot.docs.map(doc => doc.data());
-    
-    // In-memory sort
-    notifications.sort((a, b) => {
-      const timeA = a.createdAt?._seconds || 0;
-      const timeB = b.createdAt?._seconds || 0;
-      return timeB - timeA;
-    });
+    const notifications = snapshot.docs.map(doc => doc.data());
 
     res.json({ success: true, notifications });
   } catch (error) {

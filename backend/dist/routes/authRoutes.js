@@ -30,6 +30,12 @@ router.post('/register', authMiddleware_1.requireAuth, async (req, res) => {
         const allowedRoles = ['author', 'reader', 'reviewer']; // Admin & Dev assigned manually
         const userRole = allowedRoles.includes(role) ? role : 'reader';
         const { uid, email } = req.user;
+        if (typeof name !== 'string' || name.trim() === '') {
+            return res.status(400).json({ error: 'Invalid name' });
+        }
+        if (typeof email !== 'string' || email.trim() === '') {
+            return res.status(400).json({ error: 'Invalid email' });
+        }
         // Check if user already exists
         const userRef = firebase_1.db.collection('users').doc(uid);
         const doc = await userRef.get();
@@ -40,6 +46,8 @@ router.post('/register', authMiddleware_1.requireAuth, async (req, res) => {
             uid,
             name,
             email,
+            nameLower: name.toLowerCase(),
+            emailLower: email.toLowerCase(),
             role: userRole,
             createdAt: new Date(),
             updatedAt: new Date()
@@ -50,6 +58,15 @@ router.post('/register', authMiddleware_1.requireAuth, async (req, res) => {
             userData.experience = experience || '';
         }
         await userRef.set(userData);
+        try {
+            // Set Firebase Auth custom claims for role-based authentication bypass
+            await firebase_1.auth.setCustomUserClaims(uid, { role: userRole, name });
+        }
+        catch (claimError) {
+            // Rollback database profile if custom claims assignment fails
+            await userRef.delete().catch(delErr => console.error('Failed to rollback user profile:', delErr));
+            throw claimError;
+        }
         res.json({ success: true, user: userData });
     }
     catch (error) {

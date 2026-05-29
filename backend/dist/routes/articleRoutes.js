@@ -146,10 +146,11 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
             articles = snapshot.docs.map(doc => doc.data());
         }
         else if (role === 'reviewer') {
-            // Get articles where user is one of the assigned reviewerIds
-            const snapshotByArray = await firebase_1.db.collection('articles').where('reviewerIds', 'array-contains', uid).get();
-            // Also fallback for legacy reviewerId
-            const snapshotBySingle = await firebase_1.db.collection('articles').where('reviewerId', '==', uid).get();
+            // Get articles where user is one of the assigned reviewerIds concurrently
+            const [snapshotByArray, snapshotBySingle] = await Promise.all([
+                firebase_1.db.collection('articles').where('reviewerIds', 'array-contains', uid).get(),
+                firebase_1.db.collection('articles').where('reviewerId', '==', uid).get()
+            ]);
             const articleMap = new Map();
             snapshotByArray.docs.forEach(doc => articleMap.set(doc.id, doc.data()));
             snapshotBySingle.docs.forEach(doc => articleMap.set(doc.id, doc.data()));

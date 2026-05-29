@@ -49,7 +49,10 @@ router.put('/profile', requireAuth, upload.single('profileImage'), async (req: A
     };
 
     // Only add to update payload if provided to avoid overwriting with undefined
-    if (sanitizedName) updateData.name = sanitizedName;
+    if (sanitizedName) {
+      updateData.name = sanitizedName;
+      updateData.nameLower = sanitizedName.toLowerCase();
+    }
     if (sanitizedPhone !== undefined) updateData.phone = sanitizedPhone;
     if (designation !== undefined) updateData.designation = designation.trim();
     if (bio !== undefined) updateData.bio = sanitizedBio;
@@ -81,6 +84,13 @@ router.put('/profile', requireAuth, upload.single('profileImage'), async (req: A
 
     // 3. Database Update (Single Write)
     await userRef.update(updateData);
+
+    // Sync Custom Claims if Name changed
+    if (sanitizedName) {
+      auth.setCustomUserClaims(uid, { role: userData.role || 'reader', name: sanitizedName }).catch(err => 
+        console.error('Background custom claims sync error:', err)
+      );
+    }
 
     // Performance: Avoid second read by merging locally
     const mergedProfile = {
@@ -199,28 +209,45 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       return res.json({ success: true, users: [] });
     }
 
-    // Firestore doesn't support case-insensitive search well.
-    // We'll fetch all users (up to a reasonable limit) and filter in memory for now,
-    // or use prefix matching if we had a normalized search field.
-    // Given the task, we'll implement a basic search.
-    
-    // Note: In a production app with many users, we'd use Algolia or normalized fields.
-    const snapshot = await db.collection('users').limit(100).get();
-    const users = snapshot.docs
-      .map(doc => {
-        const data = doc.data();
-        return {
+    // High performance prefix queries run concurrently
+    const nameQuery = db.collection('users')
+      .where('nameLower', '>=', searchTerm)
+      .where('nameLower', '<=', searchTerm + '\uf8ff')
+      .limit(limitNum)
+      .get();
+
+    const emailQuery = db.collection('users')
+      .where('emailLower', '>=', searchTerm)
+      .where('emailLower', '<=', searchTerm + '\uf8ff')
+      .limit(limitNum)
+      .get();
+
+    const [nameSnap, emailSnap] = await Promise.all([nameQuery, emailQuery]);
+    const userMap = new Map();
+
+    nameSnap.docs.forEach(doc => {
+      const data = doc.data();
+      userMap.set(doc.id, {
+        id: doc.id,
+        name: data.name,
+        email: data.email,
+        affiliation: data.affiliation || ''
+      });
+    });
+
+    emailSnap.docs.forEach(doc => {
+      const data = doc.data();
+      if (!userMap.has(doc.id)) {
+        userMap.set(doc.id, {
           id: doc.id,
           name: data.name,
           email: data.email,
           affiliation: data.affiliation || ''
-        };
-      })
-      .filter(user => 
-        user.name?.toLowerCase().includes(searchTerm) || 
-        user.email?.toLowerCase().includes(searchTerm)
-      )
-      .slice(0, limitNum);
+        });
+      }
+    });
+
+    const users = Array.from(userMap.values()).slice(0, limitNum);
 
     res.json({ success: true, users });
   } catch (error) {
@@ -323,6 +350,8 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
       uid: userRecord.uid,
       name,
       email,
+      nameLower: name.toLowerCase(),
+      emailLower: email.toLowerCase(),
       role: 'reviewer',
       status: 'Approved',
       qualification,
@@ -331,7 +360,19 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
       updatedAt: new Date()
     };
 
-    await db.collection('users').doc(userRecord.uid).set(userData);
+    try {
+      // Write profile to database first
+      await db.collection('users').doc(userRecord.uid).set(userData);
+      
+      // Then apply custom claims
+      await auth.setCustomUserClaims(userRecord.uid, { role: 'reviewer', name });
+    } catch (err) {
+      // Rollback: Delete the auth user if database write or claims config fails
+      await auth.deleteUser(userRecord.uid).catch(authErr => 
+        console.error('Failed to delete Auth user on rollback:', authErr)
+      );
+      throw err;
+    }
 
     res.json({ 
       success: true, 

@@ -6,6 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const env_1 = require("./config/env");
+const migrationService_1 = require("./services/migrationService");
+// Run migrations in background
+(0, migrationService_1.runMigrations)().catch(err => console.error('Startup migration error:', err));
 // Import Routes
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const articleRoutes_1 = __importDefault(require("./routes/articleRoutes"));
