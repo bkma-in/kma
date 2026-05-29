@@ -41,8 +41,10 @@ router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.s
             updatedAt: new Date(),
         };
         // Only add to update payload if provided to avoid overwriting with undefined
-        if (sanitizedName)
+        if (sanitizedName) {
             updateData.name = sanitizedName;
+            updateData.nameLower = sanitizedName.toLowerCase();
+        }
         if (sanitizedPhone !== undefined)
             updateData.phone = sanitizedPhone;
         if (designation !== undefined)
@@ -70,6 +72,10 @@ router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.s
         }
         // 3. Database Update (Single Write)
         await userRef.update(updateData);
+        // Sync Custom Claims if Name changed
+        if (sanitizedName) {
+            firebase_1.auth.setCustomUserClaims(uid, { role: userData.role || 'reader', name: sanitizedName }).catch(err => console.error('Background custom claims sync error:', err));
+        }
         // Performance: Avoid second read by merging locally
         const mergedProfile = {
             ...userData,
@@ -173,25 +179,40 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
         if (!searchTerm) {
             return res.json({ success: true, users: [] });
         }
-        // Firestore doesn't support case-insensitive search well.
-        // We'll fetch all users (up to a reasonable limit) and filter in memory for now,
-        // or use prefix matching if we had a normalized search field.
-        // Given the task, we'll implement a basic search.
-        // Note: In a production app with many users, we'd use Algolia or normalized fields.
-        const snapshot = await firebase_1.db.collection('users').limit(100).get();
-        const users = snapshot.docs
-            .map(doc => {
+        // High performance prefix queries run concurrently
+        const nameQuery = firebase_1.db.collection('users')
+            .where('nameLower', '>=', searchTerm)
+            .where('nameLower', '<=', searchTerm + '\uf8ff')
+            .limit(limitNum)
+            .get();
+        const emailQuery = firebase_1.db.collection('users')
+            .where('emailLower', '>=', searchTerm)
+            .where('emailLower', '<=', searchTerm + '\uf8ff')
+            .limit(limitNum)
+            .get();
+        const [nameSnap, emailSnap] = await Promise.all([nameQuery, emailQuery]);
+        const userMap = new Map();
+        nameSnap.docs.forEach(doc => {
             const data = doc.data();
-            return {
+            userMap.set(doc.id, {
                 id: doc.id,
                 name: data.name,
                 email: data.email,
                 affiliation: data.affiliation || ''
-            };
-        })
-            .filter(user => user.name?.toLowerCase().includes(searchTerm) ||
-            user.email?.toLowerCase().includes(searchTerm))
-            .slice(0, limitNum);
+            });
+        });
+        emailSnap.docs.forEach(doc => {
+            const data = doc.data();
+            if (!userMap.has(doc.id)) {
+                userMap.set(doc.id, {
+                    id: doc.id,
+                    name: data.name,
+                    email: data.email,
+                    affiliation: data.affiliation || ''
+                });
+            }
+        });
+        const users = Array.from(userMap.values()).slice(0, limitNum);
         res.json({ success: true, users });
     }
     catch (error) {
@@ -275,11 +296,15 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
             password: tempPassword,
             displayName: name
         });
+        // Set custom claims immediately
+        await firebase_1.auth.setCustomUserClaims(userRecord.uid, { role: 'reviewer', name });
         // 2. Create user document in Firestore
         const userData = {
             uid: userRecord.uid,
             name,
             email,
+            nameLower: name.toLowerCase(),
+            emailLower: email.toLowerCase(),
             role: 'reviewer',
             status: 'Approved',
             qualification,
