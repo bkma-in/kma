@@ -62,6 +62,22 @@ interface Article {
   adminNote?: string;
   rejectionReason?: string;
 }
+const formatDate = (dateVal: any): string => {
+  if (!dateVal) return 'N/A';
+  if (typeof dateVal === 'string') {
+    const d = new Date(dateVal);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString();
+    }
+    return dateVal;
+  }
+  const seconds = dateVal._seconds ?? dateVal.seconds;
+  if (seconds !== undefined) {
+    return new Date(seconds * 1000).toLocaleDateString();
+  }
+  const d = new Date(dateVal);
+  return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+};
 
 const AdminArticles = () => {
   const { confirm, showToast } = useNotification();
@@ -140,8 +156,11 @@ const AdminArticles = () => {
             abstract: a.abstract || '',
             status: backendToFrontendStatusMap[a.status] || 'Submitted',
             assignedReviewers: a.assignedReviewers || [],
-            lastUpdated: a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : 'N/A',
-            versions: a.versions || [{ version: 1, uploadedBy: 'Author', timestamp: a.createdAt, fileName: a.pdfName || 'manuscript.pdf' }],
+            lastUpdated: formatDate(a.updatedAt || a.createdAt),
+            versions: (a.versions || [{ version: 1, uploadedBy: 'Author', timestamp: a.createdAt, fileName: a.pdfName || 'manuscript.pdf' }]).map((v: any) => ({
+              ...v,
+              timestamp: formatDate(v.timestamp || a.createdAt)
+            })),
             rejectionReason: a.rejectionReason,
             adminNote: a.adminNote,
             reviewerFeedback: a.reviewerFeedback

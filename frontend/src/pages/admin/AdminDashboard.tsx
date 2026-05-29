@@ -21,6 +21,22 @@ import { NavLink } from 'react-router-dom';
 import { getArticles } from '../../services/article.service';
 import { getReviewers } from '../../services/user.service';
 import { useProfile } from '../../hooks/useProfile';
+const formatDate = (dateVal: any): string => {
+  if (!dateVal) return 'N/A';
+  if (typeof dateVal === 'string') {
+    const d = new Date(dateVal);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString();
+    }
+    return dateVal;
+  }
+  const seconds = dateVal._seconds ?? dateVal.seconds;
+  if (seconds !== undefined) {
+    return new Date(seconds * 1000).toLocaleDateString();
+  }
+  const d = new Date(dateVal);
+  return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
+};
 
 const AdminDashboard = () => {
   const { profile } = useProfile();
@@ -68,7 +84,7 @@ const AdminDashboard = () => {
            a.status === 'revision_requested' ? 'Revision Requested' :
            a.status === 'accepted' ? 'Article Published' : 'Status Updated',
     detail: a.title,
-    time: new Date(a.createdAt).toLocaleDateString(),
+    time: formatDate(a.createdAt),
     type: a.status === 'submitted' ? 'submission' :
           a.status === 'under_review' ? 'assignment' :
           a.status === 'revision_requested' ? 'revision' : 'published'
