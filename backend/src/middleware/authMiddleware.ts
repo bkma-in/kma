@@ -21,17 +21,27 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
   try {
     const decodedToken = await auth.verifyIdToken(token);
     
-    // Fetch user role from Firestore
-    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.exists ? userDoc.data() : null;
-    const role = userData?.role || 'reader';
-    const name = userData?.name || decodedToken.name || decodedToken.email?.split('@')[0] || 'User';
+    let role = decodedToken.role;
+    let name = decodedToken.name;
+
+    if (!role || !name) {
+      // Fallback: Fetch user details from Firestore and set claims for future bypass
+      const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+      const userData = userDoc.exists ? userDoc.data() : null;
+      role = role || userData?.role || 'reader';
+      name = name || userData?.name || decodedToken.name || decodedToken.email?.split('@')[0] || 'User';
+      
+      // Update custom claims asynchronously in the background
+      auth.setCustomUserClaims(decodedToken.uid, { role, name }).catch(err => {
+        console.error('Background custom claims sync failed:', err);
+      });
+    }
 
     req.user = {
       uid: decodedToken.uid,
       email: decodedToken.email || '',
-      role: role,
-      name: name
+      role: role as string,
+      name: name as string
     };
     next();
   } catch (error: any) {

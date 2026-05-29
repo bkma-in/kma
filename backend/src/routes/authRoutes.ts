@@ -46,6 +46,8 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
       uid,
       name,
       email,
+      nameLower: name.toLowerCase(),
+      emailLower: email.toLowerCase(),
       role: userRole,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -56,6 +58,9 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
       userData.qualification = qualification || '';
       userData.experience = experience || '';
     }
+
+    // Set Firebase Auth custom claims for role-based authentication bypass
+    await auth.setCustomUserClaims(uid, { role: userRole, name });
 
     await userRef.set(userData);
 
