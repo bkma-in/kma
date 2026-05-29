@@ -23,6 +23,7 @@ import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { getArticles, assignReviewers as assignReviewersService, updateArticleStatus } from '../../services/article.service';
 import { getReviewers } from '../../services/user.service';
+import { formatDate } from '../../utils/dateHelpers';
 
 // Types
 type ArticleStatus = 
@@ -62,22 +63,6 @@ interface Article {
   adminNote?: string;
   rejectionReason?: string;
 }
-const formatDate = (dateVal: any): string => {
-  if (!dateVal) return 'N/A';
-  if (typeof dateVal === 'string') {
-    const d = new Date(dateVal);
-    if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString();
-    }
-    return dateVal;
-  }
-  const seconds = dateVal._seconds ?? dateVal.seconds;
-  if (seconds !== undefined) {
-    return new Date(seconds * 1000).toLocaleDateString();
-  }
-  const d = new Date(dateVal);
-  return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
-};
 
 const AdminArticles = () => {
   const { confirm, showToast } = useNotification();

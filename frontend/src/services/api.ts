@@ -7,14 +7,14 @@ const api = axios.create({
 
 // Track initialization state globally to avoid memory leaks/repeated subscriptions
 let isInitialized = false;
-let resolveInit: (val: any) => void;
-const initPromise = new Promise((resolve) => {
+let resolveInit: (val: unknown) => void;
+const initPromise = new Promise<unknown>((resolve) => {
   resolveInit = resolve;
 });
 
-auth.onAuthStateChanged((u) => {
+auth.authStateReady().then(() => {
   isInitialized = true;
-  resolveInit(u);
+  resolveInit(true);
 });
 
 // Add a request interceptor to automatically add the Firebase token

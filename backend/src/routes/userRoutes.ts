@@ -345,9 +345,6 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
       displayName: name
     });
 
-    // Set custom claims immediately
-    await auth.setCustomUserClaims(userRecord.uid, { role: 'reviewer', name });
-
     // 2. Create user document in Firestore
     const userData = {
       uid: userRecord.uid,
@@ -363,7 +360,19 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
       updatedAt: new Date()
     };
 
-    await db.collection('users').doc(userRecord.uid).set(userData);
+    try {
+      // Write profile to database first
+      await db.collection('users').doc(userRecord.uid).set(userData);
+      
+      // Then apply custom claims
+      await auth.setCustomUserClaims(userRecord.uid, { role: 'reviewer', name });
+    } catch (err) {
+      // Rollback: Delete the auth user if database write or claims config fails
+      await auth.deleteUser(userRecord.uid).catch(authErr => 
+        console.error('Failed to delete Auth user on rollback:', authErr)
+      );
+      throw err;
+    }
 
     res.json({ 
       success: true, 

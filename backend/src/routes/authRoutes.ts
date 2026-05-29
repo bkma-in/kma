@@ -34,6 +34,13 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
 
     const { uid, email } = req.user!;
     
+    if (typeof name !== 'string' || name.trim() === '') {
+      return res.status(400).json({ error: 'Invalid name' });
+    }
+    if (typeof email !== 'string' || email.trim() === '') {
+      return res.status(400).json({ error: 'Invalid email' });
+    }
+
     // Check if user already exists
     const userRef = db.collection('users').doc(uid);
     const doc = await userRef.get();
@@ -59,10 +66,16 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
       userData.experience = experience || '';
     }
 
-    // Set Firebase Auth custom claims for role-based authentication bypass
-    await auth.setCustomUserClaims(uid, { role: userRole, name });
-
     await userRef.set(userData);
+
+    try {
+      // Set Firebase Auth custom claims for role-based authentication bypass
+      await auth.setCustomUserClaims(uid, { role: userRole, name });
+    } catch (claimError) {
+      // Rollback database profile if custom claims assignment fails
+      await userRef.delete().catch(delErr => console.error('Failed to rollback user profile:', delErr));
+      throw claimError;
+    }
 
     res.json({ success: true, user: userData });
   } catch (error) {

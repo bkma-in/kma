@@ -21,22 +21,7 @@ import { NavLink } from 'react-router-dom';
 import { getArticles } from '../../services/article.service';
 import { getReviewers } from '../../services/user.service';
 import { useProfile } from '../../hooks/useProfile';
-const formatDate = (dateVal: any): string => {
-  if (!dateVal) return 'N/A';
-  if (typeof dateVal === 'string') {
-    const d = new Date(dateVal);
-    if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString();
-    }
-    return dateVal;
-  }
-  const seconds = dateVal._seconds ?? dateVal.seconds;
-  if (seconds !== undefined) {
-    return new Date(seconds * 1000).toLocaleDateString();
-  }
-  const d = new Date(dateVal);
-  return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString();
-};
+import { formatDate } from '../../utils/dateHelpers';
 
 const AdminDashboard = () => {
   const { profile } = useProfile();

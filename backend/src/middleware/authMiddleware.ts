@@ -29,7 +29,7 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
       const userDoc = await db.collection('users').doc(decodedToken.uid).get();
       const userData = userDoc.exists ? userDoc.data() : null;
       role = role || userData?.role || 'reader';
-      name = name || userData?.name || decodedToken.name || decodedToken.email?.split('@')[0] || 'User';
+      name = name || userData?.name || decodedToken.email?.split('@')[0] || 'User';
       
       // Update custom claims asynchronously in the background
       auth.setCustomUserClaims(decodedToken.uid, { role, name }).catch(err => {

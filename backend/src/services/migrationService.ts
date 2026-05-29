@@ -4,8 +4,9 @@ export const runMigrations = async () => {
   console.log('Starting Firestore database migrations...');
   try {
     const snapshot = await db.collection('users').get();
-    const batch = db.batch();
+    let batch = db.batch();
     let count = 0;
+    let opsInBatch = 0;
     
     for (const doc of snapshot.docs) {
       const data = doc.data();
@@ -24,11 +25,21 @@ export const runMigrations = async () => {
       if (updated) {
         batch.update(doc.ref, updateData);
         count++;
+        opsInBatch++;
+        
+        if (opsInBatch === 500) {
+          await batch.commit();
+          batch = db.batch();
+          opsInBatch = 0;
+        }
       }
     }
     
-    if (count > 0) {
+    if (opsInBatch > 0) {
       await batch.commit();
+    }
+    
+    if (count > 0) {
       console.log(`Successfully migrated ${count} users with lowercased search fields.`);
     } else {
       console.log('All users are already migrated.');

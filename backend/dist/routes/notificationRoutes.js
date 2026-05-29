@@ -10,19 +10,12 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
         const { uid } = req.user;
         const { limit = '50' } = req.query;
         const limitNum = parseInt(limit) || 50;
-        // Fetch all user notifications to allow correct ordering before limiting
         const snapshot = await firebase_1.db.collection('notifications')
             .where('userId', '==', uid)
+            .orderBy('createdAt', 'desc')
+            .limit(limitNum)
             .get();
-        let notifications = snapshot.docs.map(doc => doc.data());
-        // In-memory sort by createdAt descending
-        notifications.sort((a, b) => {
-            const timeA = a.createdAt?._seconds || 0;
-            const timeB = b.createdAt?._seconds || 0;
-            return timeB - timeA;
-        });
-        // Slice to limit after sorting to guarantee showing the newest notifications
-        notifications = notifications.slice(0, limitNum);
+        const notifications = snapshot.docs.map(doc => doc.data());
         res.json({ success: true, notifications });
     }
     catch (error) {
