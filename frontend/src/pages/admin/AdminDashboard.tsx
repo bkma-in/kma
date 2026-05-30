@@ -56,11 +56,11 @@ const AdminDashboard = () => {
   const underReviewCount = articles.filter(a => a.status === 'under_review').length;
 
   const stats = [
-    { label: 'Total Articles', value: articles.length.toString(), icon: FileText, color: 'text-zinc-600', bg: 'bg-zinc-100', path: '/admin-dashboard/articles?status=All' },
-    { label: 'Decision Required', value: pendingAdminCount.toString(), icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50', path: '/admin-dashboard/articles?status=Submitted' },
-    { label: 'Under Review', value: underReviewCount.toString(), icon: History, color: 'text-amber-600', bg: 'bg-amber-50', path: '/admin-dashboard/articles?status=All' },
-    { label: 'Approved', value: articles.filter(a => a.status === 'accepted' || a.status === 'published').length.toString(), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/admin-dashboard/articles?status=Approved' },
-    { label: 'Rejected', value: articles.filter(a => a.status === 'rejected' || a.status === 'desk_rejected').length.toString(), icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50', path: '/admin-dashboard/articles?status=Rejected' },
+    { label: 'Total Articles', value: articles.length.toString(), icon: FileText, color: 'text-zinc-600', bg: 'bg-zinc-100' },
+    { label: 'Decision Required', value: pendingAdminCount.toString(), icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Under Review', value: underReviewCount.toString(), icon: History, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Approved', value: articles.filter(a => a.status === 'accepted' || a.status === 'published').length.toString(), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Rejected', value: articles.filter(a => a.status === 'rejected' || a.status === 'desk_rejected').length.toString(), icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
   ];
 
   const activities = articles.slice(0, 4).map(a => ({
@@ -109,7 +109,7 @@ const AdminDashboard = () => {
               <p className="text-[10px] opacity-60 font-medium uppercase tracking-widest">You have {pendingAdminCount} manuscripts awaiting your final action (Publish/Reject/Send Back)</p>
             </div>
           </div>
-          <NavLink to="/admin-dashboard/articles" className="px-6 py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-blue-700 transition-all uppercase">
+          <NavLink to="/admin/articles" className="px-6 py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-blue-700 transition-all uppercase">
             Review Queue
           </NavLink>
         </div>
@@ -118,10 +118,9 @@ const AdminDashboard = () => {
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
         {stats.map((stat, i) => (
-          <NavLink 
+          <div 
             key={i} 
-            to={stat.path}
-            className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg group hover:border-black transition-all cursor-pointer block"
+            className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg block group hover:border-black transition-all"
           >
             <div className="flex justify-between items-start mb-4">
               <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", stat.bg, stat.color)}>
@@ -131,7 +130,7 @@ const AdminDashboard = () => {
             </div>
             <h3 className="text-3xl font-bold text-black tracking-tighter mb-1">{stat.value}</h3>
             <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{stat.label}</p>
-          </NavLink>
+          </div>
         ))}
       </div>
 
@@ -160,7 +159,7 @@ const AdminDashboard = () => {
           <div>
             <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase mb-4 px-1">Control Hub</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <NavLink to="/admin-dashboard/articles" className="group p-6 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex items-center justify-between">
+              <NavLink to="/admin/articles" className="group p-6 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
                     <FileText size={20} />
@@ -172,7 +171,7 @@ const AdminDashboard = () => {
                 </div>
                 <ChevronRight size={20} className="text-zinc-200 group-hover:text-black transition-all" />
               </NavLink>
-              <NavLink to="/admin-dashboard/authors" className="group p-6 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex items-center justify-between">
+              <NavLink to="/admin/authors" className="group p-6 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
                     <Users size={20} />
@@ -196,7 +195,7 @@ const AdminDashboard = () => {
                 </div>
                 <h3 className="text-sm font-bold text-black uppercase tracking-widest">Global Activity Feed</h3>
               </div>
-              <NavLink to="/admin-dashboard/articles" className="text-[10px] font-black text-zinc-400 hover:text-black transition-all uppercase tracking-widest">
+              <NavLink to="/admin/articles" className="text-[10px] font-black text-zinc-400 hover:text-black transition-all uppercase tracking-widest">
                 Full Audit Log
               </NavLink>
             </div>
