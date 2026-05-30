@@ -120,10 +120,10 @@ const AdminDashboard = () => {
         {stats.map((stat, i) => (
           <div 
             key={i} 
-            className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg block"
+            className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg block group hover:border-black transition-all"
           >
             <div className="flex justify-between items-start mb-4">
-              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shadow-sm", stat.bg, stat.color)}>
+              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", stat.bg, stat.color)}>
                 <stat.icon size={20} />
               </div>
               <TrendingUp size={16} className="text-zinc-200" />
