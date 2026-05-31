@@ -298,12 +298,15 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
     let queryRef = db.collection('users')
       .where('role', '==', 'author')
       .orderBy('createdAt', 'desc')
+      .orderBy(FieldPath.documentId())
       .limit(limitNum);
 
     if (cursor) {
-      const cursorDate = new Date(cursor as string);
-      if (!isNaN(cursorDate.getTime())) {
-        queryRef = queryRef.startAfter(cursorDate);
+      // Expected format: "<timestamp>|<docId>"
+      const [ts, docId] = (cursor as string).split('|');
+      const cursorDate = new Date(ts);
+      if (!isNaN(cursorDate.getTime()) && docId) {
+        queryRef = queryRef.startAfter(cursorDate, docId);
       }
     }
 
@@ -323,7 +326,9 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
     if (snapshot.docs.length === limitNum) {
       const lastDoc = snapshot.docs[snapshot.docs.length - 1];
       const lastData = lastDoc.data();
-      nextCursor = lastData.createdAt?.toDate ? lastData.createdAt.toDate().toISOString() : lastData.createdAt || null;
+      const ts = lastData.createdAt?.toDate ? lastData.createdAt.toDate().toISOString() : lastData.createdAt;
+      const id = lastDoc.id;
+      nextCursor = `${ts}|${id}`;
     }
 
     res.json({ success: true, authors, nextCursor });
