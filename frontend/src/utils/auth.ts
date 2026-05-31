@@ -13,7 +13,11 @@ export const getDashboardByRole = (role?: string) => {
       return "/dev/dashboard";
 
     case "author":
-    default:
       return "/author/dashboard";
+
+    default:
+      // Unknown or missing role — redirect to login instead of a dashboard
+      console.warn(`[getDashboardByRole] Unknown role: "${role}". Redirecting to login.`);
+      return "/auth?mode=login";
   }
 };

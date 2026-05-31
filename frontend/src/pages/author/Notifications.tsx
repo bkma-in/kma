@@ -20,14 +20,18 @@ import { db, auth } from '../../config/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../../utils/NotificationContext';
+import { useAuth } from '../../context/AuthContext';
 
 const Notifications = () => {
   const navigate = useNavigate();
   const { showToast } = useNotification();
+  const { currentUser } = useAuth();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('UNREAD');
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+
+  const rolePathPrefix = currentUser?.role === 'admin' ? '/admin' : '/author';
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -104,7 +108,7 @@ const Notifications = () => {
           iconBg: 'bg-amber-50',
           iconColor: 'text-amber-600',
           action: 'VIEW INVITE',
-          onClick: () => navigate('/author/articles', { state: { highlightId: notif.metadata.articleId, openInvite: true } })
+          onClick: () => navigate(`${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId, openInvite: true } })
         };
       case 'INVITATION_ACCEPTED':
         return {
@@ -113,7 +117,7 @@ const Notifications = () => {
           iconBg: 'bg-emerald-50',
           iconColor: 'text-emerald-600',
           action: 'VIEW ARTICLE',
-          onClick: () => navigate('/author/articles', { state: { highlightId: notif.metadata.articleId } })
+          onClick: () => navigate(`${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId } })
         };
       case 'INVITATION_REJECTED':
         return {
@@ -122,7 +126,7 @@ const Notifications = () => {
           iconBg: 'bg-rose-50',
           iconColor: 'text-rose-600',
           action: 'VIEW REASON',
-          onClick: () => navigate('/author/articles', { state: { highlightId: notif.metadata.articleId } })
+          onClick: () => navigate(`${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId } })
         };
       case 'REVISION_SUBMITTED':
         return {
@@ -131,7 +135,7 @@ const Notifications = () => {
           iconBg: 'bg-blue-50',
           iconColor: 'text-blue-600',
           action: 'TRACK PROGRESS',
-          onClick: () => navigate('/author/articles', { state: { highlightId: notif.metadata.articleId } })
+          onClick: () => navigate(`${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId } })
         };
       case 'REVISION_REQUIRED':
         return {
@@ -140,7 +144,7 @@ const Notifications = () => {
           iconBg: 'bg-amber-50',
           iconColor: 'text-amber-600',
           action: 'EDIT MANUSCRIPT',
-          onClick: () => navigate('/author/articles', { state: { highlightId: notif.metadata.articleId } })
+          onClick: () => navigate(`${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId } })
         };
       default:
         return {

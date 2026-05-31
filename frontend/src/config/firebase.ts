@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -15,8 +15,8 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Enforce session-only persistence globally.
-// We don't await here because auth instance is already created,
-// but it will apply to the next sign-in/check.
-setPersistence(auth, browserSessionPersistence)
-  .catch(err => console.error("Persistence error:", err));
+// Use LOCAL persistence so auth state survives tab close, browser restart, etc.
+// Auth is only cleared on explicit logout.
+setPersistence(auth, browserLocalPersistence)
+  .then(() => console.log('[Auth] Persistence set to LOCAL'))
+  .catch(err => console.error('[Auth] Persistence error:', err));

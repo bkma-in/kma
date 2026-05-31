@@ -250,6 +250,45 @@ router.get('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requ
         res.status(500).json({ error: 'Failed to fetch reviewers' });
     }
 });
+// Admin: Get all authors (paginated)
+router.get('/authors', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
+    try {
+        const { pageSize = '50', cursor } = req.query;
+        const limitNum = parseInt(pageSize) || 50;
+        let queryRef = firebase_1.db.collection('users')
+            .where('role', '==', 'author')
+            .orderBy('createdAt', 'desc')
+            .limit(limitNum);
+        if (cursor) {
+            const cursorDate = new Date(cursor);
+            if (!isNaN(cursorDate.getTime())) {
+                queryRef = queryRef.startAfter(cursorDate);
+            }
+        }
+        const snapshot = await queryRef.get();
+        const authors = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.name,
+                email: data.email,
+                affiliation: data.affiliation || 'N/A',
+                regDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
+            };
+        });
+        let nextCursor = null;
+        if (snapshot.docs.length === limitNum) {
+            const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+            const lastData = lastDoc.data();
+            nextCursor = lastData.createdAt?.toDate ? lastData.createdAt.toDate().toISOString() : lastData.createdAt || null;
+        }
+        res.json({ success: true, authors, nextCursor });
+    }
+    catch (error) {
+        console.error('Get authors error:', error);
+        res.status(500).json({ error: 'Failed to fetch authors' });
+    }
+});
 // Admin: Update reviewer status (Approve/Reject)
 router.patch('/reviewers/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
     try {

@@ -82,7 +82,7 @@ const AdminLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', end: true, icon: LayoutDashboard },
-    { name: 'Reviewers', path: '/admin/authors', icon: Users, badge: counts.reviewers > 0 ? counts.reviewers : null },
+    { name: 'Reviewers', path: '/admin/reviewers', icon: Users, badge: counts.reviewers > 0 ? counts.reviewers : null },
     { name: 'Authors', path: '/admin/authors-list', icon: Users },
     { name: 'Articles', path: '/admin/articles', icon: FileText },
     { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: counts.notifications > 0 ? counts.notifications : null },

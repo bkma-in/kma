@@ -289,10 +289,28 @@ router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRe
   }
 });
 
-// Admin: Get all authors
+// Admin: Get all authors (paginated)
 router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
   try {
-    const snapshot = await db.collection('users').where('role', '==', 'author').get();
+    const { pageSize = '50', cursor } = req.query;
+    const limitNum = parseInt(pageSize as string) || 50;
+
+    let queryRef = db.collection('users')
+      .where('role', '==', 'author')
+      .orderBy('createdAt', 'desc')
+      .orderBy(FieldPath.documentId())
+      .limit(limitNum);
+
+    if (cursor) {
+      // Expected format: "<timestamp>|<docId>"
+      const [ts, docId] = (cursor as string).split('|');
+      const cursorDate = new Date(ts);
+      if (!isNaN(cursorDate.getTime()) && docId) {
+        queryRef = queryRef.startAfter(cursorDate, docId);
+      }
+    }
+
+    const snapshot = await queryRef.get();
     const authors = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
@@ -304,10 +322,16 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
       };
     });
 
-    // In-memory sort by regDate descending
-    authors.sort((a, b) => new Date(b.regDate).getTime() - new Date(a.regDate).getTime());
+    let nextCursor = null;
+    if (snapshot.docs.length === limitNum) {
+      const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+      const lastData = lastDoc.data();
+      const ts = lastData.createdAt?.toDate ? lastData.createdAt.toDate().toISOString() : lastData.createdAt;
+      const id = lastDoc.id;
+      nextCursor = `${ts}|${id}`;
+    }
 
-    res.json({ success: true, authors });
+    res.json({ success: true, authors, nextCursor });
   } catch (error) {
     console.error('Get authors error:', error);
     res.status(500).json({ error: 'Failed to fetch authors' });

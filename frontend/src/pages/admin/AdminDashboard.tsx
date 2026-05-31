@@ -34,6 +34,18 @@ const AdminDashboard = () => {
   const [logsSearchTerm, setLogsSearchTerm] = useState('');
 
   useEffect(() => {
+    if (isLogsOpen) {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setIsLogsOpen(false);
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isLogsOpen]);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const [articlesRes, reviewersRes] = await Promise.all([
@@ -78,6 +90,20 @@ const AdminDashboard = () => {
           a.status === 'under_review' ? 'assignment' :
           a.status === 'revision_requested' ? 'revision' : 'published'
   }));
+
+  const filteredLogs = articles
+    .map(a => ({
+      title: a.status === 'submitted' ? 'New Article Submitted' :
+             a.status === 'under_review' ? 'Reviewer Assigned' :
+             a.status === 'revision_requested' ? 'Revision Requested' :
+             a.status === 'accepted' ? 'Article Published' : 'Status Updated',
+      detail: a.title,
+      time: formatDate(a.createdAt),
+      type: a.status === 'submitted' ? 'submission' :
+            a.status === 'under_review' ? 'assignment' :
+            a.status === 'revision_requested' ? 'revision' : 'published'
+    }))
+    .filter(log => log.detail.toLowerCase().includes(logsSearchTerm.toLowerCase()) || log.title.toLowerCase().includes(logsSearchTerm.toLowerCase()));
 
   if (loading) {
     return (
@@ -175,7 +201,7 @@ const AdminDashboard = () => {
                 </div>
                 <ChevronRight size={20} className="text-zinc-200 group-hover:text-black transition-all" />
               </NavLink>
-              <NavLink to="/admin/authors" className="group p-6 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex items-center justify-between">
+              <NavLink to="/admin/reviewers" className="group p-6 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
                     <Users size={20} />
@@ -278,7 +304,12 @@ const AdminDashboard = () => {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setIsLogsOpen(false)} />
           
           {/* Drawer Container */}
-          <div className="relative w-full max-w-lg bg-zinc-950 text-white h-full shadow-2xl flex flex-col border-l border-white/10 animate-in slide-in-from-right duration-300">
+          <div 
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title-logs"
+            className="relative w-full max-w-lg bg-zinc-950 text-white h-full shadow-2xl flex flex-col border-l border-white/10 animate-in slide-in-from-right duration-300"
+          >
             {/* Header */}
             <div className="px-8 py-8 border-b border-white/10 flex items-center justify-between bg-zinc-900/40 backdrop-blur-lg">
               <div className="flex items-center gap-3">
@@ -286,13 +317,14 @@ const AdminDashboard = () => {
                   <History size={18} className="text-zinc-300" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold tracking-tight">System Activity Logs</h3>
+                  <h3 id="modal-title-logs" className="text-lg font-bold tracking-tight">System Activity Logs</h3>
                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Global Audit Trail</p>
                 </div>
               </div>
               <button 
                 onClick={() => setIsLogsOpen(false)}
                 className="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center text-zinc-400 hover:text-white transition-all"
+                aria-label="Close System Activity Logs"
               >
                 <X size={20} />
               </button>
@@ -314,39 +346,26 @@ const AdminDashboard = () => {
 
             {/* Scrollable logs list */}
             <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
-              {articles
-                .map(a => ({
-                  title: a.status === 'submitted' ? 'New Article Submitted' :
-                         a.status === 'under_review' ? 'Reviewer Assigned' :
-                         a.status === 'revision_requested' ? 'Revision Requested' :
-                         a.status === 'accepted' ? 'Article Published' : 'Status Updated',
-                  detail: a.title,
-                  time: formatDate(a.createdAt),
-                  type: a.status === 'submitted' ? 'submission' :
-                        a.status === 'under_review' ? 'assignment' :
-                        a.status === 'revision_requested' ? 'revision' : 'published'
-                }))
-                .filter(log => log.detail.toLowerCase().includes(logsSearchTerm.toLowerCase()) || log.title.toLowerCase().includes(logsSearchTerm.toLowerCase()))
-                .map((log, i) => (
-                  <div key={i} className="flex gap-4 relative group">
-                    <div className="relative z-10 w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center mt-1">
-                      <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        log.type === 'submission' ? 'bg-blue-500' :
-                        log.type === 'assignment' ? 'bg-amber-500' :
-                        log.type === 'revision' ? 'bg-rose-500' : 'bg-emerald-500'
-                      )} />
-                    </div>
-                    <div className="flex-1 border-b border-white/5 pb-4">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="text-xs font-bold text-white">{log.title}</h4>
-                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{log.time}</span>
-                      </div>
-                      <p className="text-xs text-zinc-400 font-medium italic">"{log.detail}"</p>
-                    </div>
+              {filteredLogs.map((log, i) => (
+                <div key={i} className="flex gap-4 relative group">
+                  <div className="relative z-10 w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center mt-1">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full",
+                      log.type === 'submission' ? 'bg-blue-500' :
+                      log.type === 'assignment' ? 'bg-amber-500' :
+                      log.type === 'revision' ? 'bg-rose-500' : 'bg-emerald-500'
+                    )} />
                   </div>
-                ))}
-              {articles.length === 0 && (
+                  <div className="flex-1 border-b border-white/5 pb-4">
+                    <div className="flex justify-between items-start mb-1">
+                      <h4 className="text-xs font-bold text-white">{log.title}</h4>
+                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{log.time}</span>
+                    </div>
+                    <p className="text-xs text-zinc-400 font-medium italic">"{log.detail}"</p>
+                  </div>
+                </div>
+              ))}
+              {filteredLogs.length === 0 && (
                 <div className="text-center py-10 text-zinc-600 text-xs">
                   No activity logs found.
                 </div>

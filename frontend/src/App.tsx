@@ -27,6 +27,7 @@ import DeveloperIssues from './pages/developer/DeveloperIssues';
 import DeveloperNotifications from './pages/developer/DeveloperNotifications';
 import AcceptInvitation from './pages/AcceptInvitation';
 import ProtectedRoute from './components/ProtectedRoute';
+import SessionOverlay from './components/SessionOverlay';
 
 // Reader Portal Imports
 import ReaderLayout from './layouts/ReaderLayout';
@@ -39,14 +40,16 @@ import GetSubscription from './pages/reader/GetSubscription';
 import { SubscriptionProvider } from './utils/SubscriptionContext';
 
 function App() {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, roleLoading } = useAuth();
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="animate-spin text-zinc-300" size={48} />
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Initializing KMA Portal</p>
+          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
+            {loading ? 'Initializing KMA Portal' : 'Verifying Access'}
+          </p>
         </div>
       </div>
     );
@@ -54,6 +57,7 @@ function App() {
 
   return (
     <div className="w-full min-h-screen">
+      <SessionOverlay />
       <ToastContainer />
       <ConfirmModal />
       <SubscriptionProvider>
@@ -127,7 +131,7 @@ function AdminRoutes() {
       <Route element={<AdminLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="authors" element={<AdminAuthors />} />
+        <Route path="reviewers" element={<AdminAuthors />} />
         <Route path="authors-list" element={<AdminAuthorsList />} />
         <Route path="articles" element={<AdminArticles />} />
         <Route path="notifications" element={<Notifications />} />

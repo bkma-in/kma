@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Search, 
   Eye, 
@@ -30,6 +30,9 @@ const AdminAuthorsList = () => {
   const [authors, setAuthors] = useState<Author[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const fetchAuthorsList = async () => {
       try {
@@ -46,6 +49,59 @@ const AdminAuthorsList = () => {
     };
     fetchAuthorsList();
   }, []);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      previousActiveElement.current = document.activeElement as HTMLElement;
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setIsModalOpen(false);
+        }
+
+        if (e.key === 'Tab' && modalRef.current) {
+          const focusableElements = modalRef.current.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusableElements.length > 0) {
+            const firstElement = focusableElements[0] as HTMLElement;
+            const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+            if (e.shiftKey) {
+              if (document.activeElement === firstElement) {
+                lastElement.focus();
+                e.preventDefault();
+              }
+            } else {
+              if (document.activeElement === lastElement) {
+                firstElement.focus();
+                e.preventDefault();
+              }
+            }
+          }
+        }
+      };
+
+      document.addEventListener('keydown', handleKeyDown);
+
+      // Focus first focusable element (close button)
+      setTimeout(() => {
+        if (modalRef.current) {
+          const firstFocusable = modalRef.current.querySelector('button') as HTMLElement;
+          if (firstFocusable) {
+            firstFocusable.focus();
+          }
+        }
+      }, 50);
+
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+        if (previousActiveElement.current) {
+          previousActiveElement.current.focus();
+        }
+      };
+    }
+  }, [isModalOpen]);
 
   const filteredAuthors = authors.filter(auth => {
     return auth.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -145,7 +201,7 @@ const AdminAuthorsList = () => {
               {filteredAuthors.length === 0 && (
                 <tr>
                   <td colSpan={4} className="text-center py-20 text-zinc-400 text-sm">
-                    No authors registered in the association yet.
+                    {searchTerm.trim() !== "" ? "No authors match your search query." : "No authors registered in the association yet."}
                   </td>
                 </tr>
               )}
@@ -158,7 +214,13 @@ const AdminAuthorsList = () => {
       {isModalOpen && selectedAuthor && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <div className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300 border border-white/20">
+          <div 
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title-author"
+            className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300 border border-white/20"
+          >
             {/* Modal Header */}
             <div className="px-8 py-8 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
               <div className="flex items-center gap-5">
@@ -166,13 +228,14 @@ const AdminAuthorsList = () => {
                   <BookOpen size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-black tracking-tight font-['Outfit']">{selectedAuthor.name}</h3>
+                  <h3 id="modal-title-author" className="text-xl font-bold text-black tracking-tight font-['Outfit']">{selectedAuthor.name}</h3>
                   <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">{selectedAuthor.id}</p>
                 </div>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="w-10 h-10 rounded-full hover:bg-zinc-200 flex items-center justify-center text-zinc-400 hover:text-black transition-all"
+                className="w-10 h-10 rounded-full hover:bg-zinc-200 flex items-center justify-center text-zinc-400 hover:text-black transition-all animate-focus"
+                aria-label="Close Author Details Modal"
               >
                 <X size={20} />
               </button>

@@ -31,11 +31,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
         localStorage.setItem('userEmail', response.user.email);
         localStorage.setItem('is_temp_password', 'false'); 
         
+        // Store role in localStorage for legacy components that still read it
+        console.log('[LoginForm] Login successful. Navigating to dashboard for role:', response.user.role);
         navigate(getDashboardByRole(response.user.role), { replace: true });
-        // Use window.location.replace to ensure full app state reload if needed, 
-        // or just navigate if using a global state.
-        // Given we are moving to AuthProvider, navigate should be fine.
-        window.location.reload(); 
+        // NOTE: Do NOT call window.location.reload() here.
+        // AuthContext's onAuthStateChanged listener will detect the new auth state
+        // and update the app naturally. Reloading causes a race condition. 
       }
     } catch (err: any) {
       setError(err.message || 'Invalid email or password');
