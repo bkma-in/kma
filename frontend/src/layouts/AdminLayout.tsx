@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
 import GlobalHeader from '../components/GlobalHeader';
@@ -9,14 +9,51 @@ import ReportIssueModal from '../components/ReportIssueModal';
 import { useNotification } from '../utils/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../hooks/useProfile';
+import { db } from '../config/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 const AdminLayout = () => {
   const { confirm, showToast } = useNotification();
   const { profile } = useProfile();
-  const { logout } = useAuth();
+  const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [counts, setCounts] = useState({
+    notifications: 0,
+    reviewers: 0
+  });
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    // 1. Unread notifications query
+    const qNotif = query(
+      collection(db, 'notifications'),
+      where('userId', '==', currentUser.uid),
+      where('read', '==', false)
+    );
+
+    const unsubscribeNotif = onSnapshot(qNotif, (snapshot) => {
+      setCounts(prev => ({ ...prev, notifications: snapshot.size }));
+    });
+
+    // 2. Pending reviewer applications query
+    const qReviewers = query(
+      collection(db, 'users'),
+      where('role', '==', 'reviewer'),
+      where('status', '==', 'Pending')
+    );
+
+    const unsubscribeReviewers = onSnapshot(qReviewers, (snapshot) => {
+      setCounts(prev => ({ ...prev, reviewers: snapshot.size }));
+    });
+
+    return () => {
+      unsubscribeNotif();
+      unsubscribeReviewers();
+    };
+  }, [currentUser?.uid]);
 
   // Route protection & Dynamic User Data
   // App.tsx handles the primary Firebase auth check — no localStorage redirect here
@@ -45,8 +82,10 @@ const AdminLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', end: true, icon: LayoutDashboard },
-    { name: 'Reviewers', path: '/admin/authors', icon: Users },
+    { name: 'Reviewers', path: '/admin/authors', icon: Users, badge: counts.reviewers > 0 ? counts.reviewers : null },
+    { name: 'Authors', path: '/admin/authors-list', icon: Users },
     { name: 'Articles', path: '/admin/articles', icon: FileText },
+    { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: counts.notifications > 0 ? counts.notifications : null },
   ];
 
   return (
@@ -74,7 +113,7 @@ const AdminLayout = () => {
           </button>
         </div>
 
-        <nav className="flex-1 mt-6 lg:mt-8 space-y-2 px-4 overflow-y-auto">
+        <nav className="flex-1 mt-6 lg:mt-8 space-y-1 px-4 overflow-y-auto">
           {navItems.map((item) => (
             <NavLink
               key={item.name}
@@ -82,7 +121,7 @@ const AdminLayout = () => {
               end={item.end}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 relative",
+                  "flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 relative",
                   isActive
                     ? "bg-zinc-800/80 text-white shadow-lg ring-1 ring-white/10"
                     : "text-zinc-400 hover:text-white hover:bg-zinc-900"
@@ -91,8 +130,15 @@ const AdminLayout = () => {
             >
               {({ isActive }) => (
                 <>
-                  <item.icon size={18} />
-                  {item.name}
+                  <div className="flex items-center gap-3">
+                    <item.icon size={18} />
+                    {item.name}
+                  </div>
+                  {item.badge && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                      {item.badge}
+                    </span>
+                  )}
                   {isActive && (
                     <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
                   )}
