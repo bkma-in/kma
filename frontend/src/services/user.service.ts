@@ -47,3 +47,8 @@ export const addReviewer = async (reviewerData: { name: string; email: string; q
   const response = await api.post('/users/reviewers', reviewerData);
   return response.data;
 };
+
+export const getAuthors = async () => {
+  const response = await api.get('/users/authors');
+  return response.data;
+};

@@ -289,6 +289,31 @@ router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRe
   }
 });
 
+// Admin: Get all authors
+router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+  try {
+    const snapshot = await db.collection('users').where('role', '==', 'author').get();
+    const authors = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name,
+        email: data.email,
+        affiliation: data.affiliation || 'N/A',
+        regDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
+      };
+    });
+
+    // In-memory sort by regDate descending
+    authors.sort((a, b) => new Date(b.regDate).getTime() - new Date(a.regDate).getTime());
+
+    res.json({ success: true, authors });
+  } catch (error) {
+    console.error('Get authors error:', error);
+    res.status(500).json({ error: 'Failed to fetch authors' });
+  }
+});
+
 // Admin: Update reviewer status (Approve/Reject)
 router.patch('/reviewers/:id/status', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
   try {

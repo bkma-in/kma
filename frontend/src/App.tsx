@@ -15,6 +15,7 @@ import Drafts from './pages/author/Drafts';
 import AdminLayout from './layouts/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminAuthors from './pages/admin/AdminAuthors';
+import AdminAuthorsList from './pages/admin/AdminAuthorsList';
 import AdminArticles from './pages/admin/AdminArticles';
 import ReviewerLayout from './layouts/ReviewerLayout';
 import ReviewerDashboard from './pages/reviewer/ReviewerDashboard';
@@ -127,7 +128,9 @@ function AdminRoutes() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="authors" element={<AdminAuthors />} />
+        <Route path="authors-list" element={<AdminAuthorsList />} />
         <Route path="articles" element={<AdminArticles />} />
+        <Route path="notifications" element={<Notifications />} />
       </Route>
     </Routes>
   );
