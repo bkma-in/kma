@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
+@import "./animations.css";
 
 @theme {
   --font-sans: "Inter", "Outfit", sans-serif;

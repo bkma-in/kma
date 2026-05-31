@@ -2,7 +2,7 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   setPersistence,
-  browserSessionPersistence 
+  browserLocalPersistence 
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import api from './api';
@@ -21,16 +21,19 @@ const getFriendlyErrorMessage = (error: any): string => {
 
 export const login = async (email: string, password: string) => {
   try {
-    // 0. Set Persistence to Session (Clears on browser close)
-    await setPersistence(auth, browserSessionPersistence);
+    // Use LOCAL persistence so session survives browser close
+    await setPersistence(auth, browserLocalPersistence);
+    console.log('[Auth Service] Login: persistence set to LOCAL');
 
     // 1. Authenticate with Firebase Client
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    console.log('[Auth Service] Login: Firebase auth successful for', email);
     
     // 2. Fetch User Profile from Backend (which verifies the token and returns Role)
     const response = await api.post('/auth/verify');
     
     if (response.data.success) {
+      console.log('[Auth Service] Login: Backend verified. Role:', response.data.user.role);
       return {
         success: true,
         user: {
@@ -42,7 +45,7 @@ export const login = async (email: string, password: string) => {
     }
     throw new Error('Verification failed');
   } catch (error: any) {
-    console.error('Login error:', error);
+    console.error('[Auth Service] Login error:', error);
     throw new Error(getFriendlyErrorMessage(error));
   }
 };
@@ -55,7 +58,7 @@ export const register = async (userData: any) => {
     
     // Get fresh token
     const token = await user.getIdToken();
-    console.log('Registration: Firebase user created, token obtained');
+    console.log('[Auth Service] Registration: Firebase user created, token obtained');
 
     // 2. Register Profile in Backend (creates Firestore document)
     const response = await api.post('/auth/register', {
@@ -74,7 +77,7 @@ export const register = async (userData: any) => {
     }
     throw new Error('Backend registration failed');
   } catch (error: any) {
-    console.error('Registration error details:', error.response?.data || error.message);
+    console.error('[Auth Service] Registration error details:', error.response?.data || error.message);
     throw new Error(getFriendlyErrorMessage(error));
   }
 };
