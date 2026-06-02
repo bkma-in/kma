@@ -5,13 +5,16 @@ import './index.css'
 import App from './App.tsx'
 import { NotificationProvider } from './utils/NotificationContext'
 import { AuthProvider } from './context/AuthContext'
+import { SubscriptionProvider } from './utils/SubscriptionContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
         <NotificationProvider>
-          <App />
+          <SubscriptionProvider>
+            <App />
+          </SubscriptionProvider>
         </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
