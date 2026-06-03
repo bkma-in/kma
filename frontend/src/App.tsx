@@ -37,7 +37,6 @@ import ReaderPayments from './pages/reader/ReaderPayments';
 import ReaderNotifications from './pages/reader/ReaderNotifications';
 import ReaderSavedArticles from './pages/reader/ReaderSavedArticles';
 import GetSubscription from './pages/reader/GetSubscription';
-import { SubscriptionProvider } from './utils/SubscriptionContext';
 
 function App() {
   const { currentUser, loading, roleLoading } = useAuth();
@@ -55,13 +54,13 @@ function App() {
     );
   }
 
+
   return (
     <div className="w-full min-h-screen">
       <SessionOverlay />
       <ToastContainer />
       <ConfirmModal />
-      <SubscriptionProvider>
-        <Routes>
+      <Routes>
           <Route path="/" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <LandingPage />} />
           <Route path="/auth" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Auth />} />
           <Route path="/invitation/accept/:token" element={<AcceptInvitation />} />
@@ -104,7 +103,6 @@ function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </SubscriptionProvider>
     </div>
   );
 }
