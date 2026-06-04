@@ -18,6 +18,7 @@ import {
 import logo from '../assets/logo.png';
 import { cn } from '../utils/cn';
 import GlobalFooter from '../components/GlobalFooter';
+import EditorialBoardModal from '../components/EditorialBoardModal';
 import { auth } from '../config/firebase';
 
 // --- Types ---
@@ -41,6 +42,7 @@ const LandingPage: React.FC = () => {
   const [viewState, setViewState] = useState<'landing' | 'paywall' | 'full'>('landing');
   const [purchasedArticles, setPurchasedArticles] = useState<string[]>([]);
   const [isPaying, setIsPaying] = useState(false);
+  const [isEditorialBoardOpen, setIsEditorialBoardOpen] = useState(false);
 
   // Mock Articles Data
   const articles: Article[] = [
@@ -509,7 +511,12 @@ const LandingPage: React.FC = () => {
               <ul className="space-y-2.5">
                 {['Pricing', 'How it Works', 'Unlock Guide', 'Editorial Board'].map(link => (
                   <li key={link}>
-                    <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
+                    <button 
+                      onClick={() => link === 'Editorial Board' && setIsEditorialBoardOpen(true)}
+                      className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
+                    >
+                      {link}
+                    </button>
                   </li>
                 ))}
                 <li>
@@ -538,6 +545,11 @@ const LandingPage: React.FC = () => {
           <GlobalFooter showSocials={true} showTaglines={false} />
         </div>
       </footer>
+
+      <EditorialBoardModal 
+        isOpen={isEditorialBoardOpen} 
+        onClose={() => setIsEditorialBoardOpen(false)} 
+      />
     </div>
   );
 };
