@@ -507,7 +507,7 @@ const LandingPage: React.FC = () => {
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Access</h4>
               <ul className="space-y-2.5">
-                {['Pricing', 'How it Works', 'Unlock Guide'].map(link => (
+                {['Pricing', 'How it Works', 'Unlock Guide', 'Editorial Board'].map(link => (
                   <li key={link}>
                     <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
                   </li>
