@@ -40,7 +40,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) => {
               <div className="mt-1"><CheckCircle2 className="text-emerald-500" size={18} /></div>
               <div>
                 <p className="font-bold text-white mb-1">Annual Subscription</p>
-                <p>Rs. 1000/- each for the year 2011 in India.</p>
+                <p>Rs. 1000/- each in India.</p>
               </div>
             </div>
 
