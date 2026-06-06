@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { db, auth } from '../config/firebase';
+import { FieldPath } from 'firebase-admin/firestore';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/authMiddleware';
 import { upload } from '../middleware/uploadMiddleware';
 import { uploadImage, deleteImage } from '../services/cloudinaryService';
@@ -295,23 +296,10 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
     const { pageSize = '50', cursor } = req.query;
     const limitNum = parseInt(pageSize as string) || 50;
 
-    let queryRef = db.collection('users')
-      .where('role', '==', 'author')
-      .orderBy('createdAt', 'desc')
-      .orderBy(FieldPath.documentId())
-      .limit(limitNum);
-
-    if (cursor) {
-      // Expected format: "<timestamp>|<docId>"
-      const [ts, docId] = (cursor as string).split('|');
-      const cursorDate = new Date(ts);
-      if (!isNaN(cursorDate.getTime()) && docId) {
-        queryRef = queryRef.startAfter(cursorDate, docId);
-      }
-    }
-
-    const snapshot = await queryRef.get();
-    const authors = snapshot.docs.map(doc => {
+    // Fetch all authors from database using simple query (no composite index required)
+    const snapshot = await db.collection('users').where('role', '==', 'author').get();
+    
+    let allAuthors = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -319,19 +307,42 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
         email: data.email,
         affiliation: data.affiliation || 'N/A',
         regDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
+        phone: data.phone || '',
+        designation: data.designation || '',
+        bio: data.bio || '',
+        profileImage: data.profileImage || null
       };
     });
 
-    let nextCursor = null;
-    if (snapshot.docs.length === limitNum) {
-      const lastDoc = snapshot.docs[snapshot.docs.length - 1];
-      const lastData = lastDoc.data();
-      const ts = lastData.createdAt?.toDate ? lastData.createdAt.toDate().toISOString() : lastData.createdAt;
-      const id = lastDoc.id;
-      nextCursor = `${ts}|${id}`;
+    // Sort by regDate descending (createdAt) in memory
+    allAuthors.sort((a, b) => new Date(b.regDate).getTime() - new Date(a.regDate).getTime());
+
+    // Apply pagination cursor in-memory
+    let startIndex = 0;
+    if (cursor) {
+      // Expected format: "<timestamp>|<docId>"
+      const [ts, docId] = (cursor as string).split('|');
+      const cursorTime = new Date(ts).getTime();
+      
+      const foundIndex = allAuthors.findIndex(a => {
+        const aTime = new Date(a.regDate).getTime();
+        return aTime === cursorTime && a.id === docId;
+      });
+
+      if (foundIndex !== -1) {
+        startIndex = foundIndex + 1;
+      }
     }
 
-    res.json({ success: true, authors, nextCursor });
+    const paginatedAuthors = allAuthors.slice(startIndex, startIndex + limitNum);
+
+    let nextCursor = null;
+    if (startIndex + limitNum < allAuthors.length) {
+      const lastDoc = paginatedAuthors[paginatedAuthors.length - 1];
+      nextCursor = `${lastDoc.regDate}|${lastDoc.id}`;
+    }
+
+    res.json({ success: true, authors: paginatedAuthors, nextCursor });
   } catch (error) {
     console.error('Get authors error:', error);
     res.status(500).json({ error: 'Failed to fetch authors' });
