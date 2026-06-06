@@ -57,7 +57,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
         {/* 2. Title (Compact) */}
         <div className="flex-1 px-4 relative z-10 overflow-hidden">
           <h2 className="text-lg lg:text-xl font-bold tracking-tight text-black font-['Outfit'] truncate">
-            Kerala Mathematical Association
+            Bulletin Of Kerala Mathematical Association
           </h2>
         </div>
 

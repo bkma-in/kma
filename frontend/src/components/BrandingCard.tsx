@@ -29,7 +29,9 @@ const BrandingCard: React.FC = () => {
         {/* Title */}
         <div>
           <Link to="/" className="group">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-[3.25rem] font-black text-white tracking-[-0.03em] leading-[1.05] text-center md:text-left group-hover:text-zinc-200 transition-colors font-['Playfair_Display']">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-[2.75rem] font-black text-white tracking-[-0.03em] leading-[1.1] text-center md:text-left group-hover:text-zinc-200 transition-colors font-['Playfair_Display']">
+              Bulletin Of{' '}
+              <br className="hidden md:block" />
               Kerala{' '}
               <br className="hidden md:block" />
               Mathematical{' '}
@@ -94,7 +96,7 @@ const BrandingCard: React.FC = () => {
       {/* Footer */}
       <div className="relative z-10 pt-6 lg:pt-10 hidden md:block">
         <p className="text-zinc-600 text-[10px] uppercase font-bold tracking-widest text-center md:text-left">
-          &copy; 2026 Kerala Mathematical Association
+          &copy; 2026 Bulletin Of Kerala Mathematical Association
         </p>
       </div>
     </div>
