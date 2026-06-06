@@ -8,11 +8,17 @@ import {
   BookOpen, 
   Loader2,
   X,
-  Briefcase
+  Briefcase,
+  Phone,
+  FileText,
+  Award,
+  Shield,
+  User
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { getAuthors } from '../../services/user.service';
+import { getArticles } from '../../services/article.service';
 
 interface Author {
   id: string;
@@ -20,6 +26,10 @@ interface Author {
   email: string;
   affiliation: string;
   regDate: string;
+  phone?: string;
+  designation?: string;
+  bio?: string;
+  profileImage?: string | null;
 }
 
 const AdminAuthorsList = () => {
@@ -28,6 +38,7 @@ const AdminAuthorsList = () => {
   const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [authors, setAuthors] = useState<Author[]>([]);
+  const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const previousActiveElement = useRef<HTMLElement | null>(null);
@@ -47,7 +58,20 @@ const AdminAuthorsList = () => {
         setLoading(false);
       }
     };
+
+    const fetchArticlesList = async () => {
+      try {
+        const response = await getArticles();
+        if (response.success) {
+          setArticles(response.articles);
+        }
+      } catch (error) {
+        console.error('Failed to load articles:', error);
+      }
+    };
+
     fetchAuthorsList();
+    fetchArticlesList();
   }, []);
 
   useEffect(() => {
@@ -102,6 +126,32 @@ const AdminAuthorsList = () => {
       };
     }
   }, [isModalOpen]);
+
+  const getStatusStyles = (status: string) => {
+    switch (status) {
+      case 'draft':
+      case 'Draft': return 'bg-zinc-100 text-zinc-600 border-zinc-200';
+      case 'submitted':
+      case 'Submitted': return 'bg-blue-50 text-blue-600 border-blue-100';
+      case 'under_review':
+      case 'Under Review': return 'bg-amber-50 text-amber-600 border-amber-100';
+      case 'revision_requested':
+      case 'Needs Revision': return 'bg-rose-50 text-rose-600 border-rose-100';
+      case 'accepted':
+      case 'Approved': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+      case 'rejected':
+      case 'Rejected': return 'bg-zinc-100 text-zinc-500 border-zinc-200';
+      default: return 'bg-zinc-100 text-zinc-500 border-zinc-200';
+    }
+  };
+
+  const authorArticles = selectedAuthor 
+    ? articles.filter(art => 
+        (art.authorId === selectedAuthor.id || 
+         art.authors?.some((a: any) => a.userId === selectedAuthor.id)) &&
+        art.status?.toLowerCase() !== 'draft'
+      )
+    : [];
 
   const filteredAuthors = authors.filter(auth => {
     return auth.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -212,71 +262,165 @@ const AdminAuthorsList = () => {
 
       {/* Author Details Modal */}
       {isModalOpen && selectedAuthor && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" 
+            onClick={() => setIsModalOpen(false)} 
+          />
           <div 
             ref={modalRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title-author"
-            className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300 border border-white/20"
+            className="relative w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[95vh] sm:rounded-[2.5rem] bg-zinc-900 text-white shadow-2xl flex flex-col animate-in zoom-in-95 duration-300 border border-white/10 overflow-hidden"
           >
-            {/* Modal Header */}
-            <div className="px-8 py-8 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-black flex items-center justify-center text-white shadow-xl shadow-black/20">
-                  <BookOpen size={24} />
-                </div>
-                <div>
-                  <h3 id="modal-title-author" className="text-xl font-bold text-black tracking-tight font-['Outfit']">{selectedAuthor.name}</h3>
-                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">{selectedAuthor.id}</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="w-10 h-10 rounded-full hover:bg-zinc-200 flex items-center justify-center text-zinc-400 hover:text-black transition-all animate-focus"
-                aria-label="Close Author Details Modal"
-              >
-                <X size={20} />
-              </button>
-            </div>
+            {/* Header Overlay */}
+            <div className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/40 to-transparent z-0 h-48" />
+
+            {/* Close Button */}
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="absolute right-4 top-4 z-20 p-2 hover:bg-white/10 rounded-full transition-all"
+              aria-label="Close Author Details Modal"
+            >
+              <X size={20} />
+            </button>
 
             {/* Modal Content */}
-            <div className="p-8 space-y-6">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">
-                  <Mail size={12} />
-                  Verified Email
+            <div className="relative z-10 flex flex-col overflow-y-auto flex-1 min-h-0 p-6 sm:p-10 space-y-8 custom-scrollbar">
+              {/* Top Banner Section */}
+              <div className="bg-zinc-900/50 backdrop-blur-md rounded-[2rem] border border-white/5 p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-transparent opacity-50" />
+                
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-full bg-zinc-800 border-4 border-zinc-900 overflow-hidden shadow-2xl flex items-center justify-center relative">
+                    {selectedAuthor.profileImage ? (
+                      <img src={selectedAuthor.profileImage} alt={selectedAuthor.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={64} className="text-zinc-600" />
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm font-bold text-black">{selectedAuthor.email}</p>
+
+                {/* User Info */}
+                <div className="flex-1 text-center md:text-left relative z-10">
+                  <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-4">{selectedAuthor.name}</h1>
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6">
+                    <div className="flex items-center gap-2 px-4 py-1.5 bg-zinc-800/80 rounded-full border border-white/10">
+                      <Shield size={14} className="text-blue-400" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">AUTHOR</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <Calendar size={14} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">
+                        JOINED {new Date(selectedAuthor.regDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-zinc-500 text-xs italic mb-2">Verified member of the Kerala Mathematical Association</p>
+                  <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em]">ID: {selectedAuthor.id}</p>
+                </div>
+
+                {/* About Me Section */}
+                <div className="w-full md:w-72 shrink-0">
+                  <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 border border-white/10 h-full relative">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1.5 h-4 bg-blue-500 rounded-full" />
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">About Me</h3>
+                    </div>
+                    <p className="text-sm text-zinc-300 leading-relaxed italic">
+                      {selectedAuthor.bio || "I am an author of KMA"}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">
-                  <Calendar size={12} />
-                  Registration Timestamp
+              {/* Bottom Cards Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Account Information Card */}
+                <div className="bg-white/5 backdrop-blur-md rounded-[2rem] p-8 border border-white/5">
+                  <div className="flex items-center gap-3 mb-8">
+                    <Users size={18} className="text-zinc-400" />
+                    <h3 className="text-sm font-bold text-white uppercase tracking-widest">Account Information</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Full Name</label>
+                      <p className="text-sm font-bold text-white">{selectedAuthor.name}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Email Address</label>
+                      <p className="text-sm font-bold text-white">{selectedAuthor.email}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Phone Number</label>
+                      <p className={cn("text-sm font-bold", selectedAuthor.phone ? "text-white" : "text-zinc-600 italic")}>
+                        {selectedAuthor.phone || "Not provided"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Designation</label>
+                      <p className={cn("text-sm font-bold", selectedAuthor.designation ? "text-white" : "text-zinc-600 italic")}>
+                        {selectedAuthor.designation || "Not provided"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm font-bold text-black">
-                  {new Date(selectedAuthor.regDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} at {new Date(selectedAuthor.regDate).toLocaleTimeString()}
-                </p>
+
+                {/* Credibility Card */}
+                <div className="bg-white/5 backdrop-blur-md rounded-[2rem] p-8 border border-white/5 flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-6 border border-indigo-500/20">
+                    <Award size={32} />
+                  </div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2">Author Credibility</h3>
+                  <p className="text-[11px] text-zinc-500 max-w-[240px] leading-relaxed">
+                    Verified scholar with high-impact research contributions.
+                  </p>
+                </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                  <Briefcase size={14} />
-                  Academic Affiliation
+              {/* Submitted Manuscripts Section */}
+              <div className="bg-white/5 backdrop-blur-md rounded-[2rem] p-8 border border-white/5 space-y-6">
+                <div className="flex items-center gap-3">
+                  <FileText size={18} className="text-zinc-400" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest">Submitted Manuscripts ({authorArticles.length})</h3>
                 </div>
-                <div className="p-5 bg-zinc-50 rounded-2xl border border-zinc-100 text-sm font-medium text-zinc-700">
-                  {selectedAuthor.affiliation}
-                </div>
+                
+                {authorArticles.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {authorArticles.map((art) => (
+                      <div 
+                        key={art.articleId} 
+                        className="p-5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all flex flex-col gap-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <h4 className="text-sm font-bold text-white leading-snug line-clamp-2">
+                            {art.title}
+                          </h4>
+                          <span className={cn(
+                            "shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border",
+                            getStatusStyles(art.status)
+                          )}>
+                            {art.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-zinc-500 font-bold uppercase">
+                          <span>ID: {art.articleId}</span>
+                          <span>
+                            {art.createdAt && new Date(art.createdAt?._seconds ? art.createdAt._seconds * 1000 : art.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-500 italic py-8 text-center bg-white/5 border border-white/5 rounded-2xl">
+                    No manuscripts submitted yet.
+                  </p>
+                )}
               </div>
-
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="w-full py-4 bg-black text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-800 transition-all uppercase mt-4"
-              >
-                Close Profile
-              </button>
             </div>
           </div>
         </div>
