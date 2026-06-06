@@ -19,6 +19,7 @@ import logo from '../assets/logo.png';
 import { cn } from '../utils/cn';
 import GlobalFooter from '../components/GlobalFooter';
 import EditorialBoardModal from '../components/EditorialBoardModal';
+import PricingModal from '../components/PricingModal';
 import { auth } from '../config/firebase';
 
 // --- Types ---
@@ -43,6 +44,7 @@ const LandingPage: React.FC = () => {
   const [purchasedArticles, setPurchasedArticles] = useState<string[]>([]);
   const [isPaying, setIsPaying] = useState(false);
   const [isEditorialBoardOpen, setIsEditorialBoardOpen] = useState(false);
+  const [isPricingOpen, setIsPricingOpen] = useState(false);
 
   // Mock Articles Data
   const articles: Article[] = [
@@ -512,7 +514,10 @@ const LandingPage: React.FC = () => {
                 {['Pricing', 'How it Works', 'Unlock Guide', 'Editorial Board'].map(link => (
                   <li key={link}>
                     <button 
-                      onClick={() => link === 'Editorial Board' && setIsEditorialBoardOpen(true)}
+                      onClick={() => {
+                        if (link === 'Editorial Board') setIsEditorialBoardOpen(true);
+                        if (link === 'Pricing') setIsPricingOpen(true);
+                      }}
                       className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
                     >
                       {link}
@@ -549,6 +554,10 @@ const LandingPage: React.FC = () => {
       <EditorialBoardModal 
         isOpen={isEditorialBoardOpen} 
         onClose={() => setIsEditorialBoardOpen(false)} 
+      />
+      <PricingModal 
+        isOpen={isPricingOpen} 
+        onClose={() => setIsPricingOpen(false)} 
       />
     </div>
   );
