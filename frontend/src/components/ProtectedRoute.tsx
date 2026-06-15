@@ -17,6 +17,7 @@ export default function ProtectedRoute({
 
   // Wait for Firebase Auth SDK to initialize
   if (loading) {
+    console.log('[AUTH-DIAGNOSTIC] Route Guard: Waiting for Auth SDK initialization...');
     return (
       <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
         <div className="flex flex-col items-center gap-4">
@@ -29,6 +30,7 @@ export default function ProtectedRoute({
 
   // Wait for role to be verified from backend — DO NOT redirect while role is loading
   if (roleLoading) {
+    console.log('[AUTH-DIAGNOSTIC] Route Guard: Waiting for role verification/fetch...');
     return (
       <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
         <div className="flex flex-col items-center gap-4">
@@ -41,15 +43,14 @@ export default function ProtectedRoute({
 
   // No user at all — redirect to login
   if (!currentUser) {
-    console.log('[ProtectedRoute] No user. Redirecting to login.');
+    console.warn('[AUTH-DIAGNOSTIC] Route Guard Decision: REJECTED (No user session). Redirecting to login.');
     return <Navigate to="/auth?mode=login" replace />;
   }
 
   // User exists but role is not in allowed list
   const role = currentUser.role;
   if (!role) {
-    // Role is undefined/null — should never happen with new AuthContext, but guard anyway
-    console.warn('[ProtectedRoute] User has no role. Showing loading.');
+    console.error(`[AUTH-DIAGNOSTIC] Route Guard: User ${currentUser.uid} has no role defined. Rendering loader.`);
     return (
       <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
         <div className="flex flex-col items-center gap-4">
@@ -61,7 +62,7 @@ export default function ProtectedRoute({
   }
 
   if (!allowedRoles.includes(role)) {
-    console.log(`[ProtectedRoute] Role "${role}" not in allowed roles [${allowedRoles.join(', ')}]. Redirecting to correct dashboard.`);
+    console.warn(`[AUTH-DIAGNOSTIC] Route Guard Decision: REJECTED. User ${currentUser.uid} with role "${role}" is not in allowed roles [${allowedRoles.join(', ')}]. Redirecting to correct dashboard.`);
     return (
       <Navigate
         to={getDashboardByRole(role)}
@@ -70,5 +71,6 @@ export default function ProtectedRoute({
     );
   }
 
+  console.log(`[AUTH-DIAGNOSTIC] Route Guard Decision: ALLOWED. User ${currentUser.uid} with role "${role}" allowed for [${allowedRoles.join(', ')}]`);
   return <>{children}</>;
 }

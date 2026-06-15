@@ -1,7 +1,7 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { getDashboardByRole } from './utils/auth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import Auth from './pages/Auth';
 import LandingPage from './pages/LandingPage';
 import ToastContainer from './components/notifications/ToastContainer';
@@ -39,7 +39,8 @@ import ReaderSavedArticles from './pages/reader/ReaderSavedArticles';
 import GetSubscription from './pages/reader/GetSubscription';
 
 function App() {
-  const { currentUser, loading, roleLoading } = useAuth();
+  const { currentUser, loading, roleLoading, roleError, refreshRole, logout } = useAuth();
+  const navigate = useNavigate();
 
   if (loading || roleLoading) {
     return (
@@ -48,6 +49,54 @@ function App() {
           <Loader2 className="animate-spin text-zinc-300" size={48} />
           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
             {loading ? 'Initializing KMA Portal' : 'Verifying Access'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (roleError) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-zinc-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center border border-zinc-100">
+          <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="text-rose-500" size={32} />
+          </div>
+          <h2 className="text-xl font-bold text-zinc-900 mb-2 font-['Outfit']">
+            Access Verification Failed
+          </h2>
+          <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
+            {roleError}
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                console.log('[AUTH-DIAGNOSTIC] Retry verification clicked');
+                refreshRole();
+              }}
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-black text-white text-sm font-bold rounded-xl hover:bg-zinc-800 transition-all shadow-md cursor-pointer"
+            >
+              <RefreshCw size={16} />
+              Retry Verification
+            </button>
+            <button
+              onClick={async () => {
+                console.log('[AUTH-DIAGNOSTIC] Return home clicked. Performing logout and redirecting to landing page.');
+                try {
+                  await logout();
+                } catch (err) {
+                  console.error('[AUTH-DIAGNOSTIC] Logout failed:', err);
+                }
+                navigate('/', { replace: true });
+              }}
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-zinc-100 text-zinc-700 text-sm font-bold rounded-xl hover:bg-zinc-200 transition-all cursor-pointer"
+            >
+              <Home size={16} />
+              Return Home
+            </button>
+          </div>
+          <p className="text-[10px] text-zinc-400 mt-6 uppercase tracking-wider font-bold">
+            KMA Portal • Access Security
           </p>
         </div>
       </div>

@@ -55,7 +55,7 @@ const ReaderProfile = () => {
                 </h1>
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-3">
                   <span className="flex items-center gap-1.5 px-3 py-1 bg-white/10 text-white rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10 backdrop-blur-md">
-                    <Shield size={12} /> {profile?.role || "reader"}
+                    <Shield size={12} /> {profile?.role || ""}
                   </span>
                   <span className="text-zinc-400 text-xs font-medium flex items-center gap-1.5 font-bold">
                     <MapPin size={14} /> Kerala, India

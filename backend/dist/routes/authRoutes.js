@@ -26,9 +26,13 @@ router.post('/verify', authMiddleware_1.requireAuth, async (req, res) => {
 // Endpoint to handle new user registration profile creation in Firestore
 router.post('/register', authMiddleware_1.requireAuth, async (req, res) => {
     try {
-        const { name, role, qualification, experience } = req.body; // e.g., "author", "reader", or "reviewer"
-        const allowedRoles = ['author', 'reader', 'reviewer']; // Admin & Dev assigned manually
-        const userRole = allowedRoles.includes(role) ? role : 'reader';
+        const { name, role, qualification, experience } = req.body;
+        const allowedRoles = ['author', 'reader', 'reviewer'];
+        if (!role || !allowedRoles.includes(role)) {
+            console.error(`[AUTH-DIAGNOSTIC] Registration failed: Invalid or missing role "${role}"`);
+            return res.status(400).json({ error: 'Invalid or missing role. Allowed roles are: author, reader, reviewer.' });
+        }
+        const userRole = role;
         const { uid, email } = req.user;
         if (typeof name !== 'string' || name.trim() === '') {
             return res.status(400).json({ error: 'Invalid name' });

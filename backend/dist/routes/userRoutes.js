@@ -74,7 +74,13 @@ router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.s
         await userRef.update(updateData);
         // Sync Custom Claims if Name changed
         if (sanitizedName) {
-            firebase_1.auth.setCustomUserClaims(uid, { role: userData.role || 'reader', name: sanitizedName }).catch(err => console.error('Background custom claims sync error:', err));
+            if (!userData.role) {
+                console.error(`[AUTH-DIAGNOSTIC] ❌ Cannot sync custom claims: User ${uid} has no role in Firestore`);
+            }
+            else {
+                console.log(`[AUTH-DIAGNOSTIC] Syncing custom claims for UID: ${uid}, Role: "${userData.role}", Name: "${sanitizedName}"`);
+                firebase_1.auth.setCustomUserClaims(uid, { role: userData.role, name: sanitizedName }).catch(err => console.error('[AUTH-DIAGNOSTIC] Background custom claims sync error:', err));
+            }
         }
         // Performance: Avoid second read by merging locally
         const mergedProfile = {
