@@ -133,7 +133,7 @@ router.post('/report-issue', authMiddleware_1.requireAuth, uploadMiddleware_1.up
     }
 });
 // Get All Reported Issues (for Developer Dashboard)
-router.get('/reported-issues', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin', 'dev', 'developer']), async (req, res) => {
+router.get('/reported-issues', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin', 'dev']), async (req, res) => {
     try {
         const snapshot = await firebase_1.db.collection('reported_issues').orderBy('createdAt', 'desc').get();
         const issues = snapshot.docs.map(doc => {
@@ -154,7 +154,7 @@ router.get('/reported-issues', authMiddleware_1.requireAuth, (0, authMiddleware_
     }
 });
 // Update Reported Issue Status (for Developer Dashboard)
-router.patch('/reported-issues/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin', 'dev', 'developer']), async (req, res) => {
+router.patch('/reported-issues/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin', 'dev']), async (req, res) => {
     try {
         const id = req.params.id;
         const { status } = req.body;

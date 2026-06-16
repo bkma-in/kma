@@ -11,6 +11,7 @@ const ROLE_CACHE_KEY = '__kma_cached_role';
 const NAME_CACHE_KEY = '__kma_cached_name';
 const MAX_RETRY = 3;
 const RETRY_BASE_DELAY_MS = 2000;
+const VALID_ROLES: Role[] = ['admin', 'reviewer', 'author', 'reader', 'dev'];
 
 // ─── Types ───────────────────────────────────────────────────────────
 interface AuthContextType {
@@ -96,8 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { role, name } = await fetchRoleFromBackend();
 
       // Validate the retrieved role
-      const validRoles: Role[] = ['admin', 'reviewer', 'author', 'reader', 'dev'];
-      if (!role || !validRoles.includes(role)) {
+      if (!role || !VALID_ROLES.includes(role)) {
         throw new Error(`Invalid role value received: "${role}"`);
       }
 
@@ -137,8 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const cachedRole = localStorage.getItem(ROLE_CACHE_KEY) as Role | null;
       const cachedName = localStorage.getItem(NAME_CACHE_KEY);
 
-      const validRoles: Role[] = ['admin', 'reviewer', 'author', 'reader', 'dev'];
-      if (cachedRole && validRoles.includes(cachedRole)) {
+      if (cachedRole && VALID_ROLES.includes(cachedRole)) {
         console.log(`[AUTH-DIAGNOSTIC] Using cached role: "${cachedRole}" for UID: ${user.uid}`);
         setCurrentUser({ ...user, role: cachedRole, name: cachedName || user.displayName || user.email?.split('@')[0] || 'User' });
         setShowRefreshNotice(true); // Notify user there was a connection/refresh issue

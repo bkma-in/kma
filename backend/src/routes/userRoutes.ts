@@ -156,7 +156,7 @@ router.post('/report-issue', requireAuth, upload.single('screenshot'), async (re
 });
 
 // Get All Reported Issues (for Developer Dashboard)
-router.get('/reported-issues', requireAuth, requireRole(['admin', 'dev', 'developer']), async (req: AuthRequest, res) => {
+router.get('/reported-issues', requireAuth, requireRole(['admin', 'dev']), async (req: AuthRequest, res) => {
   try {
     const snapshot = await db.collection('reported_issues').orderBy('createdAt', 'desc').get();
     const issues = snapshot.docs.map(doc => {
@@ -177,7 +177,7 @@ router.get('/reported-issues', requireAuth, requireRole(['admin', 'dev', 'develo
 });
 
 // Update Reported Issue Status (for Developer Dashboard)
-router.patch('/reported-issues/:id/status', requireAuth, requireRole(['admin', 'dev', 'developer']), async (req: AuthRequest, res) => {
+router.patch('/reported-issues/:id/status', requireAuth, requireRole(['admin', 'dev']), async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
     const { status } = req.body;
