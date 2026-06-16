@@ -11,6 +11,7 @@ const ROLE_CACHE_KEY = '__kma_cached_role';
 const NAME_CACHE_KEY = '__kma_cached_name';
 const MAX_RETRY = 3;
 const RETRY_BASE_DELAY_MS = 2000;
+const VALID_ROLES: Role[] = ['admin', 'reviewer', 'author', 'reader', 'dev'];
 
 // ─── Types ───────────────────────────────────────────────────────────
 interface AuthContextType {
@@ -19,6 +20,7 @@ interface AuthContextType {
   roleLoading: boolean;   // true while role is being fetched/verified from backend
   sessionExpired: boolean; // true when auth is lost (user must re-login)
   showRefreshNotice: boolean; // true when ~55 min approaches — tells user to refresh
+  roleError: string | null;  // error message when role verification fails
   logout: () => Promise<void>;
   refreshRole: () => Promise<void>;
   dismissRefreshNotice: () => void;
@@ -59,6 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [roleLoading, setRoleLoading] = useState(false); // Role verification
   const [sessionExpired, setSessionExpired] = useState(false);
   const [showRefreshNotice, setShowRefreshNotice] = useState(false);
+  const [roleError, setRoleError] = useState<string | null>(null);
 
   const sessionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialAuthCheck = useRef(true);
@@ -84,13 +87,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ─── Fetch and set role (idempotent, never defaults to reader) ────
   const loadRole = useCallback(async (user: User, isTokenRefresh = false) => {
-    // Don't set roleLoading on token refresh — it would flash the loading screen
-    if (!isTokenRefresh) {
-      setRoleLoading(true);
-    }
+    console.log(`[AUTH-DIAGNOSTIC] loadRole invoked for UID: ${user.uid}, isTokenRefresh: ${isTokenRefresh}`);
+    // Always set roleLoading to true to prevent race conditions during token refresh or initial load
+    setRoleLoading(true);
+    setRoleError(null); // Reset role error at start of attempt
 
     try {
+      console.log(`[AUTH-DIAGNOSTIC] Fetching role from backend for UID: ${user.uid}...`);
       const { role, name } = await fetchRoleFromBackend();
+
+      // Validate the retrieved role
+      if (!role || !VALID_ROLES.includes(role)) {
+        throw new Error(`Invalid role value received: "${role}"`);
+      }
+
+      console.log(`[AUTH-DIAGNOSTIC] Role successfully verified from backend: "${role}" for UID: ${user.uid}`);
 
       // Cache for instant initial render on next page load
       localStorage.setItem(ROLE_CACHE_KEY, role);
@@ -103,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         // Log if role changed unexpectedly
         if (prev && prev.role !== role) {
-          console.warn(`[AuthContext] ⚠️ ROLE CHANGED: ${prev.role} → ${role} for user ${user.uid}`);
+          console.warn(`[AUTH-DIAGNOSTIC] ⚠️ ROLE CHANGED unexpectedly: "${prev.role}" → "${role}" for UID: ${user.uid}`);
         }
         return { ...user, role, name };
       });
@@ -111,43 +122,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Reset session timer on successful role fetch
       startSessionTimer();
       setSessionExpired(false);
-    } catch (error) {
-      console.error('[AuthContext] All role fetch attempts failed:', error);
+    } catch (error: any) {
+      console.error(`[AUTH-DIAGNOSTIC] ❌ Role retrieval/verification failed for UID: ${user.uid}:`, error);
 
       if (isTokenRefresh) {
-        // On token-refresh failure: DO NOT overwrite the role.
+        // On token-refresh failure: DO NOT overwrite the role in active session.
         // Keep the existing role and show refresh notice instead.
-        console.log('[AuthContext] Keeping existing role. Showing refresh notice to user.');
+        console.warn('[AUTH-DIAGNOSTIC] Token refresh role lookup failed. Retaining active session role.');
         setShowRefreshNotice(true);
         return;
       }
 
-      // On initial load: try cached role, otherwise show session expired
+      // On initial load: try cached role, otherwise show role verification error
       const cachedRole = localStorage.getItem(ROLE_CACHE_KEY) as Role | null;
       const cachedName = localStorage.getItem(NAME_CACHE_KEY);
 
-      if (cachedRole) {
-        console.log('[AuthContext] Using cached role:', cachedRole);
+      if (cachedRole && VALID_ROLES.includes(cachedRole)) {
+        console.log(`[AUTH-DIAGNOSTIC] Using cached role: "${cachedRole}" for UID: ${user.uid}`);
         setCurrentUser({ ...user, role: cachedRole, name: cachedName || user.displayName || user.email?.split('@')[0] || 'User' });
-        setShowRefreshNotice(true); // Still notify user there was an issue
+        setShowRefreshNotice(true); // Notify user there was a connection/refresh issue
       } else {
-        // No cache, no backend — user must re-login
-        console.error('[AuthContext] No cached role available. Marking session as expired.');
-        setSessionExpired(true);
+        // No cache, no backend — user has failed role verification
+        console.error('[AUTH-DIAGNOSTIC] ❌ No valid cached role available and backend verification failed. Setting role error.');
+        setRoleError('Unable to verify your account permissions. Please sign in again.');
       }
     } finally {
-      if (!isTokenRefresh) {
-        setRoleLoading(false);
-      }
+      setRoleLoading(false);
+      console.log(`[AUTH-DIAGNOSTIC] loadRole completed for UID: ${user.uid}`);
     }
   }, [startSessionTimer]);
 
   // ─── Firebase Auth State Listener ──────────────────────────────────
   useEffect(() => {
-    console.log('[AuthContext] Setting up onAuthStateChanged listener');
+    console.log('[AUTH-DIAGNOSTIC] Setting up onAuthStateChanged listener');
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      console.log('[AuthContext] onAuthStateChanged fired. User:', user ? user.uid : 'null');
+      console.log('[AUTH-DIAGNOSTIC] onAuthStateChanged fired. User:', user ? user.uid : 'null');
 
       if (user) {
         await loadRole(user, false);
@@ -156,7 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // User is null — either signed out or session genuinely expired
         if (!isInitialAuthCheck.current) {
           // This is NOT the initial check — the user WAS logged in before
-          console.log('[AuthContext] Auth state lost (was previously logged in). Session expired.');
+          console.warn('[AUTH-DIAGNOSTIC] Auth state lost (previously logged in). Session marked as expired.');
           setSessionExpired(true);
         }
         setCurrentUser(null);
@@ -171,6 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
+      console.log('[AUTH-DIAGNOSTIC] Unsubscribing onAuthStateChanged listener');
       unsubscribeAuth();
       if (sessionTimerRef.current) {
         clearTimeout(sessionTimerRef.current);
@@ -180,7 +191,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ─── Token Refresh Listener (separate from auth state) ─────────────
   useEffect(() => {
-    console.log('[AuthContext] Setting up onIdTokenChanged listener');
+    console.log('[AUTH-DIAGNOSTIC] Setting up onIdTokenChanged listener');
 
     // Track whether this is the first fire (which happens immediately on setup)
     let isFirstFire = true;
@@ -192,20 +203,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (user) {
-        console.log('[AuthContext] 🔄 Token refreshed for user:', user.uid);
-        // Re-verify role from backend on token refresh, but DON'T reset state on failure
+        console.log('[AUTH-DIAGNOSTIC] 🔄 Token change/refresh detected for UID:', user.uid);
+        // Re-verify role from backend on token refresh
         await loadRole(user, true);
       }
     });
 
-    return () => unsubscribeToken();
+    return () => {
+      console.log('[AUTH-DIAGNOSTIC] Unsubscribing onIdTokenChanged listener');
+      unsubscribeToken();
+    };
   }, [loadRole]);
 
   // ─── Manual role refresh ───────────────────────────────────────────
   const refreshRole = useCallback(async () => {
     const user = auth.currentUser;
     if (user) {
-      console.log('[AuthContext] Manual role refresh triggered');
+      console.log('[AUTH-DIAGNOSTIC] Manual role refresh triggered');
       setShowRefreshNotice(false);
       await loadRole(user, false);
     }
@@ -214,7 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ─── Logout ────────────────────────────────────────────────────────
   const logout = async () => {
     try {
-      console.log('[AuthContext] Logout initiated');
+      console.log('[AUTH-DIAGNOSTIC] Logout initiated');
       await auth.signOut();
       const authKeys = ['isLoggedIn', 'role', 'userEmail', 'userName', 'userId', 'is_temp_password', ROLE_CACHE_KEY, NAME_CACHE_KEY];
       authKeys.forEach(key => {
@@ -223,13 +237,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       setCurrentUser(null);
       setSessionExpired(false);
+      setRoleError(null);
       setShowRefreshNotice(false);
       if (sessionTimerRef.current) {
         clearTimeout(sessionTimerRef.current);
       }
-      console.log('[AuthContext] Logout complete. All auth data cleared.');
+      console.log('[AUTH-DIAGNOSTIC] Logout complete. All auth data and local caches cleared.');
     } catch (error) {
-      console.error('[AuthContext] Error signing out:', error);
+      console.error('[AUTH-DIAGNOSTIC] ❌ Error signing out:', error);
       throw error;
     }
   };
@@ -241,6 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       roleLoading,
       sessionExpired,
       showRefreshNotice,
+      roleError,
       logout,
       refreshRole,
       dismissRefreshNotice
