@@ -70,7 +70,7 @@ const AcceptInvitation = () => {
       const response = await api.post(`/articles/invitations/${token}/accept${articleIdFromUrl ? `?articleId=${articleIdFromUrl}` : ''}`);
       if (response.data.success) {
         showToast('You are now a co-author of this article!', 'success');
-        navigate('/author/articles');
+        navigate('/author/articles', { replace: true });
       }
     } catch (err: any) {
       showToast(err.response?.data?.error || 'Failed to accept invitation', 'error');
@@ -90,7 +90,7 @@ const AcceptInvitation = () => {
       const response = await api.post(`/articles/invitations/${token}/reject${articleIdFromUrl ? `?articleId=${articleIdFromUrl}` : ''}`, { reason: rejectReason });
       if (response.data.success) {
         showToast('Invitation declined', 'info');
-        navigate('/author/dashboard');
+        navigate('/author/dashboard', { replace: true });
       }
     } catch (err: any) {
       showToast(err.response?.data?.error || 'Failed to decline invitation', 'error');

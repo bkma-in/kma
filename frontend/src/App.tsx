@@ -110,8 +110,11 @@ function App() {
       <ToastContainer />
       <ConfirmModal />
       <Routes>
-          <Route path="/" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <LandingPage />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Auth />} />
+          <Route path="/login" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Navigate to="/auth?mode=login" replace />} />
+          <Route path="/signin" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Navigate to="/auth?mode=login" replace />} />
+          <Route path="/register" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Navigate to="/auth?mode=register" replace />} />
           <Route path="/invitation/accept/:token" element={<AcceptInvitation />} />
           
           {/* Author Portal Routes */}
