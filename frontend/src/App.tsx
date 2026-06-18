@@ -42,13 +42,16 @@ function App() {
   const { currentUser, loading, roleLoading, roleError, refreshRole, logout } = useAuth();
   const navigate = useNavigate();
 
+  const dashboardPath = currentUser ? getDashboardByRole(currentUser.role) : '';
+  const hasValidDashboard = !!currentUser && !dashboardPath.startsWith('/auth');
+
   if (loading || roleLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="animate-spin text-zinc-300" size={48} />
           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
-            {loading ? 'Initializing KMA Portal' : 'Verifying Access'}
+            {loading ? 'Initializing BKMA Portal' : 'Verifying Access'}
           </p>
         </div>
       </div>
@@ -96,7 +99,7 @@ function App() {
             </button>
           </div>
           <p className="text-[10px] text-zinc-400 mt-6 uppercase tracking-wider font-bold">
-            KMA Portal • Access Security
+            BKMA Portal • Access Security
           </p>
         </div>
       </div>
@@ -111,10 +114,10 @@ function App() {
       <ConfirmModal />
       <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/auth" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Auth />} />
-          <Route path="/login" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Navigate to="/auth?mode=login" replace />} />
-          <Route path="/signin" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Navigate to="/auth?mode=login" replace />} />
-          <Route path="/register" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Navigate to="/auth?mode=register" replace />} />
+          <Route path="/auth" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Auth />} />
+          <Route path="/login" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
+          <Route path="/signin" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
+          <Route path="/register" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=register" replace />} />
           <Route path="/invitation/accept/:token" element={<AcceptInvitation />} />
           
           {/* Author Portal Routes */}

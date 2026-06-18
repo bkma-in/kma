@@ -20,7 +20,8 @@ import { cn } from '../utils/cn';
 import GlobalFooter from '../components/GlobalFooter';
 import EditorialBoardModal from '../components/EditorialBoardModal';
 import PricingModal from '../components/PricingModal';
-import { auth } from '../config/firebase';
+import { useAuth } from '../context/AuthContext';
+import { getDashboardByRole } from '../utils/auth';
 
 // --- Types ---
 interface Article {
@@ -37,8 +38,9 @@ interface Article {
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isLoggedIn = !!currentUser;
   const [activeArticle, setActiveArticle] = useState<Article | null>(null);
   const [viewState, setViewState] = useState<'landing' | 'paywall' | 'full'>('landing');
   const [purchasedArticles, setPurchasedArticles] = useState<string[]>([]);
@@ -88,11 +90,6 @@ const LandingPage: React.FC = () => {
       setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
-    
-    // Check login status via Firebase
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setIsLoggedIn(!!user);
-    });
 
     // Check purchases
     const purchases = JSON.parse(localStorage.getItem('purchased_articles') || '[]');
@@ -100,7 +97,6 @@ const LandingPage: React.FC = () => {
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      unsubscribe();
     };
   }, []);
 
@@ -138,11 +134,9 @@ const LandingPage: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await auth.signOut();
-      localStorage.clear();
-      sessionStorage.clear();
+      await logout();
       setViewState('landing');
-      window.location.replace('/auth?mode=login');
+      navigate('/auth?mode=login', { replace: true });
     } catch (error) {
       console.error('Logout failed', error);
     }
@@ -319,15 +313,21 @@ const LandingPage: React.FC = () => {
               />
             </div>
 
-            {isLoggedIn ? (
-              <div className="flex items-center gap-4">
+            {isLoggedIn && currentUser ? (
+              <div className="flex items-center gap-4 sm:gap-6">
+                <button 
+                  onClick={() => navigate(getDashboardByRole(currentUser.role))}
+                  className="text-[10px] font-black text-zinc-400 hover:text-black uppercase tracking-widest transition-colors cursor-pointer"
+                >
+                  Dashboard
+                </button>
                 <button 
                   onClick={handleLogout}
-                  className="text-[10px] font-black text-zinc-400 hover:text-black uppercase tracking-widest transition-colors"
+                  className="text-[10px] font-black text-zinc-400 hover:text-black uppercase tracking-widest transition-colors cursor-pointer"
                 >
                   Logout
                 </button>
-                <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-bold shadow-lg shadow-black/20">
+                <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-bold shadow-lg shadow-black/20 select-none">
                   USER
                 </div>
               </div>
