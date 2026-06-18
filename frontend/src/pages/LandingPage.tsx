@@ -20,7 +20,6 @@ import { cn } from '../utils/cn';
 import GlobalFooter from '../components/GlobalFooter';
 import EditorialBoardModal from '../components/EditorialBoardModal';
 import PricingModal from '../components/PricingModal';
-import { auth } from '../config/firebase';
 import { useAuth } from '../context/AuthContext';
 import { getDashboardByRole } from '../utils/auth';
 
