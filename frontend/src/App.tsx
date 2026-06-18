@@ -48,7 +48,7 @@ function App() {
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="animate-spin text-zinc-300" size={48} />
           <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
-            {loading ? 'Initializing KMA Portal' : 'Verifying Access'}
+            {loading ? 'Initializing BKMA Portal' : 'Verifying Access'}
           </p>
         </div>
       </div>
@@ -96,7 +96,7 @@ function App() {
             </button>
           </div>
           <p className="text-[10px] text-zinc-400 mt-6 uppercase tracking-wider font-bold">
-            KMA Portal • Access Security
+            BKMA Portal • Access Security
           </p>
         </div>
       </div>

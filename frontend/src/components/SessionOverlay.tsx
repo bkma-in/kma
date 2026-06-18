@@ -107,7 +107,7 @@ const SessionOverlay: React.FC = () => {
             </div>
 
             <p className="text-[10px] text-zinc-400 mt-4 uppercase tracking-wider font-bold">
-              KMA Portal • Session Security
+              BKMA Portal • Session Security
             </p>
           </div>
         </div>
