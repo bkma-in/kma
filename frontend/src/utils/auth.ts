@@ -1,19 +1,19 @@
 export const getDashboardByRole = (role?: string) => {
   switch (role) {
     case "admin":
-      return "/admin/dashboard";
+      return "/admin";
 
     case "reviewer":
-      return "/reviewer/dashboard";
+      return "/reviewer";
 
     case "reader":
-      return "/reader/dashboard";
+      return "/reader";
 
     case "dev":
-      return "/dev/dashboard";
+      return "/dev";
 
     case "author":
-      return "/author/dashboard";
+      return "/author";
 
     default:
       // Unknown or missing role — redirect to login instead of a dashboard
