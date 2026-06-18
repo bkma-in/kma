@@ -20,7 +20,8 @@ import { cn } from '../utils/cn';
 import GlobalFooter from '../components/GlobalFooter';
 import EditorialBoardModal from '../components/EditorialBoardModal';
 import PricingModal from '../components/PricingModal';
-import { auth } from '../config/firebase';
+import { useAuth } from '../context/AuthContext';
+import { getDashboardByRole } from '../utils/auth';
 
 // --- Types ---
 interface Article {
@@ -37,8 +38,9 @@ interface Article {
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isLoggedIn = !!currentUser;
   const [activeArticle, setActiveArticle] = useState<Article | null>(null);
   const [viewState, setViewState] = useState<'landing' | 'paywall' | 'full'>('landing');
   const [purchasedArticles, setPurchasedArticles] = useState<string[]>([]);
@@ -89,18 +91,12 @@ const LandingPage: React.FC = () => {
     };
     window.addEventListener('scroll', handleScroll);
 
-    // Check login status via Firebase
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setIsLoggedIn(!!user);
-    });
-
     // Check purchases
     const purchases = JSON.parse(localStorage.getItem('purchased_articles') || '[]');
     setPurchasedArticles(purchases);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      unsubscribe();
     };
   }, []);
 
@@ -136,17 +132,7 @@ const LandingPage: React.FC = () => {
     }, 2000);
   };
 
-  const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      localStorage.clear();
-      sessionStorage.clear();
-      setViewState('landing');
-      window.location.replace('/auth?mode=login');
-    } catch (error) {
-      console.error('Logout failed', error);
-    }
-  };
+
 
   // --- Render Components ---
 
@@ -316,35 +302,31 @@ const LandingPage: React.FC = () => {
               />
             </div>
 
-            {isLoggedIn ? (
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={handleLogout}
-                  className="text-[10px] font-black text-zinc-400 hover:text-black uppercase tracking-widest transition-colors"
-                >
-                  Logout
-                </button>
-                <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-bold shadow-lg shadow-black/20">
-                  USER
-                </div>
-              </div>
-            ) : (
-              <>
-                <button
-                  onClick={() => navigate('/auth?mode=login')}
-                  className="text-sm sm:text-base font-bold hover:text-zinc-600 transition-colors shrink-0 uppercase tracking-widest"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => navigate('/auth?mode=register')}
-                  className="bg-black text-white text-sm sm:text-base font-black py-3 px-5 sm:py-4 sm:px-10 rounded-xl shadow-2xl shadow-black/20 hover:bg-zinc-800 transition-all active:scale-95 text-center leading-tight sm:leading-normal uppercase tracking-[0.1em] shrink-0"
-                >
-                  <span className="hidden sm:inline">Get Started</span>
-                  <span className="sm:hidden">Get <br /> Started</span>
-                </button>
-              </>
-            )}
+            <button 
+              onClick={() => {
+                if (isLoggedIn && currentUser) {
+                  navigate(getDashboardByRole(currentUser.role));
+                } else {
+                  navigate('/auth?mode=login');
+                }
+              }}
+              className="text-sm sm:text-base font-bold hover:text-zinc-600 transition-colors shrink-0 uppercase tracking-widest cursor-pointer"
+            >
+              Login
+            </button>
+            <button 
+              onClick={() => {
+                if (isLoggedIn && currentUser) {
+                  navigate(getDashboardByRole(currentUser.role));
+                } else {
+                  navigate('/auth?mode=register');
+                }
+              }}
+              className="bg-black text-white text-sm sm:text-base font-black py-3 px-5 sm:py-4 sm:px-10 rounded-xl shadow-2xl shadow-black/20 hover:bg-zinc-800 transition-all active:scale-95 text-center leading-tight sm:leading-normal uppercase tracking-[0.1em] shrink-0 cursor-pointer"
+            >
+              <span className="hidden sm:inline">Get Started</span>
+              <span className="sm:hidden">Get <br /> Started</span>
+            </button>
           </div>
         </div>
       </nav>

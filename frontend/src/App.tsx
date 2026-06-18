@@ -42,6 +42,9 @@ function App() {
   const { currentUser, loading, roleLoading, roleError, refreshRole, logout } = useAuth();
   const navigate = useNavigate();
 
+  const dashboardPath = currentUser ? getDashboardByRole(currentUser.role) : '';
+  const hasValidDashboard = !!currentUser && !dashboardPath.startsWith('/auth');
+
   if (loading || roleLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
@@ -110,10 +113,10 @@ function App() {
       <ConfirmModal />
       <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/auth" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Auth />} />
-          <Route path="/login" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Navigate to="/auth?mode=login" replace />} />
-          <Route path="/signin" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Navigate to="/auth?mode=login" replace />} />
-          <Route path="/register" element={currentUser ? <Navigate to={getDashboardByRole(currentUser.role)} replace /> : <Navigate to="/auth?mode=register" replace />} />
+          <Route path="/auth" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Auth />} />
+          <Route path="/login" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
+          <Route path="/signin" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
+          <Route path="/register" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=register" replace />} />
           <Route path="/invitation/accept/:token" element={<AcceptInvitation />} />
           
           {/* Author Portal Routes */}
