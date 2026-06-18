@@ -215,7 +215,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, profile, o
                          <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">About Me</h3>
                        </div>
                        <p className="text-sm text-zinc-300 leading-relaxed italic">
-                         {formData.bio || "I am an author of KMA"}
+                         {formData.bio || "I am an author of BKMA"}
                        </p>
                     </div>
                  </div>

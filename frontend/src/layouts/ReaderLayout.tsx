@@ -63,7 +63,7 @@ const ReaderLayout = () => {
       e.preventDefault();
       confirm({
         title: 'Feature Locked',
-        message: 'A KMA Reader Subscription is required to access this feature. Would you like to view our plans?',
+        message: 'A BKMA Reader Subscription is required to access this feature. Would you like to view our plans?',
         confirmText: 'View Plans',
         onConfirm: () => navigate('/reader/get-subscription')
       });

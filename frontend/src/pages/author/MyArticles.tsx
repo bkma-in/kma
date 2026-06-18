@@ -596,7 +596,7 @@ const MyArticles = () => {
         {isLoading ? (
           <div className="p-20 text-center flex flex-col items-center gap-4">
             <div className="w-10 h-10 border-4 border-zinc-100 border-t-black rounded-full animate-spin" />
-            <p className="text-zinc-500 font-medium text-sm">Synchronizing with KMA Archive...</p>
+            <p className="text-zinc-500 font-medium text-sm">Synchronizing with BKMA Archive...</p>
           </div>
         ) : filteredArticles.length > 0 ? (
           <div className="overflow-x-auto">

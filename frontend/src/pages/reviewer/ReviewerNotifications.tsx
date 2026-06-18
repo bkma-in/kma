@@ -60,7 +60,7 @@ const ReviewerNotifications = () => {
       id: '4', 
       type: 'alert', 
       title: 'Submission Window Closing', 
-      articleTitle: 'KMA Volume 15 Issue 1',
+      articleTitle: 'BKMA Volume 15 Issue 1',
       message: 'The current submission window for the Global Archive will close in 48 hours.', 
       timestamp: '2 days ago', 
       read: true 

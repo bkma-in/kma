@@ -72,7 +72,7 @@ const DeveloperNotifications = () => {
       id: '5',
       type: 'system',
       title: 'System Maintenance Window',
-      subject: 'KMA Platform — Scheduled Downtime',
+      subject: 'BKMA Platform — Scheduled Downtime',
       message: 'A maintenance window is scheduled for Saturday 02:00–04:00 IST. Backend services will be temporarily unavailable.',
       timestamp: '2 days ago',
       read: true,

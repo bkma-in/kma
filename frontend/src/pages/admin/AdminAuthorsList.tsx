@@ -330,7 +330,7 @@ const AdminAuthorsList = () => {
                       <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">About Me</h3>
                     </div>
                     <p className="text-sm text-zinc-300 leading-relaxed italic">
-                      {selectedAuthor.bio || "I am an author of KMA"}
+                      {selectedAuthor.bio || "I am an author of BKMA"}
                     </p>
                   </div>
                 </div>
