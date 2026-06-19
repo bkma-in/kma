@@ -393,7 +393,7 @@ const AdminArticles = () => {
                             setRejectionError(null);
                             setSelectedReviewersForAssigning([]);
                           }}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-blue-700 transition-all uppercase"
+                          className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase"
                         >
                           Review Submission
                         </button>

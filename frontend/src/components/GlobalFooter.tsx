@@ -56,7 +56,7 @@ const GlobalFooter = ({ showSocials = false, showTaglines = true }: GlobalFooter
           </div>
 
           {/* Developed By (Right) */}
-          <div className="flex flex-col items-center md:items-end gap-2 text-center md:text-right">
+          <div className="flex flex-col items-center gap-2 text-center">
             <h4 className="text-[11px] font-semibold tracking-wider uppercase text-zinc-400">
               Designed And Developed By
             </h4>
