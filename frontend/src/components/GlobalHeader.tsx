@@ -50,7 +50,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             <Menu size={20} />
           </button>
           <div className="w-10 h-10 bg-white rounded-lg p-1.5 shadow-sm flex items-center justify-center overflow-hidden border border-zinc-100">
-            <img src={logo} alt="KMA Logo" className="w-full h-full object-contain" />
+            <img src={logo} alt="BKMA Logo" className="w-full h-full object-contain" />
           </div>
         </div>
 

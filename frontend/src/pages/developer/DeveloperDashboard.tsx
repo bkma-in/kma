@@ -75,7 +75,7 @@ const DeveloperDashboard = () => {
             <span className="text-[10px] font-black uppercase tracking-[0.3em]">Engineering Overview</span>
           </div>
           <h1 className="text-4xl font-bold tracking-tighter text-black">Console Dashboard</h1>
-          <p className="text-zinc-500 text-sm max-w-md">Real-time telemetry and incident reports across the KMA publishing platform.</p>
+          <p className="text-zinc-500 text-sm max-w-md">Real-time telemetry and incident reports across the BKMA publishing platform.</p>
         </div>
       </div>
 

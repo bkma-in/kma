@@ -138,7 +138,7 @@ const Dashboard = () => {
   }));
 
   const notifications = [
-    { message: 'Welcome to the KMA Author Portal!', time: 'Now' },
+    { message: 'Welcome to the BKMA Author Portal!', time: 'Now' },
   ];
 
   return (

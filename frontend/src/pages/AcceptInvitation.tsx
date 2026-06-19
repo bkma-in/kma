@@ -171,7 +171,7 @@ const AcceptInvitation = () => {
               <AlertCircle size={20} className="text-amber-600 shrink-0" />
               <div>
                 <p className="text-sm font-bold text-amber-900 mb-1">Authentication Required</p>
-                <p className="text-xs text-amber-700">You need to sign in to your KMA account to accept this invitation.</p>
+                <p className="text-xs text-amber-700">You need to sign in to your BKMA account to accept this invitation.</p>
               </div>
             </div>
           )}

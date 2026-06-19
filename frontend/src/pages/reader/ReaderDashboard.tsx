@@ -21,7 +21,7 @@ const ReaderDashboard = () => {
   const stats = [
     { label: 'Published Papers', value: '1,248', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Saved Articles', value: isSubscribed ? '12' : '0', icon: Bookmark, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'KMA Volume', value: 'Vol. 42', icon: BookOpen, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'BKMA Volume', value: 'Vol. 42', icon: BookOpen, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Recent Reads', value: isSubscribed ? '4' : '0', icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
 
@@ -37,7 +37,7 @@ const ReaderDashboard = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold text-black tracking-tight font-['Outfit']">Reader Dashboard</h1>
-          <p className="text-zinc-500 mt-1">Explore the latest research in the KMA scholarly archive.</p>
+          <p className="text-zinc-500 mt-1">Explore the latest research in the BKMA scholarly archive.</p>
         </div>
         
         {!isSubscribed && (

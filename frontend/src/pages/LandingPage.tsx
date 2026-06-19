@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  ChevronRight, 
-  BookOpen, 
-  Users, 
-  BadgePercent, 
-  Info, 
-  Mail, 
-  Globe, 
-  Lock, 
-  CheckCircle2, 
+import {
+  Search,
+  ChevronRight,
+  BookOpen,
+  Users,
+  BadgePercent,
+  Info,
+  Mail,
+  Globe,
+  Lock,
+  CheckCircle2,
   Download,
   X,
   CreditCard
@@ -114,14 +114,14 @@ const LandingPage: React.FC = () => {
     } else {
       setViewState('paywall');
     }
-    
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const simulatePayment = () => {
     if (!activeArticle) return;
     setIsPaying(true);
-    
+
     // Simulate payment gateway delay
     setTimeout(() => {
       const newPurchases = [...purchasedArticles, activeArticle.id];
@@ -139,7 +139,7 @@ const LandingPage: React.FC = () => {
   const PaywallScreen = ({ article }: { article: Article }) => (
     <div className="min-h-screen bg-white pt-32 pb-20 px-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="max-w-3xl mx-auto">
-        <button 
+        <button
           onClick={() => setViewState('landing')}
           className="flex items-center gap-2 text-[10px] font-black text-zinc-400 hover:text-black uppercase tracking-widest mb-10 transition-colors"
         >
@@ -148,7 +148,7 @@ const LandingPage: React.FC = () => {
 
         <div className="bg-zinc-50 rounded-[2.5rem] p-10 sm:p-16 border border-zinc-100 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl -mr-32 -mt-32 opacity-50" />
-          
+
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-8">
               <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-white shadow-xl shadow-black/20">
@@ -158,7 +158,7 @@ const LandingPage: React.FC = () => {
             </div>
 
             <h2 className="text-4xl sm:text-5xl font-bold text-black mb-6 tracking-tighter leading-tight">{article.title}</h2>
-            
+
             <div className="space-y-4 mb-12">
               <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Executive Summary</h4>
               <p className="text-zinc-600 text-lg leading-relaxed italic border-l-4 border-zinc-200 pl-6 py-2">
@@ -174,12 +174,12 @@ const LandingPage: React.FC = () => {
               </div>
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-100 flex flex-col justify-center">
                 <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mb-2">Publication</p>
-                <p className="text-sm font-bold text-black">KMA Archive Vol. {article.vol}</p>
+                <p className="text-sm font-bold text-black">BKMA Archive Vol. {article.vol}</p>
                 <p className="text-xs text-zinc-500 mt-1">{article.date}</p>
               </div>
             </div>
 
-            <button 
+            <button
               onClick={simulatePayment}
               disabled={isPaying}
               className="w-full py-5 bg-black text-white rounded-[1.25rem] font-bold text-sm tracking-[0.2em] hover:bg-zinc-800 transition-all shadow-2xl shadow-black/20 active:scale-[0.98] flex items-center justify-center gap-4 disabled:bg-zinc-400"
@@ -196,7 +196,7 @@ const LandingPage: React.FC = () => {
                 </>
               )}
             </button>
-            
+
             <p className="text-center text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-6">
               Secure payment via Razorpay / UPI
             </p>
@@ -210,7 +210,7 @@ const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-white pt-32 pb-20 px-6 animate-in fade-in duration-1000">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-12">
-          <button 
+          <button
             onClick={() => setViewState('landing')}
             className="flex items-center gap-2 text-[10px] font-black text-zinc-400 hover:text-black uppercase tracking-widest transition-colors"
           >
@@ -259,13 +259,13 @@ const LandingPage: React.FC = () => {
             <p>{article.fullContent}</p>
             <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
             <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-            
+
             <div className="py-12 flex justify-center">
               <div className="w-24 h-1 bg-zinc-100 rounded-full" />
             </div>
 
             <h3 className="text-2xl font-bold text-black font-sans uppercase tracking-widest">2. Methodology</h3>
-            <p>The methodology employed in this study follows the standardized KMA protocol for topological analysis. Data was collected over a 12-month period across multiple mathematical models.</p>
+            <p>The methodology employed in this study follows the standardized BKMA protocol for topological analysis. Data was collected over a 12-month period across multiple mathematical models.</p>
           </div>
         </div>
       </div>
@@ -278,29 +278,26 @@ const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white font-sans text-black selection:bg-black selection:text-white animate-in fade-in duration-700">
       {/* Navigation */}
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 px-4 sm:px-6 py-4 lg:py-6 ${
-        isScrolled 
-          ? "bg-white/70 backdrop-blur-lg border-b border-zinc-200 py-3 shadow-sm" 
-          : "bg-white border-b border-zinc-100 py-4 lg:py-6"
-      }`}>
-        <div className="max-w-[1440px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-3">
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 px-4 sm:px-6 py-4 lg:py-6 ${isScrolled
+        ? "bg-white/70 backdrop-blur-lg border-b border-zinc-200 py-3 shadow-sm"
+        : "bg-white border-b border-zinc-100 py-4 lg:py-6"
+        }`}>
+        <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-4 lg:gap-6">
+          <div className="flex items-center gap-3 sm:gap-4 lg:gap-5 shrink-0">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-xl shadow-black/5 overflow-hidden border border-zinc-100">
-              <img src={logo} alt="KMA Logo" className="w-full h-full object-contain" />
+              <img src={logo} alt="BKMA Logo" className="w-full h-full object-contain" />
             </div>
-            <h1 className="font-['Playfair_Display'] font-black text-lg sm:text-4xl leading-[1.1] sm:leading-tight tracking-[-0.03em] flex flex-col sm:block">
-              <span className="sm:inline">Kerala</span>
-              <span className="sm:inline"> Mathematical</span>
-              <span className="sm:inline"> Association</span>
+            <h1 className="font-['Playfair_Display'] font-black text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl leading-[1.1] sm:leading-tight tracking-[-0.01em] [word-spacing:0.18em] block lg:whitespace-nowrap">
+              Bulletin Of Kerala Mathematical Association
             </h1>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-6">
-            <div className="hidden sm:flex items-center bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-3.5 focus-within:ring-2 focus-within:ring-black/5 transition-all w-64 lg:w-96 shadow-inner">
+          <div className="flex items-center gap-3 sm:gap-4 md:gap-5 lg:gap-6 xl:gap-8">
+            <div className="hidden sm:flex items-center bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-3 sm:py-4 focus-within:ring-2 focus-within:ring-black/5 transition-all w-36 sm:w-40 md:w-44 lg:w-48 xl:w-64 shadow-inner shrink-0">
               <Search size={20} className="text-zinc-400 shrink-0" />
-              <input 
-                type="text" 
-                placeholder="search for research papers..." 
+              <input
+                type="text"
+                placeholder="search for research papers..."
                 className="bg-transparent border-none focus:ring-0 text-base placeholder:text-zinc-400 ml-3 w-full outline-none font-medium"
               />
             </div>
@@ -325,7 +322,7 @@ const LandingPage: React.FC = () => {
                   navigate('/auth?mode=register');
                 }
               }}
-              className="bg-black text-white text-sm sm:text-base font-black py-3 px-5 sm:py-4 sm:px-10 rounded-xl shadow-2xl shadow-black/20 hover:bg-zinc-800 transition-all active:scale-95 text-center leading-tight sm:leading-normal uppercase tracking-[0.1em] cursor-pointer"
+              className="bg-black text-white text-sm sm:text-base font-black py-3 px-5 sm:py-4 sm:px-10 rounded-xl shadow-2xl shadow-black/20 hover:bg-zinc-800 transition-all active:scale-95 text-center leading-tight sm:leading-normal uppercase tracking-[0.1em] shrink-0 cursor-pointer"
             >
               <span className="hidden sm:inline">Get Started</span>
               <span className="sm:hidden">Get <br /> Started</span>
@@ -352,7 +349,7 @@ const LandingPage: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="text-white font-bold text-sm tracking-wide mb-1 flex items-center gap-2">
-                       REVIEWER NOTICE
+                      REVIEWER NOTICE
                     </h4>
                     <p className="text-zinc-500 text-sm leading-relaxed">
                       Reviewer accounts require admin approval. You will be able to log in only after your account has been approved.
@@ -430,13 +427,13 @@ const LandingPage: React.FC = () => {
                     </div>
                     <span className="text-[10px] font-bold text-zinc-400">{art.date}</span>
                   </div>
-                  
-                  <button 
+
+                  <button
                     onClick={() => handleReadFull(art)}
                     className={cn(
                       "w-full py-3 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 group",
-                      purchasedArticles.includes(art.id) 
-                        ? "bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100" 
+                      purchasedArticles.includes(art.id)
+                        ? "bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100"
                         : "bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10"
                     )}
                   >
@@ -458,14 +455,14 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto">
           {/* Main Footer Content Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 mb-12">
-            
+
             {/* Column 1: Branding */}
             <div className="lg:col-span-2 space-y-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1.5 shadow-xl shadow-white/5 overflow-hidden">
-                  <img src={logo} alt="KMA Logo" className="w-full h-full object-contain" />
+                  <img src={logo} alt="BKMA Logo" className="w-full h-full object-contain" />
                 </div>
-                <h1 className="font-['Playfair_Display'] font-black text-xl tracking-[-0.02em]">Kerala Mathematical Association</h1>
+                <h1 className="font-['Playfair_Display'] font-black text-xl tracking-[-0.02em]"> Bulletin Of Kerala Mathematical Association</h1>
               </div>
               <p className="text-zinc-500 text-[11px] leading-relaxed max-w-sm">
                 Advancing mathematical research and higher education through global collaboration and peer-reviewed scholarly excellence.
@@ -495,7 +492,7 @@ const LandingPage: React.FC = () => {
               <ul className="space-y-2.5">
                 {['Pricing', 'How it Works', 'Unlock Guide', 'Editorial Board'].map(link => (
                   <li key={link}>
-                    <button 
+                    <button
                       onClick={() => {
                         if (link === 'Editorial Board') setIsEditorialBoardOpen(true);
                         if (link === 'Pricing') setIsPricingOpen(true);
@@ -533,13 +530,13 @@ const LandingPage: React.FC = () => {
         </div>
       </footer>
 
-      <EditorialBoardModal 
-        isOpen={isEditorialBoardOpen} 
-        onClose={() => setIsEditorialBoardOpen(false)} 
+      <EditorialBoardModal
+        isOpen={isEditorialBoardOpen}
+        onClose={() => setIsEditorialBoardOpen(false)}
       />
-      <PricingModal 
-        isOpen={isPricingOpen} 
-        onClose={() => setIsPricingOpen(false)} 
+      <PricingModal
+        isOpen={isPricingOpen}
+        onClose={() => setIsPricingOpen(false)}
       />
     </div>
   );

@@ -378,7 +378,7 @@ const SubmitArticle = () => {
         </div>
         <h1 className="text-4xl font-bold text-black mb-3 tracking-tighter font-['Outfit']">Manuscript Received!</h1>
         <p className="text-zinc-500 max-w-sm mx-auto mb-10 leading-relaxed">
-          Your research has been successfully submitted to the KMA Peer-Review Engine. You can monitor its progress in your dashboard.
+          Your research has been successfully submitted to the BKMA Peer-Review Engine. You can monitor its progress in your dashboard.
         </p>
         <div className="flex gap-4">
           <button 
@@ -884,7 +884,7 @@ const SubmitArticle = () => {
                           I certify that this research is original and anonymized.
                         </span>
                         <p className={cn("text-[10px] leading-relaxed", errors.termsAccepted ? "text-rose-500" : "text-zinc-500")}>
-                          By checking this box, you confirm that the manuscript adheres to KMA Peer-Review standards and has not been published elsewhere.
+                          By checking this box, you confirm that the manuscript adheres to BKMA Peer-Review standards and has not been published elsewhere.
                         </p>
                         {errors.termsAccepted && (
                           <p className="mt-2 text-[9px] font-black text-rose-600 uppercase tracking-widest flex items-center gap-1 animate-pulse">
@@ -994,7 +994,7 @@ const SubmitArticle = () => {
                 </div>
                 <div>
                   <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest leading-none mb-1">Registry Email</p>
-                  <p className="text-sm font-bold text-black">{profile?.email || localStorage.getItem('userEmail') || 'research@kma.org'}</p>
+                  <p className="text-sm font-bold text-black">{profile?.email || localStorage.getItem('userEmail') || 'research@bkma.org'}</p>
                 </div>
               </div>
             </div>

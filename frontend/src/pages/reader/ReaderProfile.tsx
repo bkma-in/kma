@@ -105,7 +105,7 @@ const ReaderProfile = () => {
               </div>
               <div className="space-y-1.5">
                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Membership ID</p>
-                <p className="text-black font-bold tracking-tight">KMA-MEM-402</p>
+                <p className="text-black font-bold tracking-tight">BKMA-MEM-402</p>
               </div>
             </div>
           </div>

@@ -57,7 +57,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
         {/* Header */}
         <header className="mb-8 sm:mb-10 text-center md:text-left">
           <h2 className="text-2xl sm:text-3xl font-bold text-black mb-1.5 font-['Outfit']">Welcome Back</h2>
-          <p className="text-zinc-500 text-sm">Log in to your KMA account</p>
+          <p className="text-zinc-500 text-sm">Log in to your BKMA account</p>
         </header>
 
         <form className="space-y-6" onSubmit={handleLogin}>

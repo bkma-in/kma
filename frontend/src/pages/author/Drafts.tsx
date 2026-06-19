@@ -101,7 +101,7 @@ const Drafts = () => {
             <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase font-['Outfit']">Personal Workspace</h2>
           </div>
           <h1 className="text-4xl font-bold tracking-tighter text-black font-['Outfit']">Saved Drafts</h1>
-          <p className="text-zinc-500 mt-2 text-sm leading-relaxed max-w-xl">Review and complete your pending manuscripts before final submission to the KMA Archive.</p>
+          <p className="text-zinc-500 mt-2 text-sm leading-relaxed max-w-xl">Review and complete your pending manuscripts before final submission to the BKMA Archive.</p>
         </div>
 
         <NavLink 

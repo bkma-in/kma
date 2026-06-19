@@ -28,7 +28,7 @@ const ReviewerArticles = () => {
   const { showToast } = useNotification();
   const [articles, setArticles] = useState<Article[]>([
     { 
-      id: 'KMA-2024-002', 
+      id: 'BKMA-2024-002', 
       title: 'Advanced Cryptography Protocols in Quantum Systems', 
       author: 'Michael Chang', 
       assignedDate: '2024-03-15', 
@@ -37,7 +37,7 @@ const ReviewerArticles = () => {
       selectedStatus: ''
     },
     { 
-      id: 'KMA-2024-006', 
+      id: 'BKMA-2024-006', 
       title: 'Neural Networks in Modern Diagnostic Medicine', 
       author: 'Dr. Sarah Jenkins', 
       assignedDate: '2024-03-18', 
@@ -46,7 +46,7 @@ const ReviewerArticles = () => {
       selectedStatus: ''
     },
     { 
-      id: 'KMA-2024-010', 
+      id: 'BKMA-2024-010', 
       title: 'Topological Data Analysis in Social Networks', 
       author: 'Prof. Elena Sterling', 
       assignedDate: '2024-03-10', 
