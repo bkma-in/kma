@@ -28,6 +28,11 @@ import DeveloperNotifications from './pages/developer/DeveloperNotifications';
 import AcceptInvitation from './pages/AcceptInvitation';
 import ProtectedRoute from './components/ProtectedRoute';
 import SessionOverlay from './components/SessionOverlay';
+import AboutUs from './pages/AboutUs';
+import RefundPolicy from './pages/RefundPolicy';
+import TermsAndConditions from './pages/TermsAndConditions';
+import PricingPage from './pages/PricingPage';
+import ServiceDescription from './pages/ServiceDescription';
 
 // Reader Portal Imports
 import ReaderLayout from './layouts/ReaderLayout';
@@ -113,6 +118,13 @@ function App() {
       <ConfirmModal />
       <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/about-us" element={<AboutUs />} />
+          <Route path="/refund-policy" element={<RefundPolicy />} />
+          <Route path="/refund-cancellation-policy" element={<Navigate to="/refund-policy" replace />} />
+          <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+          <Route path="/terms" element={<Navigate to="/terms-and-conditions" replace />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/service-description" element={<ServiceDescription />} />
           <Route path="/auth" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Auth />} />
           <Route path="/login" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
           <Route path="/signin" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
