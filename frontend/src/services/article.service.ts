@@ -5,6 +5,11 @@ export const getArticles = async () => {
   return response.data;
 };
 
+export const getPublishedArticles = async () => {
+  const response = await api.get('/articles/published');
+  return response.data;
+};
+
 export const deleteArticle = async (id: string) => {
   const response = await api.delete(`/articles/${id}`);
   return response.data;
@@ -39,7 +44,7 @@ export const assignReviewers = async (id: string, reviewerIds: string[], reviewe
   return response.data;
 };
 
-export const updateArticleStatus = async (id: string, status: string, extraData?: { rejectionReason?: string; adminNote?: string }) => {
+export const updateArticleStatus = async (id: string, status: string, extraData?: { rejectionReason?: string; adminNote?: string; remarks?: string; recommendation?: string; reviewedFile?: any }) => {
   const response = await api.patch(`/articles/${id}/status`, { status, ...extraData });
   return response.data;
 };
