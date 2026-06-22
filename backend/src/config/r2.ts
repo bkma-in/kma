@@ -3,7 +3,7 @@ import { config } from './env';
 
 export const s3Client = new S3Client({
   region: 'auto',
-  endpoint: `https://${config.r2.accountId}.r2.cloudflarestorage.com`,
+  endpoint: config.r2.endpoint || `https://${config.r2.accountId}.r2.cloudflarestorage.com`,
   credentials: {
     accessKeyId: config.r2.accessKeyId,
     secretAccessKey: config.r2.secretAccessKey,
