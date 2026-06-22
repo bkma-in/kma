@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Search,
   ChevronRight,
@@ -464,7 +464,12 @@ const LandingPage: React.FC = () => {
                 Advancing mathematical research and higher education through global collaboration and peer-reviewed scholarly excellence.
               </p>
               <div className="flex gap-4">
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">About Us</button>
+                <Link 
+                  to="/about-us"
+                  className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md flex items-center justify-center"
+                >
+                  About Us
+                </Link>
                 <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Guidelines</button>
                 <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Archives</button>
               </div>
@@ -476,7 +481,13 @@ const LandingPage: React.FC = () => {
               <ul className="space-y-2.5">
                 {['Publication', 'Review Guidelines', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
                   <li key={link}>
-                    <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
+                    {link === 'Refund/Cancellation Policy' ? (
+                      <Link to="/refund-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : (
+                      <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -486,22 +497,32 @@ const LandingPage: React.FC = () => {
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Access</h4>
               <ul className="space-y-2.5">
-                {['Pricing', 'How it Works', 'Unlock Guide', 'Editorial Board'].map(link => (
+                {['Pricing', 'How it Works', 'Service Description', 'Editorial Board', 'Terms & Conditions'].map(link => (
                   <li key={link}>
-                    <button
-                      onClick={() => {
-                        if (link === 'Editorial Board') setIsEditorialBoardOpen(true);
-                        if (link === 'Pricing') setIsPricingOpen(true);
-                      }}
-                      className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
-                    >
-                      {link}
-                    </button>
+                    {link === 'Terms & Conditions' ? (
+                      <Link to="/terms" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : link === 'Pricing' ? (
+                      <Link to="/pricing" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : link === 'Service Description' ? (
+                      <Link to="/service-description" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (link === 'Editorial Board') setIsEditorialBoardOpen(true);
+                        }}
+                        className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
+                      >
+                        {link}
+                      </button>
+                    )}
                   </li>
                 ))}
-                <li>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-700 italic">Institutional</span>
-                </li>
               </ul>
             </div>
 
