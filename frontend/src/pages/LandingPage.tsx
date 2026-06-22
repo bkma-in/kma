@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   Download,
   X,
-  CreditCard
+  CreditCard,
+  Loader2
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { cn } from '../utils/cn';
@@ -22,6 +23,7 @@ import EditorialBoardModal from '../components/EditorialBoardModal';
 import PricingModal from '../components/PricingModal';
 import { useAuth } from '../context/AuthContext';
 import { getDashboardByRole } from '../utils/auth';
+import { getPublishedArticles } from '../services/article.service';
 
 // --- Types ---
 interface Article {
@@ -48,42 +50,24 @@ const LandingPage: React.FC = () => {
   const [isEditorialBoardOpen, setIsEditorialBoardOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
 
-  // Mock Articles Data
-  const articles: Article[] = [
-    {
-      id: 'ART-001',
-      tag: 'Topology',
-      vol: '42',
-      title: 'On the Homotopy Type of Certain Spaces',
-      author: 'Dr. S. Raman',
-      date: 'OCT 2023',
-      abstract: 'An exploration of the properties of spaces derived from complex algebraic varieties and their fundamental groups. This research identifies new topological invariants using persistent homology techniques.',
-      fullContent: 'The fundamental group of a complex algebraic variety is a powerful invariant... [Full research content detailing the mathematical proofs and topological classifications across 24 pages of rigorous analysis].',
-      pdfAvailable: true
-    },
-    {
-      id: 'ART-002',
-      tag: 'Number Theory',
-      vol: '42',
-      title: 'Prime Distribution in Arithmetic Progressions',
-      author: 'M. Nair',
-      date: 'SEP 2023',
-      abstract: 'A deep dive into the distribution patterns of prime numbers within specific arithmetic progression sequences, refining the Dirichlet Theorem estimates.',
-      fullContent: 'Consider the sequence {a + nd}... [Full research content detailing the distribution of primes in arithmetic progressions with refined error terms and computational results].',
-      pdfAvailable: true
-    },
-    {
-      id: 'ART-003',
-      tag: 'Applied Math',
-      vol: '41',
-      title: 'Fluid Dynamics in Porous Media',
-      author: 'A. K. Menon',
-      date: 'JUN 2023',
-      abstract: 'Investigating the flow of viscous fluids through porous materials using non-linear differential equations to model industrial filtration processes.',
-      fullContent: 'The Darcy-Forchheimer equation provides a model... [Full research content detailing the non-linear fluid dynamics simulations and experimental validations in multi-layered porous structures].',
-      pdfAvailable: true
-    }
-  ];
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPublished = async () => {
+      try {
+        const res = await getPublishedArticles();
+        if (res.success) {
+          setArticles(res.articles);
+        }
+      } catch (err) {
+        console.error('Failed to load published articles:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPublished();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -406,47 +390,59 @@ const LandingPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {articles.map((art, i) => (
-              <div key={i} className="bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col">
-                <div className="flex gap-3 mb-6">
-                  <span className="bg-black text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">{art.tag}</span>
-                  <span className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest pt-1">VOL. {art.vol}</span>
-                </div>
-                <h3 className="text-2xl font-bold mb-4 leading-tight min-h-[4rem]">{art.title}</h3>
-                <p className="text-zinc-500 text-sm mb-8 leading-relaxed line-clamp-3">
-                  {art.abstract}
-                </p>
-                <div className="mt-auto">
-                  <div className="flex items-center justify-between mb-6 pt-6 border-t border-zinc-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
-                        <Users size={14} />
-                      </div>
-                      <span className="text-sm font-bold">{art.author}</span>
-                    </div>
-                    <span className="text-[10px] font-bold text-zinc-400">{art.date}</span>
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="animate-spin text-zinc-300" size={32} />
+            </div>
+          ) : articles.length === 0 ? (
+            <div className="text-center py-20 bg-white border border-zinc-200 rounded-[2rem] p-10 flex flex-col items-center justify-center gap-4">
+              <BookOpen size={48} className="text-zinc-300 animate-pulse" />
+              <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No published articles available</h3>
+              <p className="text-sm text-zinc-500 max-w-sm">There are no peer-reviewed articles published in the archives yet. Please check back later.</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-8">
+              {articles.map((art, i) => (
+                <div key={i} className="bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col">
+                  <div className="flex gap-3 mb-6">
+                    <span className="bg-black text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">{art.tag}</span>
+                    <span className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest pt-1">VOL. {art.vol}</span>
                   </div>
+                  <h3 className="text-2xl font-bold mb-4 leading-tight min-h-[4rem]">{art.title}</h3>
+                  <p className="text-zinc-500 text-sm mb-8 leading-relaxed line-clamp-3">
+                    {art.abstract}
+                  </p>
+                  <div className="mt-auto">
+                    <div className="flex items-center justify-between mb-6 pt-6 border-t border-zinc-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+                          <Users size={14} />
+                        </div>
+                        <span className="text-sm font-bold">{art.author}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-zinc-400">{art.date}</span>
+                    </div>
 
-                  <button
-                    onClick={() => handleReadFull(art)}
-                    className={cn(
-                      "w-full py-3 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 group",
-                      purchasedArticles.includes(art.id)
-                        ? "bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100"
-                        : "bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10"
-                    )}
-                  >
-                    {purchasedArticles.includes(art.id) ? (
-                      <>READ FULL ARTICLE <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" /></>
-                    ) : (
-                      <>UNLOCK ARTICLE <Lock size={12} /></>
-                    )}
-                  </button>
+                    <button
+                      onClick={() => handleReadFull(art)}
+                      className={cn(
+                        "w-full py-3 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 group",
+                        purchasedArticles.includes(art.id)
+                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100"
+                          : "bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10"
+                      )}
+                    >
+                      {purchasedArticles.includes(art.id) ? (
+                        <>READ FULL ARTICLE <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" /></>
+                      ) : (
+                        <>UNLOCK ARTICLE <Lock size={12} /></>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
