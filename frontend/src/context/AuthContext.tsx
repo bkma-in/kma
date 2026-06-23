@@ -6,7 +6,6 @@ import type { Role } from '../utils/validation';
 import api from '../services/api';
 
 // ─── Constants ───────────────────────────────────────────────────────
-const SESSION_WARNING_MS = 50 * 60 * 1000; // 50 minutes — warn before the ~55-min token refresh
 const ROLE_CACHE_KEY = '__kma_cached_role';
 const NAME_CACHE_KEY = '__kma_cached_name';
 const MAX_RETRY = 3;
@@ -19,11 +18,9 @@ interface AuthContextType {
   loading: boolean;       // true until Firebase Auth SDK has initialized
   roleLoading: boolean;   // true while role is being fetched/verified from backend
   sessionExpired: boolean; // true when auth is lost (user must re-login)
-  showRefreshNotice: boolean; // true when ~55 min approaches — tells user to refresh
   roleError: string | null;  // error message when role verification fails
   logout: () => Promise<void>;
   refreshRole: () => Promise<void>;
-  dismissRefreshNotice: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,30 +57,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);        // Auth SDK init
   const [roleLoading, setRoleLoading] = useState(false); // Role verification
   const [sessionExpired, setSessionExpired] = useState(false);
-  const [showRefreshNotice, setShowRefreshNotice] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
 
-  const sessionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialAuthCheck = useRef(true);
-
-  // ─── Start session timer ──────────────────────────────────────────
-  const startSessionTimer = useCallback(() => {
-    // Clear any existing timer
-    if (sessionTimerRef.current) {
-      clearTimeout(sessionTimerRef.current);
-    }
-    // After ~50 minutes, show the refresh notification
-    sessionTimerRef.current = setTimeout(() => {
-      console.log('[AuthContext] Session approaching token refresh window. Showing refresh notice.');
-      setShowRefreshNotice(true);
-    }, SESSION_WARNING_MS);
-    console.log('[AuthContext] Session timer started. Will notify in ~50 minutes.');
-  }, []);
-
-  // ─── Dismiss refresh notice ──────────────────────────────────────
-  const dismissRefreshNotice = useCallback(() => {
-    setShowRefreshNotice(false);
-  }, []);
 
   // ─── Fetch and set role (idempotent, never defaults to reader) ────
   const loadRole = useCallback(async (user: User, isTokenRefresh = false) => {
@@ -119,8 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { ...user, role, name };
       });
 
-      // Reset session timer on successful role fetch
-      startSessionTimer();
       setSessionExpired(false);
     } catch (error: any) {
       console.error(`[AUTH-DIAGNOSTIC] ❌ Role retrieval/verification failed for UID: ${user.uid}:`, error);
@@ -129,7 +103,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // On token-refresh failure: DO NOT overwrite the role in active session.
         // Keep the existing role and show refresh notice instead.
         console.warn('[AUTH-DIAGNOSTIC] Token refresh role lookup failed. Retaining active session role.');
-        setShowRefreshNotice(true);
         return;
       }
 
@@ -140,7 +113,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (cachedRole && VALID_ROLES.includes(cachedRole)) {
         console.log(`[AUTH-DIAGNOSTIC] Using cached role: "${cachedRole}" for UID: ${user.uid}`);
         setCurrentUser({ ...user, role: cachedRole, name: cachedName || user.displayName || user.email?.split('@')[0] || 'User' });
-        setShowRefreshNotice(true); // Notify user there was a connection/refresh issue
       } else {
         // No cache, no backend — user has failed role verification
         console.error('[AUTH-DIAGNOSTIC] ❌ No valid cached role available and backend verification failed. Setting role error.');
@@ -150,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setRoleLoading(false);
       console.log(`[AUTH-DIAGNOSTIC] loadRole completed for UID: ${user.uid}`);
     }
-  }, [startSessionTimer]);
+  }, []);
 
   // ─── Firebase Auth State Listener ──────────────────────────────────
   useEffect(() => {
@@ -170,10 +142,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSessionExpired(true);
         }
         setCurrentUser(null);
-        // Clear session timer
-        if (sessionTimerRef.current) {
-          clearTimeout(sessionTimerRef.current);
-        }
       }
 
       isInitialAuthCheck.current = false;
@@ -183,9 +151,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       console.log('[AUTH-DIAGNOSTIC] Unsubscribing onAuthStateChanged listener');
       unsubscribeAuth();
-      if (sessionTimerRef.current) {
-        clearTimeout(sessionTimerRef.current);
-      }
     };
   }, [loadRole]);
 
@@ -220,7 +185,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const user = auth.currentUser;
     if (user) {
       console.log('[AUTH-DIAGNOSTIC] Manual role refresh triggered');
-      setShowRefreshNotice(false);
       await loadRole(user, false);
     }
   }, [loadRole]);
@@ -238,10 +202,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentUser(null);
       setSessionExpired(false);
       setRoleError(null);
-      setShowRefreshNotice(false);
-      if (sessionTimerRef.current) {
-        clearTimeout(sessionTimerRef.current);
-      }
       console.log('[AUTH-DIAGNOSTIC] Logout complete. All auth data and local caches cleared.');
     } catch (error) {
       console.error('[AUTH-DIAGNOSTIC] ❌ Error signing out:', error);
@@ -255,11 +215,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading,
       roleLoading,
       sessionExpired,
-      showRefreshNotice,
       roleError,
       logout,
-      refreshRole,
-      dismissRefreshNotice
+      refreshRole
     }}>
       {children}
     </AuthContext.Provider>

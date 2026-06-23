@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { db } from '../config/firebase';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/authMiddleware';
 import { upload } from '../middleware/uploadMiddleware';
-import { uploadPdfToR2, getSignedPdfUrl } from '../services/storageService';
+import { uploadPdfToR2, getSignedPdfUrl, deletePdfFromR2 } from '../services/storageService';
 
 import { uploadImage, deleteImage } from '../services/cloudinaryService';
 
@@ -286,6 +286,28 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
       await deleteImage(article.thumbnailPublicId);
     }
 
+    // Cleanup PDF from R2
+    if (article.pdfUrl) {
+      try {
+        await deletePdfFromR2(article.pdfUrl);
+      } catch (err: any) {
+        console.error(`[ROUTE-CLEANUP] Failed to delete main PDF ${article.pdfUrl} from R2:`, err.message || err);
+      }
+    }
+
+    // Cleanup PDFs in revisionHistory from R2
+    if (Array.isArray(article.revisionHistory)) {
+      for (const rev of article.revisionHistory) {
+        if (rev.pdfUrl) {
+          try {
+            await deletePdfFromR2(rev.pdfUrl);
+          } catch (err: any) {
+            console.error(`[ROUTE-CLEANUP] Failed to delete revision PDF ${rev.pdfUrl} from R2:`, err.message || err);
+          }
+        }
+      }
+    }
+
     await articleRef.delete();
     res.json({ success: true, message: 'Article deleted successfully' });
 
@@ -295,9 +317,35 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// Get Signed PDF URL (requires active subscription for reader)
-router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
-// ... (rest of the file remains the same)
+// Get Published Articles (Public endpoint)
+router.get('/published', async (req, res) => {
+  try {
+    const snapshot = await db.collection('articles').where('status', '==', 'accepted').get();
+    const articles = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: data.articleId,
+        title: data.title,
+        abstract: data.abstract,
+        author: data.authors && data.authors.length > 0 ? data.authors[0].name : 'Anonymous Author',
+        createdAt: data.createdAt,
+        issueId: data.issueId,
+        vol: data.volume || 1,
+        date: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleDateString() : 'Recent',
+        tag: data.tag || 'Scholarly',
+        pdfAvailable: !!data.pdfUrl,
+        fullContent: data.abstract // fallback content
+      };
+    });
+    res.json({ success: true, articles });
+  } catch (error) {
+    console.error('Get published articles error:', error);
+    res.status(500).json({ error: 'Failed to retrieve published articles' });
+  }
+});
+
+// Get Single Article Details (with strict role-based access control)
+router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
     const { role, uid } = req.user!;
@@ -311,8 +359,130 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
 
     // Access control check
     let hasAccess = false;
-    if (['admin', 'reviewer'].includes(role)) hasAccess = true;
-    if (role === 'author' && article.authorId === uid) hasAccess = true;
+    if (role === 'admin') hasAccess = true;
+    
+    if (role === 'reviewer') {
+      const isAssigned = (Array.isArray(article.reviewerIds) && article.reviewerIds.includes(uid)) || (article.reviewerId === uid);
+      if (isAssigned) {
+        hasAccess = true;
+      } else {
+        return res.status(403).json({ error: 'Article not assigned to you' });
+      }
+    }
+
+    if (role === 'author') {
+      const isParticipant = article.authorId === uid || (Array.isArray(article.participantIds) && article.participantIds.includes(uid));
+      if (isParticipant) {
+        hasAccess = true;
+      } else {
+        return res.status(403).json({ error: 'Forbidden: You are not an author of this article' });
+      }
+    }
+
+    if (role === 'reader') {
+      if (article.status !== 'accepted' || !article.issueId) {
+         return res.status(403).json({ error: 'Article not published yet' });
+      }
+
+      // Check subscription
+      const subQuery = await db.collection('subscriptions')
+        .where('userId', '==', uid)
+        .where('issueId', '==', article.issueId)
+        .where('status', '==', 'active')
+        .limit(1)
+        .get();
+
+      if (!subQuery.empty) {
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Forbidden: Requires active subscription for this issue' });
+    }
+
+    // Sanitize metadata (double-blind reviewer stripping)
+    const sanitized = { ...article };
+    if (role === 'reviewer') {
+      delete sanitized.authorId;
+      delete sanitized.authors;
+      delete sanitized.participantIds;
+      if (sanitized.author) {
+        sanitized.author = 'Anonymous Author';
+      }
+      if (sanitized.reviews) {
+        sanitized.reviewerFeedback = sanitized.reviews[uid] || null;
+        delete sanitized.reviews;
+      }
+    } else if (role === 'author') {
+      delete sanitized.reviewerId;
+      delete sanitized.reviewerIds;
+      delete sanitized.assignedReviewers;
+      
+      if (sanitized.reviews) {
+        const anonymousReviews: any = {};
+        let idx = 1;
+        for (const key of Object.keys(sanitized.reviews)) {
+          const review = sanitized.reviews[key];
+          anonymousReviews[`Reviewer ${idx}`] = {
+            remarks: review.remarks,
+            recommendation: review.recommendation,
+            reviewedFile: review.reviewedFile,
+            updatedAt: review.updatedAt
+          };
+          idx++;
+        }
+        sanitized.reviews = anonymousReviews;
+      }
+      if (sanitized.reviewerFeedback) {
+        sanitized.reviewerFeedback = {
+          remarks: sanitized.reviewerFeedback.remarks,
+          recommendation: sanitized.reviewerFeedback.recommendation
+        };
+      }
+    }
+
+    res.json({ success: true, article: sanitized });
+  } catch (error) {
+    console.error('Get article error:', error);
+    res.status(500).json({ error: 'Failed to retrieve article details' });
+  }
+});
+
+// Get Signed PDF URL (requires active subscription for reader)
+router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const id = req.params.id as string;
+    const { role, uid } = req.user!;
+
+    const articleDoc = await db.collection('articles').doc(id).get();
+    if (!articleDoc.exists) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    const article = articleDoc.data()!;
+
+    // Access control check
+    let hasAccess = false;
+    if (role === 'admin') hasAccess = true;
+
+    if (role === 'reviewer') {
+      const isAssigned = (Array.isArray(article.reviewerIds) && article.reviewerIds.includes(uid)) || (article.reviewerId === uid);
+      if (isAssigned) {
+        hasAccess = true;
+      } else {
+        return res.status(403).json({ error: 'Article not assigned to you' });
+      }
+    }
+
+    if (role === 'author') {
+      const isParticipant = article.authorId === uid || (Array.isArray(article.participantIds) && article.participantIds.includes(uid));
+      if (isParticipant) {
+        hasAccess = true;
+      } else {
+        return res.status(403).json({ error: 'Forbidden: You are not an author of this article' });
+      }
+    }
 
     if (role === 'reader') {
       if (article.status !== 'accepted' || !article.issueId) {
@@ -465,6 +635,14 @@ router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
       updateData.status = status;
 
       if (pdfFile) {
+        // Delete old draft PDF from R2 to prevent orphaned storage objects
+        if (article.pdfUrl) {
+          try {
+            await deletePdfFromR2(article.pdfUrl);
+          } catch (err: any) {
+            console.error(`[ROUTE-CLEANUP] Failed to delete old draft PDF ${article.pdfUrl} from R2:`, err.message || err);
+          }
+        }
         const objectKey = await uploadPdfToR2(pdfFile.buffer, pdfFile.originalname, authorId);
         updateData.pdfUrl = objectKey;
         updateData.pdfName = pdfFile.originalname;
