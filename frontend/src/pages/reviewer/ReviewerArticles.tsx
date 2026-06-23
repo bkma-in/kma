@@ -81,6 +81,12 @@ const ReviewerArticles = () => {
     ));
   };
 
+  const handleRemarksChange = (id: string, remarks: string) => {
+    setArticles(prev => prev.map(art => 
+      art.articleId === id ? { ...art, remarks } : art
+    ));
+  };
+
   const handleSubmit = async (id: string) => {
     const article = articles.find(a => a.articleId === id);
     if (!article || !article.selectedStatus) {
@@ -90,15 +96,22 @@ const ReviewerArticles = () => {
 
     setSubmittingId(id);
     try {
+      const remarksText = article.remarks || 'Reviewed via peer assessment portal.';
       // Send the status update to the backend PATCH /:id/status route
       const response = await updateArticleStatus(id, 'under_review', {
-        remarks: 'Reviewed via peer assessment portal.',
+        remarks: remarksText,
         recommendation: article.selectedStatus
       });
 
       if (response.success) {
         setArticles(prev => prev.map(art => 
-          art.articleId === id ? { ...art, reviewerFeedback: { recommendation: article.selectedStatus } } : art
+          art.articleId === id ? { 
+            ...art, 
+            reviewerFeedback: { 
+              recommendation: article.selectedStatus,
+              remarks: remarksText
+            } 
+          } : art
         ));
         setSuccessMessage('Review submitted successfully');
         setTimeout(() => setSuccessMessage(null), 3000);
@@ -259,7 +272,7 @@ const ReviewerArticles = () => {
                     </td>
                     <td className="px-8 py-8">
                       {!isReviewed ? (
-                        <div className="relative">
+                        <div className="relative space-y-2">
                           <select 
                             value={article.selectedStatus}
                             onChange={(e) => handleStatusChange(article.articleId, e.target.value as ReviewStatus)}
@@ -270,6 +283,12 @@ const ReviewerArticles = () => {
                             <option value="Rejected">Rejected</option>
                             <option value="Needs Improvement">Needs Revision</option>
                           </select>
+                          <textarea
+                            placeholder="Add remarks..."
+                            value={article.remarks || ''}
+                            onChange={(e) => handleRemarksChange(article.articleId, e.target.value)}
+                            className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-[10px] font-medium focus:ring-2 focus:ring-black outline-none resize-none h-12 shadow-sm focus:bg-white transition-all font-sans"
+                          />
                         </div>
                       ) : (
                         <div className={cn(
