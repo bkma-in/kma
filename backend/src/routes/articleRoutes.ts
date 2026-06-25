@@ -9,6 +9,15 @@ import { uploadImage, deleteImage } from '../services/cloudinaryService';
 
 const router = Router();
 
+const normalizeRecommendation = (recommendation: string): string => {
+  if (!recommendation) return '';
+  const val = recommendation.trim().toLowerCase();
+  if (val === 'accepted' || val === 'approved') return 'Approved';
+  if (val === 'rejected') return 'Rejected';
+  if (val === 'needs improvement' || val === 'needs revision' || val === 'revision') return 'Needs Improvement';
+  return recommendation;
+};
+
 // Submit Article or Save Draft (Author only)
 router.post('/', requireAuth, requireRole(['author']), upload.fields([
   { name: 'pdf', maxCount: 1 },
@@ -246,6 +255,24 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
             recommendation: sanitized.reviewerFeedback.recommendation
           };
         }
+      } else if (role === 'admin') {
+        // Expose reviews but also populate reviewerFeedback with the latest review for backward-compatibility
+        if (sanitized.reviews && Object.keys(sanitized.reviews).length > 0) {
+          const reviewList = Object.values(sanitized.reviews).sort((a: any, b: any) => {
+            const getTimestamp = (val: any) => {
+              if (!val) return 0;
+              if (typeof val.toDate === 'function') return val.toDate().getTime();
+              if (val._seconds) return val._seconds * 1000;
+              if (val instanceof Date) return val.getTime();
+              if (typeof val === 'string') return new Date(val).getTime();
+              return 0;
+            };
+            return getTimestamp(b.updatedAt) - getTimestamp(a.updatedAt);
+          });
+          sanitized.reviewerFeedback = reviewList[0];
+        } else {
+          sanitized.reviewerFeedback = null;
+        }
       }
       return sanitized;
     });
@@ -439,6 +466,23 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
           remarks: sanitized.reviewerFeedback.remarks,
           recommendation: sanitized.reviewerFeedback.recommendation
         };
+      }
+    } else if (role === 'admin') {
+      if (sanitized.reviews && Object.keys(sanitized.reviews).length > 0) {
+        const reviewList = Object.values(sanitized.reviews).sort((a: any, b: any) => {
+          const getTimestamp = (val: any) => {
+            if (!val) return 0;
+            if (typeof val.toDate === 'function') return val.toDate().getTime();
+            if (val._seconds) return val._seconds * 1000;
+            if (val instanceof Date) return val.getTime();
+            if (typeof val === 'string') return new Date(val).getTime();
+            return 0;
+          };
+          return getTimestamp(b.updatedAt) - getTimestamp(a.updatedAt);
+        });
+        sanitized.reviewerFeedback = reviewList[0];
+      } else {
+        sanitized.reviewerFeedback = null;
       }
     }
 
@@ -735,16 +779,46 @@ router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), asy
     }
 
     if (role === 'reviewer') {
+      const reviewerName = req.user!.name || 'Reviewer';
+      const articleData = doc.data();
+      const title = articleData?.title || 'Untitled Article';
+      const normalizedRecommendation = normalizeRecommendation(recommendation || '');
+
       // Reviewer logs their own feedback in the 'reviews' map
       await articleRef.update({
         [`reviews.${uid}`]: {
           remarks: remarks || '',
-          recommendation: recommendation || '',
+          recommendation: normalizedRecommendation,
           reviewedFile: reviewedFile || null,
+          reviewerName,
           updatedAt: new Date()
         },
         updatedAt: new Date()
       });
+
+      // Send high-priority notifications to all Admins
+      try {
+        const adminsSnapshot = await db.collection('users').where('role', '==', 'admin').get();
+        if (!adminsSnapshot.empty) {
+          const batch = db.batch();
+          adminsSnapshot.docs.forEach(adminDoc => {
+            const notifRef = db.collection('notifications').doc();
+            batch.set(notifRef, {
+              notificationId: notifRef.id,
+              userId: adminDoc.id,
+              type: 'REVIEW_SUBMITTED',
+              title: 'Review Recommendation Submitted',
+              message: `Reviewer ${reviewerName} has submitted a recommendation ("${normalizedRecommendation || 'None'}") for "${title}".`,
+              metadata: { articleId: id },
+              read: false,
+              createdAt: new Date()
+            });
+          });
+          await batch.commit();
+        }
+      } catch (notifErr) {
+        console.error('Failed to send admin notifications:', notifErr);
+      }
     } else if (role === 'admin') {
       // Admin updates article overall status/finalizes decision
       const updateData: any = {

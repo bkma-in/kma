@@ -62,6 +62,12 @@ interface Article {
   };
   adminNote?: string;
   rejectionReason?: string;
+  reviews?: Record<string, {
+    remarks: string;
+    recommendation: ReviewerRecommendation;
+    reviewerName?: string;
+    updatedAt?: any;
+  }>;
 }
 
 const AdminArticles = () => {
@@ -148,7 +154,8 @@ const AdminArticles = () => {
             })),
             rejectionReason: a.rejectionReason,
             adminNote: a.adminNote,
-            reviewerFeedback: a.reviewerFeedback
+            reviewerFeedback: a.reviewerFeedback,
+            reviews: a.reviews
           }));
           setArticles(mappedArticles);
         }
@@ -505,51 +512,97 @@ const AdminArticles = () => {
               )}
 
               {/* 2. Reviewer Assessment Section */}
-              {selectedArticle.reviewerFeedback && (
-                <div className="space-y-6">
+              {selectedArticle.reviews && Object.keys(selectedArticle.reviews).length > 0 ? (
+                <div className="space-y-6 animate-in fade-in duration-300">
                   <div className="flex items-center gap-2 text-[10px] font-black text-amber-600 uppercase tracking-widest">
                     <MessageSquare size={14} />
-                    Reviewer Assessment
+                    Reviewer Assessments ({Object.keys(selectedArticle.reviews).length})
                   </div>
-                  <div className="bg-zinc-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
-                    
-                    <div className="flex items-center justify-between mb-8 relative z-10">
-                      <div className="flex items-center gap-4">
-                        <div className={cn(
-                          "w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg",
-                          selectedArticle.reviewerFeedback.recommendation === 'Approved' ? 'bg-emerald-500' :
-                          selectedArticle.reviewerFeedback.recommendation === 'Rejected' ? 'bg-rose-500' : 'bg-amber-500'
-                        )}>
-                          {getStatusIcon(selectedArticle.reviewerFeedback.recommendation)}
-                        </div>
-                        <div>
-                          <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">Expert Decision</p>
-                          <p className="text-lg font-bold">{selectedArticle.reviewerFeedback.recommendation}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Assigned Reviewers</p>
-                        {selectedArticle.assignedReviewers && selectedArticle.assignedReviewers.length > 0 ? (
-                          <div className="space-y-0.5">
-                            {selectedArticle.assignedReviewers.map(r => (
-                              <p key={r} className="text-xs font-bold">{r}</p>
-                            ))}
+                  
+                  {Object.entries(selectedArticle.reviews).map(([uid, review]) => {
+                    const reviewDate = review.updatedAt ? formatDate(review.updatedAt) : 'N/A';
+                    return (
+                      <div key={uid} className="bg-zinc-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
+                        
+                        <div className="flex items-center justify-between mb-8 relative z-10">
+                          <div className="flex items-center gap-4">
+                            <div className={cn(
+                              "w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg",
+                              review.recommendation === 'Approved' ? 'bg-emerald-500' :
+                              review.recommendation === 'Rejected' ? 'bg-rose-500' : 'bg-amber-500'
+                            )}>
+                              {getStatusIcon(review.recommendation)}
+                            </div>
+                            <div>
+                              <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">Decision</p>
+                              <p className="text-lg font-bold">{review.recommendation}</p>
+                            </div>
                           </div>
-                        ) : (
-                          <p className="text-xs font-bold text-zinc-400 italic">None</p>
-                        )}
-                      </div>
-                    </div>
+                          <div className="text-right">
+                            <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Reviewer</p>
+                            <p className="text-xs font-bold text-white">{review.reviewerName || 'Anonymous Reviewer'}</p>
+                            <p className="text-[8px] text-zinc-400 font-medium">{reviewDate}</p>
+                          </div>
+                        </div>
 
-                    <div className="space-y-4 relative z-10">
-                      <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">Reviewer Remarks</p>
-                      <div className="bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/10 italic text-sm text-zinc-300 leading-relaxed">
-                        "{selectedArticle.reviewerFeedback.remarks}"
+                        <div className="space-y-4 relative z-10">
+                          <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">Reviewer Remarks</p>
+                          <div className="bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/10 italic text-sm text-zinc-300 leading-relaxed font-sans">
+                            "{review.remarks}"
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                selectedArticle.reviewerFeedback && (
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-amber-600 uppercase tracking-widest">
+                      <MessageSquare size={14} />
+                      Reviewer Assessment
+                    </div>
+                    <div className="bg-zinc-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
+                      
+                      <div className="flex items-center justify-between mb-8 relative z-10">
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg",
+                            selectedArticle.reviewerFeedback.recommendation === 'Approved' ? 'bg-emerald-500' :
+                            selectedArticle.reviewerFeedback.recommendation === 'Rejected' ? 'bg-rose-500' : 'bg-amber-500'
+                          )}>
+                            {getStatusIcon(selectedArticle.reviewerFeedback.recommendation)}
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">Expert Decision</p>
+                            <p className="text-lg font-bold">{selectedArticle.reviewerFeedback.recommendation}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Assigned Reviewers</p>
+                          {selectedArticle.assignedReviewers && selectedArticle.assignedReviewers.length > 0 ? (
+                            <div className="space-y-0.5">
+                              {selectedArticle.assignedReviewers.map(r => (
+                                <p key={r} className="text-xs font-bold">{r}</p>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs font-bold text-zinc-400 italic">None</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 relative z-10">
+                        <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">Reviewer Remarks</p>
+                        <div className="bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/10 italic text-sm text-zinc-300 leading-relaxed font-sans">
+                          "{selectedArticle.reviewerFeedback.remarks}"
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )
               )}
             </div>
 
@@ -648,7 +701,7 @@ const AdminArticles = () => {
                   </div>
                 )}
 
-                {selectedArticle.status === 'Sent to Reviewer' && (
+                {(selectedArticle.status === 'Sent to Reviewer' || (selectedArticle.status === 'Under Review' && !selectedArticle.reviewerFeedback)) && (
                   <div className="w-full py-5 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-black tracking-widest border border-indigo-100 flex items-center justify-center gap-3">
                     <Send size={18} />
                     WAITING FOR REVIEWER FEEDBACK

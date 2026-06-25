@@ -11,6 +11,18 @@ const uploadMiddleware_1 = require("../middleware/uploadMiddleware");
 const storageService_1 = require("../services/storageService");
 const cloudinaryService_1 = require("../services/cloudinaryService");
 const router = (0, express_1.Router)();
+const normalizeRecommendation = (recommendation) => {
+    if (!recommendation)
+        return '';
+    const val = recommendation.trim().toLowerCase();
+    if (val === 'accepted' || val === 'approved')
+        return 'Approved';
+    if (val === 'rejected')
+        return 'Rejected';
+    if (val === 'needs improvement' || val === 'needs revision' || val === 'revision')
+        return 'Needs Improvement';
+    return recommendation;
+};
 // Submit Article or Save Draft (Author only)
 router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['author']), uploadMiddleware_1.upload.fields([
     { name: 'pdf', maxCount: 1 },
@@ -233,6 +245,31 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
                     };
                 }
             }
+            else if (role === 'admin') {
+                // Expose reviews but also populate reviewerFeedback with the latest review for backward-compatibility
+                if (sanitized.reviews && Object.keys(sanitized.reviews).length > 0) {
+                    const reviewList = Object.values(sanitized.reviews).sort((a, b) => {
+                        const getTimestamp = (val) => {
+                            if (!val)
+                                return 0;
+                            if (typeof val.toDate === 'function')
+                                return val.toDate().getTime();
+                            if (val._seconds)
+                                return val._seconds * 1000;
+                            if (val instanceof Date)
+                                return val.getTime();
+                            if (typeof val === 'string')
+                                return new Date(val).getTime();
+                            return 0;
+                        };
+                        return getTimestamp(b.updatedAt) - getTimestamp(a.updatedAt);
+                    });
+                    sanitized.reviewerFeedback = reviewList[0];
+                }
+                else {
+                    sanitized.reviewerFeedback = null;
+                }
+            }
             return sanitized;
         });
         res.json({ success: true, articles });
@@ -409,6 +446,30 @@ router.get('/:id', authMiddleware_1.requireAuth, async (req, res) => {
                     remarks: sanitized.reviewerFeedback.remarks,
                     recommendation: sanitized.reviewerFeedback.recommendation
                 };
+            }
+        }
+        else if (role === 'admin') {
+            if (sanitized.reviews && Object.keys(sanitized.reviews).length > 0) {
+                const reviewList = Object.values(sanitized.reviews).sort((a, b) => {
+                    const getTimestamp = (val) => {
+                        if (!val)
+                            return 0;
+                        if (typeof val.toDate === 'function')
+                            return val.toDate().getTime();
+                        if (val._seconds)
+                            return val._seconds * 1000;
+                        if (val instanceof Date)
+                            return val.getTime();
+                        if (typeof val === 'string')
+                            return new Date(val).getTime();
+                        return 0;
+                    };
+                    return getTimestamp(b.updatedAt) - getTimestamp(a.updatedAt);
+                });
+                sanitized.reviewerFeedback = reviewList[0];
+            }
+            else {
+                sanitized.reviewerFeedback = null;
             }
         }
         res.json({ success: true, article: sanitized });
@@ -666,16 +727,45 @@ router.patch('/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
             return res.status(404).json({ error: 'Article not found' });
         }
         if (role === 'reviewer') {
+            const reviewerName = req.user.name || 'Reviewer';
+            const articleData = doc.data();
+            const title = articleData?.title || 'Untitled Article';
+            const normalizedRecommendation = normalizeRecommendation(recommendation || '');
             // Reviewer logs their own feedback in the 'reviews' map
             await articleRef.update({
                 [`reviews.${uid}`]: {
                     remarks: remarks || '',
-                    recommendation: recommendation || '',
+                    recommendation: normalizedRecommendation,
                     reviewedFile: reviewedFile || null,
+                    reviewerName,
                     updatedAt: new Date()
                 },
                 updatedAt: new Date()
             });
+            // Send high-priority notifications to all Admins
+            try {
+                const adminsSnapshot = await firebase_1.db.collection('users').where('role', '==', 'admin').get();
+                if (!adminsSnapshot.empty) {
+                    const batch = firebase_1.db.batch();
+                    adminsSnapshot.docs.forEach(adminDoc => {
+                        const notifRef = firebase_1.db.collection('notifications').doc();
+                        batch.set(notifRef, {
+                            notificationId: notifRef.id,
+                            userId: adminDoc.id,
+                            type: 'REVIEW_SUBMITTED',
+                            title: 'Review Recommendation Submitted',
+                            message: `Reviewer ${reviewerName} has submitted a recommendation ("${normalizedRecommendation || 'None'}") for "${title}".`,
+                            metadata: { articleId: id },
+                            read: false,
+                            createdAt: new Date()
+                        });
+                    });
+                    await batch.commit();
+                }
+            }
+            catch (notifErr) {
+                console.error('Failed to send admin notifications:', notifErr);
+            }
         }
         else if (role === 'admin') {
             // Admin updates article overall status/finalizes decision
