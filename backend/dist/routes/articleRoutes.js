@@ -11,6 +11,18 @@ const uploadMiddleware_1 = require("../middleware/uploadMiddleware");
 const storageService_1 = require("../services/storageService");
 const cloudinaryService_1 = require("../services/cloudinaryService");
 const router = (0, express_1.Router)();
+const normalizeRecommendation = (recommendation) => {
+    if (!recommendation)
+        return '';
+    const val = recommendation.trim().toLowerCase();
+    if (val === 'accepted' || val === 'approved')
+        return 'Approved';
+    if (val === 'rejected')
+        return 'Rejected';
+    if (val === 'needs improvement' || val === 'needs revision' || val === 'revision')
+        return 'Needs Improvement';
+    return recommendation;
+};
 // Submit Article or Save Draft (Author only)
 router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['author']), uploadMiddleware_1.upload.fields([
     { name: 'pdf', maxCount: 1 },
@@ -718,11 +730,12 @@ router.patch('/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
             const reviewerName = req.user.name || 'Reviewer';
             const articleData = doc.data();
             const title = articleData?.title || 'Untitled Article';
+            const normalizedRecommendation = normalizeRecommendation(recommendation || '');
             // Reviewer logs their own feedback in the 'reviews' map
             await articleRef.update({
                 [`reviews.${uid}`]: {
                     remarks: remarks || '',
-                    recommendation: recommendation || '',
+                    recommendation: normalizedRecommendation,
                     reviewedFile: reviewedFile || null,
                     reviewerName,
                     updatedAt: new Date()
@@ -741,7 +754,7 @@ router.patch('/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
                             userId: adminDoc.id,
                             type: 'REVIEW_SUBMITTED',
                             title: 'Review Recommendation Submitted',
-                            message: `Reviewer ${reviewerName} has submitted a recommendation ("${recommendation || 'None'}") for "${title}".`,
+                            message: `Reviewer ${reviewerName} has submitted a recommendation ("${normalizedRecommendation || 'None'}") for "${title}".`,
                             metadata: { articleId: id },
                             read: false,
                             createdAt: new Date()

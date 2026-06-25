@@ -9,6 +9,15 @@ import { uploadImage, deleteImage } from '../services/cloudinaryService';
 
 const router = Router();
 
+const normalizeRecommendation = (recommendation: string): string => {
+  if (!recommendation) return '';
+  const val = recommendation.trim().toLowerCase();
+  if (val === 'accepted' || val === 'approved') return 'Approved';
+  if (val === 'rejected') return 'Rejected';
+  if (val === 'needs improvement' || val === 'needs revision' || val === 'revision') return 'Needs Improvement';
+  return recommendation;
+};
+
 // Submit Article or Save Draft (Author only)
 router.post('/', requireAuth, requireRole(['author']), upload.fields([
   { name: 'pdf', maxCount: 1 },
@@ -773,12 +782,13 @@ router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), asy
       const reviewerName = req.user!.name || 'Reviewer';
       const articleData = doc.data();
       const title = articleData?.title || 'Untitled Article';
+      const normalizedRecommendation = normalizeRecommendation(recommendation || '');
 
       // Reviewer logs their own feedback in the 'reviews' map
       await articleRef.update({
         [`reviews.${uid}`]: {
           remarks: remarks || '',
-          recommendation: recommendation || '',
+          recommendation: normalizedRecommendation,
           reviewedFile: reviewedFile || null,
           reviewerName,
           updatedAt: new Date()
@@ -798,7 +808,7 @@ router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), asy
               userId: adminDoc.id,
               type: 'REVIEW_SUBMITTED',
               title: 'Review Recommendation Submitted',
-              message: `Reviewer ${reviewerName} has submitted a recommendation ("${recommendation || 'None'}") for "${title}".`,
+              message: `Reviewer ${reviewerName} has submitted a recommendation ("${normalizedRecommendation || 'None'}") for "${title}".`,
               metadata: { articleId: id },
               read: false,
               createdAt: new Date()
