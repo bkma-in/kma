@@ -92,7 +92,7 @@ const ReviewerDashboard = () => {
               <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">You have {pendingReviewsCount} manuscripts awaiting your assessment</p>
             </div>
           </div>
-          <NavLink to="/reviewer-dashboard/articles" className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-amber-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20">
+          <NavLink to="/reviewer/articles" className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-amber-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20">
             Start Reviewing
           </NavLink>
         </div>
@@ -126,7 +126,7 @@ const ReviewerDashboard = () => {
                 </div>
                 <h3 className="text-sm font-bold text-black uppercase tracking-widest">Recent Activity</h3>
               </div>
-              <NavLink to="/reviewer-dashboard/articles" className="text-[10px] font-black text-zinc-400 hover:text-black transition-all uppercase tracking-widest flex items-center gap-1">
+              <NavLink to="/reviewer/articles" className="text-[10px] font-black text-zinc-400 hover:text-black transition-all uppercase tracking-widest flex items-center gap-1">
                 View All <ChevronRight size={14} />
               </NavLink>
             </div>
@@ -161,14 +161,14 @@ const ReviewerDashboard = () => {
             <h3 className="text-xs font-bold uppercase tracking-widest mb-6 text-zinc-500 relative z-10">Navigation</h3>
             <div className="space-y-3 relative z-10">
               <NavLink 
-                to="/reviewer-dashboard/articles" 
+                to="/reviewer/articles" 
                 className="w-full py-4 bg-white/10 hover:bg-white text-white hover:text-black rounded-2xl text-[10px] font-black tracking-[0.2em] transition-all uppercase flex items-center justify-center gap-3 active:scale-95 border border-white/5 shadow-lg"
               >
                 <BookOpen size={18} />
                 View Assigned Articles
               </NavLink>
               <NavLink 
-                to="/reviewer-dashboard/notifications" 
+                to="/reviewer/notifications" 
                 className="w-full py-4 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-2xl text-[10px] font-black tracking-[0.2em] transition-all uppercase flex items-center justify-center gap-3 active:scale-95 border border-white/5"
               >
                 <Bell size={18} />

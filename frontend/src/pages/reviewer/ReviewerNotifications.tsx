@@ -198,7 +198,7 @@ const ReviewerNotifications = () => {
 
                 {/* Clickable Article Link */}
                 <button 
-                  onClick={() => navigate('/reviewer-dashboard/articles')}
+                  onClick={() => navigate('/reviewer/articles')}
                   className={cn(
                     "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-sm",
                     !notification.read 
@@ -250,7 +250,7 @@ const ReviewerNotifications = () => {
             "Your notification archive is currently empty. We'll alert you as soon as a new manuscript requires your expertise."
           </p>
           <button 
-            onClick={() => navigate('/reviewer-dashboard')}
+            onClick={() => navigate('/reviewer')}
             className="flex items-center gap-3 px-10 py-4 bg-black text-white rounded-2xl text-xs font-bold tracking-widest hover:bg-zinc-800 transition-all shadow-2xl shadow-black/10 active:scale-95"
           >
             RETURN TO OVERVIEW
