@@ -68,8 +68,15 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  const pendingAdminCount = articles.filter(a => a.status === 'submitted').length;
-  const underReviewCount = articles.filter(a => a.status === 'under_review').length;
+  const pendingAdminCount = articles.filter(a => 
+    a.status === 'submitted' || 
+    (a.status === 'under_review' && a.reviews && Object.keys(a.reviews).length > 0)
+  ).length;
+
+  const underReviewCount = articles.filter(a => 
+    a.status === 'under_review' && 
+    (!a.reviews || Object.keys(a.reviews).length === 0)
+  ).length;
 
   const stats = [
     { label: 'Total Articles', value: articles.length.toString(), icon: FileText, color: 'text-zinc-600', bg: 'bg-zinc-100' },
@@ -79,29 +86,44 @@ const AdminDashboard = () => {
     { label: 'Rejected', value: articles.filter(a => a.status === 'rejected' || a.status === 'desk_rejected').length.toString(), icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
   ];
 
+  const getActivityTitle = (a: any) => {
+    if (a.status === 'under_review' && a.reviews && Object.keys(a.reviews).length > 0) {
+      return 'Review Submitted';
+    }
+    switch (a.status) {
+      case 'submitted': return 'New Article Submitted';
+      case 'under_review': return 'Reviewer Assigned';
+      case 'revision_requested': return 'Revision Requested';
+      case 'accepted': return 'Article Approved';
+      case 'published': return 'Article Published';
+      case 'rejected': return 'Article Rejected';
+      case 'desk_rejected': return 'Desk Rejected';
+      default: return 'Status Updated';
+    }
+  };
+
+  const getActivityType = (a: any) => {
+    if (a.status === 'under_review' && a.reviews && Object.keys(a.reviews).length > 0) {
+      return 'revision';
+    }
+    return a.status === 'submitted' ? 'submission' :
+           a.status === 'under_review' ? 'assignment' :
+           a.status === 'revision_requested' ? 'revision' : 'published';
+  };
+
   const activities = articles.slice(0, 4).map(a => ({
-    title: a.status === 'submitted' ? 'New Article Submitted' :
-           a.status === 'under_review' ? 'Reviewer Assigned' :
-           a.status === 'revision_requested' ? 'Revision Requested' :
-           a.status === 'accepted' ? 'Article Published' : 'Status Updated',
+    title: getActivityTitle(a),
     detail: a.title,
     time: formatDate(a.createdAt),
-    type: a.status === 'submitted' ? 'submission' :
-          a.status === 'under_review' ? 'assignment' :
-          a.status === 'revision_requested' ? 'revision' : 'published'
+    type: getActivityType(a)
   }));
 
   const filteredLogs = articles
     .map(a => ({
-      title: a.status === 'submitted' ? 'New Article Submitted' :
-             a.status === 'under_review' ? 'Reviewer Assigned' :
-             a.status === 'revision_requested' ? 'Revision Requested' :
-             a.status === 'accepted' ? 'Article Published' : 'Status Updated',
+      title: getActivityTitle(a),
       detail: a.title,
       time: formatDate(a.createdAt),
-      type: a.status === 'submitted' ? 'submission' :
-            a.status === 'under_review' ? 'assignment' :
-            a.status === 'revision_requested' ? 'revision' : 'published'
+      type: getActivityType(a)
     }))
     .filter(log => log.detail.toLowerCase().includes(logsSearchTerm.toLowerCase()) || log.title.toLowerCase().includes(logsSearchTerm.toLowerCase()));
 
