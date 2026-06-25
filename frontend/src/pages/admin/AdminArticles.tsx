@@ -34,7 +34,8 @@ type ArticleStatus =
   | 'Rejected'
   | 'Sent to Reviewer'
   | 'Under Review'
-  | 'Desk Rejected';
+  | 'Desk Rejected'
+  | 'Awaiting Decision';
 
 type ReviewerRecommendation = 'Approved' | 'Needs Improvement' | 'Rejected' | 'None';
 
@@ -139,24 +140,28 @@ const AdminArticles = () => {
             'desk_rejected': 'Desk Rejected'
           };
           
-          const mappedArticles = articlesRes.articles.map((a: any) => ({
-            id: a.articleId || a.id,
-            title: a.title,
-            author: a.authors?.find((au: any) => au.role === 'submitter')?.name || a.author || 'Author',
-            category: a.category || 'Mathematics',
-            abstract: a.abstract || '',
-            status: backendToFrontendStatusMap[a.status] || 'Submitted',
-            assignedReviewers: a.assignedReviewers || [],
-            lastUpdated: formatDate(a.updatedAt || a.createdAt),
-            versions: (a.versions || [{ version: 1, uploadedBy: 'Author', timestamp: a.createdAt, fileName: a.pdfName || 'manuscript.pdf' }]).map((v: any) => ({
-              ...v,
-              timestamp: formatDate(v.timestamp || a.createdAt)
-            })),
-            rejectionReason: a.rejectionReason,
-            adminNote: a.adminNote,
-            reviewerFeedback: a.reviewerFeedback,
-            reviews: a.reviews
-          }));
+          const mappedArticles = articlesRes.articles.map((a: any) => {
+            const hasReviews = a.reviews && Object.keys(a.reviews).length > 0;
+            const mappedStatus = backendToFrontendStatusMap[a.status] || 'Submitted';
+            return {
+              id: a.articleId || a.id,
+              title: a.title,
+              author: a.authors?.find((au: any) => au.role === 'submitter')?.name || a.author || 'Author',
+              category: a.category || 'Mathematics',
+              abstract: a.abstract || '',
+              status: (a.status === 'under_review' && hasReviews) ? 'Awaiting Decision' : mappedStatus,
+              assignedReviewers: a.assignedReviewers || [],
+              lastUpdated: formatDate(a.updatedAt || a.createdAt),
+              versions: (a.versions || [{ version: 1, uploadedBy: 'Author', timestamp: a.createdAt, fileName: a.pdfName || 'manuscript.pdf' }]).map((v: any) => ({
+                ...v,
+                timestamp: formatDate(v.timestamp || a.createdAt)
+              })),
+              rejectionReason: a.rejectionReason,
+              adminNote: a.adminNote,
+              reviewerFeedback: a.reviewerFeedback,
+              reviews: a.reviews
+            };
+          });
           setArticles(mappedArticles);
         }
         
@@ -191,6 +196,7 @@ const AdminArticles = () => {
       case 'Submitted': return 'bg-blue-50 text-blue-600 border-blue-100';
       case 'Sent to Reviewer': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
       case 'Under Review': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
+      case 'Awaiting Decision': return 'bg-violet-50 text-violet-600 border-violet-100';
       default: return 'bg-zinc-100 text-zinc-600 border-zinc-200';
     }
   };
@@ -205,6 +211,7 @@ const AdminArticles = () => {
       case 'Submitted': return <FileText size={12} />;
       case 'Sent to Reviewer': return <Send size={12} />;
       case 'Under Review': return <Send size={12} />;
+      case 'Awaiting Decision': return <MessageSquare size={12} />;
       default: return <Clock size={12} />;
     }
   };
@@ -316,7 +323,7 @@ const AdminArticles = () => {
               className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer"
             >
               <option value="All">All Workflow States</option>
-              {['Submitted', 'Needs Improvement', 'Approved', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected'].map(s => (
+              {['Submitted', 'Needs Improvement', 'Approved', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected', 'Awaiting Decision'].map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -705,6 +712,13 @@ const AdminArticles = () => {
                   <div className="w-full py-5 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-black tracking-widest border border-indigo-100 flex items-center justify-center gap-3">
                     <Send size={18} />
                     WAITING FOR REVIEWER FEEDBACK
+                  </div>
+                )}
+
+                {selectedArticle.status === 'Awaiting Decision' && (
+                  <div className="w-full py-5 bg-violet-50 text-violet-600 rounded-2xl text-xs font-black tracking-widest border border-violet-100 flex items-center justify-center gap-3">
+                    <AlertCircle size={18} />
+                    DECISION REQUIRED: REVIEW SUBMITTED
                   </div>
                 )}
               </div>
