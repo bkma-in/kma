@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  CheckCircle2, 
-  Zap, 
-  ShieldCheck, 
-  Clock, 
+import {
+  CheckCircle2,
+  Zap,
+  ShieldCheck,
+  Clock,
   Award,
   ArrowRight,
   CreditCard,
@@ -25,7 +25,7 @@ const GetSubscription = () => {
     {
       id: 'annual',
       name: 'Annual Pass',
-      price: '₹499',
+      price: '₹2000',
       period: 'per year',
       features: [
         'Unlock all research articles',
@@ -39,7 +39,7 @@ const GetSubscription = () => {
     {
       id: 'lifetime',
       name: 'Life Member',
-      price: '₹4,999',
+      price: '₹1000',
       period: 'one-time',
       features: [
         'Lifetime unlimited access',
@@ -55,7 +55,7 @@ const GetSubscription = () => {
 
   const handleSubscribe = () => {
     setIsLoading(true);
-    
+
     // Simulate payment gateway
     setTimeout(() => {
       // Temporary session-only activation
@@ -83,13 +83,13 @@ const GetSubscription = () => {
 
       <div className="grid md:grid-cols-2 gap-8 mb-16">
         {plans.map((plan) => (
-          <div 
+          <div
             key={plan.id}
             onClick={() => setSelectedPlan(plan.id as 'annual' | 'lifetime')}
             className={cn(
               "relative bg-white border-2 rounded-[2.5rem] p-10 transition-all cursor-pointer group",
-              selectedPlan === plan.id 
-                ? "border-black shadow-2xl scale-[1.02]" 
+              selectedPlan === plan.id
+                ? "border-black shadow-2xl scale-[1.02]"
                 : "border-zinc-100 hover:border-zinc-300 shadow-sm"
             )}
           >
@@ -128,7 +128,7 @@ const GetSubscription = () => {
               ))}
             </ul>
 
-            <button 
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleSubscribe();
@@ -136,8 +136,8 @@ const GetSubscription = () => {
               disabled={isLoading}
               className={cn(
                 "w-full py-5 rounded-2xl font-bold text-sm tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase",
-                selectedPlan === plan.id 
-                  ? "bg-black text-white shadow-xl shadow-black/20 hover:bg-zinc-800" 
+                selectedPlan === plan.id
+                  ? "bg-black text-white shadow-xl shadow-black/20 hover:bg-zinc-800"
                   : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
               )}
             >

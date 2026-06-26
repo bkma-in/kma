@@ -52,6 +52,16 @@ interface Article {
   authors: any[];
   authorId: string;
   versions: Version[];
+  reviewerFeedback?: {
+    remarks: string;
+    recommendation: string;
+  };
+  adminNote?: string;
+  reviews?: Record<string, {
+    remarks: string;
+    recommendation: string;
+    updatedAt?: any;
+  }>;
 }
 
 
@@ -141,6 +151,9 @@ const MyArticles = () => {
           })(),
           status: (a.status === 'draft' ? 'Draft' : mapStatus(a.status)) as Status | 'Draft',
           abstract: a.abstract,
+          reviewerFeedback: a.reviewerFeedback,
+          reviews: a.reviews,
+          adminNote: a.adminNote,
           versions: a.revisionHistory ? 
             a.revisionHistory.map((v: any, i: number) => ({
               version: i + 1,
@@ -908,6 +921,56 @@ const MyArticles = () => {
                     "{selectedArticle.abstract}"
                   </div>
                 </div>
+
+                {/* Reviewer Feedback / Revision Request Details (For Authors) */}
+                {selectedArticle.status === 'Needs Revision' && (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-rose-600 uppercase tracking-widest">
+                      <AlertCircle size={14} />
+                      Revision Requirements
+                    </div>
+                    <div className="p-8 bg-rose-50/50 border border-rose-100 rounded-[2rem] space-y-6">
+                      {/* Admin Note */}
+                      {selectedArticle.adminNote && (
+                        <div>
+                          <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 font-['Outfit']">Editor's Instructions</h4>
+                          <p className="text-xs text-zinc-700 leading-relaxed font-sans bg-white p-4 rounded-xl border border-rose-200/50">
+                            "{selectedArticle.adminNote}"
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Reviewer Feedback */}
+                      {selectedArticle.reviews && Object.keys(selectedArticle.reviews).length > 0 ? (
+                        <div className="space-y-4">
+                          <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest font-['Outfit']">Reviewer Assessments</h4>
+                          {Object.entries(selectedArticle.reviews).map(([key, review]: [string, any], idx) => (
+                            <div key={idx} className="bg-white p-6 rounded-2xl border border-zinc-150 space-y-3">
+                              <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-wider font-['Outfit']">{key}</span>
+                                <span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[8px] font-bold uppercase tracking-wide border border-amber-100 font-['Outfit']">
+                                  {review.recommendation || 'Needs Revision'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-zinc-600 italic leading-relaxed font-sans">
+                                "{review.remarks}"
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        selectedArticle.reviewerFeedback && (
+                          <div>
+                            <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 font-['Outfit']">Reviewer Remarks</h4>
+                            <div className="bg-white p-6 rounded-2xl border border-zinc-150 italic text-xs text-zinc-600 leading-relaxed font-sans">
+                              "{selectedArticle.reviewerFeedback.remarks}"
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Manuscript Preview */}
                 <div className="space-y-4">
