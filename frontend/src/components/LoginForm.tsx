@@ -46,6 +46,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
   };
 
   useEffect(() => {
+    localStorage.removeItem('registration_in_progress');
+  }, []);
+
+  useEffect(() => {
     if (prefilledEmail) {
       setEmail(prefilledEmail);
     }
