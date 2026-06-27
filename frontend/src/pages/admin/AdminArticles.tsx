@@ -28,8 +28,10 @@ import { formatDate } from '../../utils/dateHelpers';
 // Types
 type ArticleStatus = 
   | 'Submitted' 
-  | 'Needs Improvement' 
+  | 'Need Improvements' 
+  | 'Revision Requested'
   | 'Approved' 
+  | 'Ready to Publish'
   | 'Published' 
   | 'Rejected'
   | 'Sent to Reviewer'
@@ -37,7 +39,7 @@ type ArticleStatus =
   | 'Desk Rejected'
   | 'Awaiting Decision';
 
-type ReviewerRecommendation = 'Approved' | 'Needs Improvement' | 'Rejected' | 'None';
+type ReviewerRecommendation = 'Approved' | 'Accepted' | 'Needs Improvement' | 'Need Improvements' | 'Rejected' | 'None';
 
 interface Version {
   version: number;
@@ -81,7 +83,7 @@ const AdminArticles = () => {
   useEffect(() => {
     const statusParam = searchParams.get('status');
     if (statusParam) {
-      const validStatuses = ['Submitted', 'Needs Improvement', 'Approved', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected'];
+      const validStatuses = ['Submitted', 'Need Improvements', 'Revision Requested', 'Approved', 'Ready to Publish', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected', 'Awaiting Decision'];
       if (validStatuses.includes(statusParam)) {
         setStatusFilter(statusParam as ArticleStatus);
       } else if (statusParam === 'All') {
@@ -132,8 +134,8 @@ const AdminArticles = () => {
         if (articlesRes.success) {
           const backendToFrontendStatusMap: Record<string, ArticleStatus> = {
             'submitted': 'Submitted',
-            'revision_requested': 'Needs Improvement',
-            'accepted': 'Approved',
+            'revision_requested': 'Revision Requested',
+            'accepted': 'Ready to Publish',
             'published': 'Published',
             'rejected': 'Rejected',
             'under_review': 'Under Review',
@@ -143,13 +145,34 @@ const AdminArticles = () => {
           const mappedArticles = articlesRes.articles.map((a: any) => {
             const hasReviews = a.reviews && Object.keys(a.reviews).length > 0;
             const mappedStatus = backendToFrontendStatusMap[a.status] || 'Submitted';
+            
+            let status: ArticleStatus = mappedStatus;
+            if (a.status === 'under_review' && hasReviews) {
+              const latestReview = a.reviewerFeedback;
+              if (latestReview) {
+                if (latestReview.recommendation === 'Approved' || latestReview.recommendation === 'Accepted') {
+                  status = 'Ready to Publish';
+                } else if (latestReview.recommendation === 'Needs Improvement' || latestReview.recommendation === 'Need Improvements') {
+                  status = 'Need Improvements';
+                } else if (latestReview.recommendation === 'Rejected') {
+                  status = 'Rejected';
+                } else {
+                  status = 'Awaiting Decision';
+                }
+              } else {
+                status = 'Awaiting Decision';
+              }
+            } else if (a.status === 'accepted') {
+              status = 'Ready to Publish';
+            }
+
             return {
               id: a.articleId || a.id,
               title: a.title,
               author: a.authors?.find((au: any) => au.role === 'submitter')?.name || a.author || 'Author',
               category: a.category || 'Mathematics',
               abstract: a.abstract || '',
-              status: (a.status === 'under_review' && hasReviews) ? 'Awaiting Decision' : mappedStatus,
+              status,
               assignedReviewers: a.assignedReviewers || [],
               lastUpdated: formatDate(a.updatedAt || a.createdAt),
               versions: (a.versions || [{ version: 1, uploadedBy: 'Author', timestamp: a.createdAt, fileName: a.pdfName || 'manuscript.pdf' }]).map((v: any) => ({
@@ -189,7 +212,10 @@ const AdminArticles = () => {
   const getStatusStyles = (status: string) => {
     switch (status) {
       case 'Approved': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+      case 'Ready to Publish': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
       case 'Needs Improvement': return 'bg-amber-50 text-amber-600 border-amber-100';
+      case 'Need Improvements': return 'bg-amber-50 text-amber-600 border-amber-100';
+      case 'Revision Requested': return 'bg-rose-50 text-rose-600 border-rose-100';
       case 'Rejected': return 'bg-rose-50 text-rose-600 border-rose-100';
       case 'Desk Rejected': return 'bg-rose-50 text-rose-600 border-rose-100';
       case 'Published': return 'bg-purple-50 text-purple-600 border-purple-100';
@@ -204,7 +230,10 @@ const AdminArticles = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'Approved': return <CheckCircle2 size={12} />;
+      case 'Ready to Publish': return <CheckCircle2 size={12} />;
       case 'Needs Improvement': return <AlertCircle size={12} />;
+      case 'Need Improvements': return <AlertCircle size={12} />;
+      case 'Revision Requested': return <Clock size={12} />;
       case 'Rejected': return <XCircle size={12} />;
       case 'Desk Rejected': return <XCircle size={12} />;
       case 'Published': return <UploadCloud size={12} />;
@@ -227,12 +256,15 @@ const AdminArticles = () => {
     setIsDetailsOpen(true);
   };
 
-  const updateStatus = async (id: string, status: ArticleStatus, extraData?: any) => {
+  const updateStatus = async (id: string, status: ArticleStatus, extraData?: any, successMsg?: string) => {
     try {
       const backendStatusMap: Record<string, string> = {
         'Submitted': 'submitted',
+        'Need Improvements': 'revision_requested',
         'Needs Improvement': 'revision_requested',
+        'Revision Requested': 'revision_requested',
         'Approved': 'accepted',
+        'Ready to Publish': 'accepted',
         'Published': 'published',
         'Rejected': 'rejected',
         'Under Review': 'under_review',
@@ -247,7 +279,7 @@ const AdminArticles = () => {
         if (selectedArticle?.id === id) {
           setSelectedArticle(prev => prev ? { ...prev, status, ...extraData } : null);
         }
-        showToast(`Status updated successfully.`, 'success');
+        showToast(successMsg || `Status updated successfully.`, 'success');
       }
     } catch (error) {
       console.error('Failed to update status:', error);
@@ -323,7 +355,7 @@ const AdminArticles = () => {
               className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer"
             >
               <option value="All">All Workflow States</option>
-              {['Submitted', 'Needs Improvement', 'Approved', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected', 'Awaiting Decision'].map(s => (
+              {['Submitted', 'Need Improvements', 'Revision Requested', 'Ready to Publish', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected', 'Awaiting Decision'].map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -393,8 +425,6 @@ const AdminArticles = () => {
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center justify-end gap-2">
-                      
-
                       {/* Contextual Action Button */}
                       {article.status === 'Submitted' ? (
                         <button 
@@ -410,6 +440,38 @@ const AdminArticles = () => {
                           className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase"
                         >
                           Review Submission
+                        </button>
+                      ) : article.status === 'Ready to Publish' ? (
+                        <button 
+                          onClick={() => {
+                            confirm({
+                              title: 'Publish Article',
+                              message: 'Are you sure you want to publish this article on the BKMA website?',
+                              confirmText: 'Publish',
+                              onConfirm: () => {
+                                updateStatus(article.id, 'Published', null, 'Article published successfully.');
+                              }
+                            });
+                          }}
+                          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-emerald-700 transition-all uppercase"
+                        >
+                          Publish Article
+                        </button>
+                      ) : article.status === 'Need Improvements' ? (
+                        <button 
+                          onClick={() => {
+                            confirm({
+                              title: 'Send Back to Author',
+                              message: 'Send this manuscript back to the author for revision?',
+                              confirmText: 'Send Back',
+                              onConfirm: () => {
+                                updateStatus(article.id, 'Revision Requested', null, 'Revision request sent to author.');
+                              }
+                            });
+                          }}
+                          className="px-4 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all uppercase"
+                        >
+                          Send Back To Author
                         </button>
                       ) : (
                         <button 
@@ -517,6 +579,79 @@ const AdminArticles = () => {
                   </div>
                 </div>
               )}
+
+              {/* Peer Review Details Card */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest">
+                  <UserCheck size={14} />
+                  Peer Review Details
+                </div>
+                <div className="p-8 bg-zinc-50 rounded-3xl border border-zinc-200/50 space-y-6">
+                  {/* Assigned Reviewer(s) */}
+                  <div>
+                    <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 font-['Outfit']">Assigned Reviewer(s)</h4>
+                    {selectedArticle.assignedReviewers && selectedArticle.assignedReviewers.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedArticle.assignedReviewers.map(r => (
+                          <span key={r} className="px-3 py-1 bg-white border border-zinc-200 rounded-lg text-xs font-bold text-zinc-700 uppercase font-['Outfit']">
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-zinc-500 italic">No reviewers assigned to this manuscript.</p>
+                    )}
+                  </div>
+
+                  {/* Review Status & Decision */}
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1 font-['Outfit']">Review Status</h4>
+                      <p className="text-sm font-bold text-zinc-900">
+                        {selectedArticle.reviews && Object.keys(selectedArticle.reviews).length > 0
+                          ? 'Review Process Completed'
+                          : selectedArticle.assignedReviewers && selectedArticle.assignedReviewers.length > 0
+                            ? 'Awaiting Reviewer Assessment'
+                            : 'Not Started'
+                        }
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1 font-['Outfit']">Review Decision</h4>
+                      <p className={cn(
+                        "text-sm font-bold",
+                        selectedArticle.reviewerFeedback?.recommendation === 'Approved' || selectedArticle.reviewerFeedback?.recommendation === 'Accepted' ? 'text-emerald-600' :
+                        selectedArticle.reviewerFeedback?.recommendation === 'Rejected' ? 'text-rose-600' :
+                        selectedArticle.reviewerFeedback?.recommendation === 'Needs Improvement' || selectedArticle.reviewerFeedback?.recommendation === 'Need Improvements' ? 'text-amber-600' :
+                        'text-zinc-500'
+                      )}>
+                        {selectedArticle.reviewerFeedback?.recommendation || 'None'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Review Completion Date */}
+                  {selectedArticle.reviews && Object.keys(selectedArticle.reviews).length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1 font-['Outfit']">Review Completion Date</h4>
+                      <p className="text-xs text-zinc-600">
+                        {Object.values(selectedArticle.reviews).map((r: any) => r.updatedAt ? formatDate(r.updatedAt) : 'N/A').join(', ')}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Reviewer Feedback / Remarks */}
+                  {selectedArticle.reviewerFeedback && (
+                    <div>
+                      <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-2 font-['Outfit']">Reviewer Feedback</h4>
+                      <div className="bg-white p-6 rounded-2xl border border-zinc-200/50 italic text-sm text-zinc-700 leading-relaxed font-sans">
+                        "{selectedArticle.reviewerFeedback.remarks}"
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* 2. Reviewer Assessment Section */}
               {selectedArticle.reviews && Object.keys(selectedArticle.reviews).length > 0 ? (
@@ -644,7 +779,7 @@ const AdminArticles = () => {
                   </div>
                 )}
 
-                {selectedArticle.reviewerFeedback?.recommendation === 'Needs Improvement' && (
+                {selectedArticle.status === 'Need Improvements' && (
                   <button 
                     onClick={() => setIsAdminNoteModalOpen(true)}
                     className="w-full flex items-center justify-center gap-3 py-5 bg-amber-500 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-amber-600 transition-all shadow-xl shadow-amber-500/20 active:scale-95"
@@ -674,16 +809,16 @@ const AdminArticles = () => {
                   </button>
                 )}
 
-                {selectedArticle.reviewerFeedback?.recommendation === 'Approved' && (
+                {selectedArticle.status === 'Ready to Publish' && (
                   <button 
                     onClick={() => {
                       confirm({
                         title: 'Publish Article',
-                        message: 'Are you sure you want to PUBLISH this article? It will appear on the main website.',
+                        message: 'Are you sure you want to publish this article on the BKMA website?',
                         confirmText: 'Publish',
                         onConfirm: () => {
-                          updateStatus(selectedArticle.id, 'Published');
-                          showToast('Article published successfully', 'success');
+                          updateStatus(selectedArticle.id, 'Published', null, 'Article published successfully.');
+                          setIsDetailsOpen(false);
                         }
                       });
                     }}
@@ -761,8 +896,9 @@ const AdminArticles = () => {
                 </button>
                 <button 
                   onClick={() => {
-                    updateStatus(selectedArticle!.id, 'Needs Improvement');
+                    updateStatus(selectedArticle!.id, 'Revision Requested', { adminNote }, 'Revision request sent to author.');
                     setIsAdminNoteModalOpen(false);
+                    setIsDetailsOpen(false);
                     setAdminNote('');
                   }}
                   className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
