@@ -79,6 +79,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
         onSuccess(formData.email);
       }, 2000);
     } catch (err: any) {
+      localStorage.removeItem('registration_in_progress');
       setErrors({ form: err.message || 'Registration failed' });
     } finally {
       setIsLoading(false);
