@@ -132,11 +132,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[AUTH-DIAGNOSTIC] onAuthStateChanged fired. User:', user ? user.uid : 'null');
 
       if (user) {
+        if (localStorage.getItem('registration_in_progress') === 'true') {
+          console.log('[AUTH-DIAGNOSTIC] Registration in progress, skipping role load');
+          isInitialAuthCheck.current = false;
+          setLoading(false);
+          return;
+        }
         await loadRole(user, false);
         setSessionExpired(false);
       } else {
         // User is null — either signed out or session genuinely expired
-        if (!isInitialAuthCheck.current) {
+        const isManual = localStorage.getItem('manual_logout_active') === 'true';
+        const isRegistering = localStorage.getItem('registration_in_progress') === 'true';
+        
+        if (isManual) {
+          localStorage.removeItem('manual_logout_active');
+        }
+
+        if (!isInitialAuthCheck.current && !isManual && !isRegistering) {
           // This is NOT the initial check — the user WAS logged in before
           console.warn('[AUTH-DIAGNOSTIC] Auth state lost (previously logged in). Session marked as expired.');
           setSessionExpired(true);
@@ -169,6 +182,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (user) {
         console.log('[AUTH-DIAGNOSTIC] 🔄 Token change/refresh detected for UID:', user.uid);
+        if (localStorage.getItem('registration_in_progress') === 'true') {
+          console.log('[AUTH-DIAGNOSTIC] Registration in progress, skipping token refresh role load');
+          return;
+        }
         // Re-verify role from backend on token refresh
         await loadRole(user, true);
       }
@@ -193,6 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       console.log('[AUTH-DIAGNOSTIC] Logout initiated');
+      localStorage.setItem('manual_logout_active', 'true');
       await auth.signOut();
       const authKeys = ['isLoggedIn', 'role', 'userEmail', 'userName', 'userId', 'is_temp_password', ROLE_CACHE_KEY, NAME_CACHE_KEY];
       authKeys.forEach(key => {

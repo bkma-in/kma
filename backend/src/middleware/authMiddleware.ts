@@ -42,20 +42,21 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     }
 
     // 3. Validation
+    const isRegistering = req.originalUrl.endsWith('/register') || req.path === '/register';
     const validRoles = ['admin', 'reviewer', 'author', 'reader', 'dev'];
-    if (!role || !validRoles.includes(role)) {
+    if (!isRegistering && (!role || !validRoles.includes(role))) {
       console.error(`[AUTH-DIAGNOSTIC] ❌ Access Denied: User ${decodedToken.uid} has invalid or missing role: "${role}"`);
       return res.status(403).json({ error: 'Unauthorized: User has no valid role assigned.' });
     }
 
     name = name || decodedToken.email?.split('@')[0] || 'User';
 
-    console.log(`[AUTH-DIAGNOSTIC] Route Guard Decision: ALLOWED. User: ${decodedToken.uid}, Role: "${role}" (Source: ${source}), Name: "${name}"`);
+    console.log(`[AUTH-DIAGNOSTIC] Route Guard Decision: ALLOWED. User: ${decodedToken.uid}, Role: "${role || 'unregistered'}" (Source: ${source}), Name: "${name}"`);
 
     req.user = {
       uid: decodedToken.uid,
       email: decodedToken.email || '',
-      role: role as string,
+      role: (role || '') as string,
       name: name as string
     };
     next();
