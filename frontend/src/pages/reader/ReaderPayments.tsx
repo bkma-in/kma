@@ -7,10 +7,14 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  FileText
+  FileText,
+  Printer,
+  X
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
+import { useAuth } from '../../context/AuthContext';
+import { ReceiptTemplate } from '../../components/ReceiptTemplate';
 
 type PaymentStatus = 'Paid' | 'Pending' | 'Failed';
 
@@ -24,6 +28,7 @@ interface Payment {
 
 const ReaderPayments = () => {
   const { showToast } = useNotification();
+  const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'All'>('All');
 
@@ -35,8 +40,39 @@ const ReaderPayments = () => {
     { id: 'PAY-4432', amount: '₹499', date: '2024-02-20', status: 'Pending', article: 'Advanced Cryptography Protocols' },
   ]);
 
-  const handleDownloadReceipt = (id: string) => {
-    showToast(`Receipt for ${id} downloaded successfully`, 'success');
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleViewReceipt = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsModalOpen(true);
+  };
+
+  // Helper to format date YYYY-MM-DD to DD/MM/YYYY
+  const formatDateString = (dateStr: string) => {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
+  };
+
+  // Helper to convert number to Indian words
+  const numberToWords = (num: number): string => {
+    const a = [
+      '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+      'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+    ];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    
+    const helper = (n: number): string => {
+      if (n < 20) return a[n];
+      if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
+      if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' and ' + helper(n % 100) : '');
+      return '';
+    };
+    
+    if (num === 0) return 'Zero';
+    return `${helper(num)} Rupees Only`;
   };
 
   const filteredPayments = payments.filter(p => {
@@ -47,8 +83,9 @@ const ReaderPayments = () => {
   });
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Header */}
+    <>
+      <div className="space-y-8 animate-in fade-in duration-700 no-print">
+        {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold text-black tracking-tight font-['Outfit']">Payment History</h1>
@@ -131,7 +168,7 @@ const ReaderPayments = () => {
                   </td>
                   <td className="px-6 py-5 text-right">
                     <button 
-                      onClick={() => handleDownloadReceipt(payment.id)}
+                      onClick={() => handleViewReceipt(payment)}
                       className={cn(
                         "p-2 rounded-lg transition-all",
                         payment.status === 'Paid' 
@@ -140,6 +177,7 @@ const ReaderPayments = () => {
                       )}
                       disabled={payment.status !== 'Paid'}
                       aria-disabled={payment.status !== 'Paid'}
+                      title="View Receipt"
                     >
                       <Download size={16} />
                     </button>
@@ -160,7 +198,63 @@ const ReaderPayments = () => {
           </table>
         </div>
       </div>
-    </div>
+    </div> {/* End of no-print page wrapper */}
+
+      {/* Receipt Modal */}
+      {isModalOpen && selectedPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm receipt-modal-backdrop animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl overflow-hidden shadow-2xl max-w-4xl w-full max-h-[95vh] flex flex-col border border-zinc-200 receipt-modal-card">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50 no-print">
+              <div>
+                <h3 className="text-sm font-black text-black uppercase tracking-wider">Receipt Preview</h3>
+                <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Transaction Ref: {selectedPayment.id}</p>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-xl transition-all"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body / Scroll Container */}
+            <div className="flex-1 overflow-y-auto p-6 bg-zinc-100/50 flex justify-center">
+              <ReceiptTemplate 
+                receiptNumber={selectedPayment.id.replace('PAY-', '')}
+                date={formatDateString(selectedPayment.date)}
+                memberName={currentUser?.name || localStorage.getItem('userName') || ''}
+                amount={selectedPayment.amount.replace('₹', '')}
+                amountInWords={numberToWords(parseInt(selectedPayment.amount.replace('₹', '')))}
+                membershipType="Article Subscription"
+                journalYear={selectedPayment.date.substring(0, 4)}
+                paymentMethod="Online Payment (UPI/Card)"
+                transactionId={`TXN-${selectedPayment.id}-${selectedPayment.date.replace(/-/g, '')}`}
+                status="PAID"
+              />
+            </div>
+
+            {/* Modal Footer / Actions */}
+            <div className="px-6 py-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-end gap-3 receipt-modal-actions no-print">
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-zinc-500 hover:text-black transition-all bg-white hover:bg-zinc-100 border border-zinc-200 rounded-xl"
+              >
+                Close
+              </button>
+              <button 
+                onClick={() => window.print()}
+                className="px-4 py-2 text-xs font-bold text-white bg-black hover:bg-zinc-800 transition-all rounded-xl flex items-center gap-2 shadow-sm"
+              >
+                <Printer size={14} />
+                Print Receipt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
