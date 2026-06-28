@@ -42,7 +42,7 @@ export const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
   return (
     <div className="receipt-container-wrapper">
       <div className="receipt-card">
-        
+
         {/* Central Seal Watermark - Positioned like the physical stamp */}
         <div className="receipt-center-seal">
           <img src="/seal.png" alt="Official Seal" className="receipt-seal-image" />
@@ -94,7 +94,7 @@ export const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
 
           {/* Line 2: The sum of Rupees */}
           <div className="receipt-body-multiline-row">
-            <span className="receipt-body-label-inline">the sum of Rupees (Cash/Cheque*/Draft)</span>
+            <span className="receipt-body-label-inline">the sum of Rupees (UPI / Card / Net Banking / Wallet)</span>
             <span className="receipt-body-value-inline">{amountInWords || ''}</span>
             <div className="receipt-print-line receipt-print-line-1"></div>
             <div className="receipt-print-line receipt-print-line-2"></div>

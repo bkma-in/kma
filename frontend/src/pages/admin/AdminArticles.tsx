@@ -247,7 +247,11 @@ const AdminArticles = () => {
 
   const filteredArticles = articles.filter(art => {
     const matchesSearch = art.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || art.status === statusFilter;
+    // If statusFilter is 'All', exclude 'Ready to Publish', 'Published', and 'Revision Requested'
+    // so they disappear from the active review queue immediately.
+    const matchesStatus = statusFilter === 'All'
+      ? (art.status !== 'Ready to Publish' && art.status !== 'Published' && art.status !== 'Revision Requested')
+      : art.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -425,8 +429,11 @@ const AdminArticles = () => {
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center justify-end gap-2">
-                      {/* Contextual Action Button */}
-                      {article.status === 'Submitted' ? (
+                      {/* Contextual Action Buttons */}
+                      {['Published', 'Ready to Publish', 'Rejected', 'Desk Rejected'].includes(article.status) ? (
+                        <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">No actions required</span>
+                      ) : (!article.assignedReviewers || article.assignedReviewers.length === 0) ? (
+                        // Stage 1: Before Reviewer Assignment
                         <button 
                           onClick={() => {
                             setPreviewArticle(article);
@@ -437,66 +444,50 @@ const AdminArticles = () => {
                             setRejectionError(null);
                             setSelectedReviewersForAssigning([]);
                           }}
-                          className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase"
+                          className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase cursor-pointer"
                         >
                           Review Submission
                         </button>
-                      ) : article.status === 'Ready to Publish' ? (
-                        <button 
-                          onClick={() => {
-                            confirm({
-                              title: 'Publish Article',
-                              message: 'Are you sure you want to publish this article on the BKMA website?',
-                              confirmText: 'Publish',
-                              onConfirm: () => {
-                                updateStatus(article.id, 'Published', null, 'Article published successfully.');
-                              }
-                            });
-                          }}
-                          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-emerald-700 transition-all uppercase"
-                        >
-                          Publish Article
-                        </button>
-                      ) : article.status === 'Need Improvements' ? (
-                        <button 
-                          onClick={() => {
-                            confirm({
-                              title: 'Send Back to Author',
-                              message: 'Send this manuscript back to the author for revision?',
-                              confirmText: 'Send Back',
-                              onConfirm: () => {
-                                updateStatus(article.id, 'Revision Requested', null, 'Revision request sent to author.');
-                              }
-                            });
-                          }}
-                          className="px-4 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all uppercase"
-                        >
-                          Send Back To Author
-                        </button>
                       ) : (
-                        <button 
-                          onClick={() => {
-                            setPreviewArticle(article);
-                            setIsPreviewOpen(true);
-                            setIsAssigningFromPreview(false);
-                            setIsRejectingFromPreview(false);
-                            setRejectionReasonText('');
-                            setRejectionError(null);
-                            setSelectedReviewersForAssigning([]);
-                          }}
-                          className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-blue-600 transition-all" 
-                          title="Preview Manuscript"
-                        >
-                          <Eye size={18} />
-                        </button>
-                      )}
-                      {article.status === 'Approved' && (
-                        <button 
-                          onClick={() => openDetails(article)}
-                          className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase"
-                        >
-                          Finalize
-                        </button>
+                        // Stage 2: After Reviewer Assignment
+                        <>
+                          <button
+                            onClick={() => {
+                              // Verify eligibility: Must have an Approved or Accepted recommendation
+                              const hasApprovedReview = 
+                                (article.reviewerFeedback && (article.reviewerFeedback.recommendation === 'Approved' || article.reviewerFeedback.recommendation === 'Accepted')) ||
+                                (article.reviews && Object.values(article.reviews).some((r: any) => r.recommendation === 'Approved' || r.recommendation === 'Accepted'));
+
+                              if (!hasApprovedReview) {
+                                showToast('This article is not eligible for publication. It must have an Approved or Accepted recommendation from a reviewer.', 'error');
+                                return;
+                              }
+
+                              confirm({
+                                title: 'Move to Publish List',
+                                message: 'Move this article to the Ready to Publish list?',
+                                confirmText: 'Move',
+                                onConfirm: () => {
+                                  updateStatus(article.id, 'Ready to Publish', null, 'Article successfully moved to Ready to Publish list.');
+                                }
+                              });
+                            }}
+                            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-emerald-700 transition-all uppercase cursor-pointer"
+                          >
+                            Move to Publish List
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              setSelectedArticle(article);
+                              setAdminNote('');
+                              setIsAdminNoteModalOpen(true);
+                            }}
+                            className="px-4 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all uppercase cursor-pointer"
+                          >
+                            Send Back to Author
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>

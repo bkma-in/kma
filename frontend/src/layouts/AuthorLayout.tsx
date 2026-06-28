@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { auth, db } from '../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileEdit, BookOpen, Inbox, Bell, Search, LogOut, X, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, FileEdit, BookOpen, Inbox, Bell, Search, LogOut, X, HelpCircle, AlertCircle, User, Settings } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
 import GlobalHeader from '../components/GlobalHeader';
@@ -23,6 +23,7 @@ const AuthorLayout = () => {
   const [counts, setCounts] = useState({
     drafts: 0,
     articles: 0,
+    revisionRequired: 0,
     notifications: 0
   });
 
@@ -92,10 +93,15 @@ const AuthorLayout = () => {
         return isRevisionNeeded || isPendingInvitation;
       }).length;
 
+      const revisionRequiredCount = articles.filter((a: any) => {
+        return a.status === 'revision_requested' && a.authorId === uid;
+      }).length;
+
       setCounts(prev => ({ 
         ...prev, 
         drafts: draftsCount, 
-        articles: articlesCount 
+        articles: articlesCount,
+        revisionRequired: revisionRequiredCount
       }));
     });
 
@@ -129,8 +135,9 @@ const AuthorLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/author/dashboard', end: true, icon: LayoutDashboard },
-    { name: 'Submit Article', path: '/author/submit', icon: FileEdit },
     { name: 'My Articles', path: '/author/articles', icon: BookOpen, badge: counts.articles > 0 ? counts.articles : null },
+    { name: 'New Submission', path: '/author/submit', icon: FileEdit },
+    { name: 'Revision Required', path: '/author/revision-required', icon: AlertCircle, badge: counts.revisionRequired > 0 ? counts.revisionRequired : null },
     { name: 'Drafts', path: '/author/drafts', icon: Inbox, badge: counts.drafts > 0 ? counts.drafts : null },
     { name: 'Notifications', path: '/author/notifications', icon: Bell, badge: counts.notifications > 0 ? counts.notifications : null },
   ];

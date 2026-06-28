@@ -5,12 +5,16 @@ import {
   UploadCloud,
   CheckCircle2,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  X,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { getArticles, updateArticleStatus, bulkPublishArticles } from '../../services/article.service';
 import { formatDate } from '../../utils/dateHelpers';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 // Types
 type ArticleStatus = 'Ready to Publish' | 'Published';
@@ -42,6 +46,48 @@ const AdminReadyToPublish = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [publishing, setPublishing] = useState(false);
+
+  // Metadata Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [volumeNo, setVolumeNo] = useState('');
+  const [monthYear, setMonthYear] = useState('');
+  const [issueNumber, setIssueNumber] = useState('');
+  const [issn, setIssn] = useState('');
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Close modal on Esc keypress
+  useEffect(() => {
+    if (isModalOpen) {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && !publishing) {
+          setIsModalOpen(false);
+        }
+      };
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isModalOpen, publishing]);
+
+  // Load ISSN automatically when modal opens
+  useEffect(() => {
+    if (isModalOpen) {
+      const fetchIssnSetting = async () => {
+        try {
+          const docRef = doc(db, 'settings', 'journal');
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists() && docSnap.data().issn) {
+            setIssn(docSnap.data().issn);
+          } else {
+            setIssn('0973-2721'); // default fallback
+          }
+        } catch (err) {
+          setIssn('0973-2721'); // default fallback
+        }
+      };
+      fetchIssnSetting();
+    }
+  }, [isModalOpen]);
 
   const loadData = async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -154,42 +200,141 @@ const AdminReadyToPublish = () => {
     }
   };
 
-  // Bulk publish handler
-  const handleBulkPublish = () => {
-    const selectedCount = selectedIds.length;
-    confirm({
-      title: 'Publish Selected Articles',
-      message: `Are you sure you want to publish the ${selectedCount} selected articles on the BKMA website?`,
-      confirmText: 'Publish',
-      onConfirm: async () => {
-        setPublishing(true);
-        try {
-          const response = await bulkPublishArticles(selectedIds);
-          if (response.success) {
-            const publishedCount = response.publishedCount || 0;
-            const failures = response.failures || [];
+  // Client-side validations
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!volumeNo) {
+      errors.volumeNo = 'Volume Number is required';
+    } else if (volumeNo.length > 20) {
+      errors.volumeNo = 'Volume Number cannot exceed 20 characters';
+    }
 
-            // Remove successfully published articles from state
-            const failedIds = failures.map((f: any) => f.id);
-            const successfulIds = selectedIds.filter(id => !failedIds.includes(id));
+    if (!monthYear) {
+      errors.monthYear = 'Month & Year is required';
+    }
 
-            setArticles(prev => prev.filter(a => !successfulIds.includes(a.id)));
-            setSelectedIds(prev => prev.filter(id => failedIds.includes(id)));
-
-            if (failures.length > 0) {
-              showToast(`Published ${publishedCount} articles. ${failures.length} failed.`, 'info');
-            } else {
-              showToast(`Successfully published ${publishedCount} articles.`, 'success');
-            }
-          }
-        } catch (error) {
-          console.error('Bulk publish failed:', error);
-          showToast('Failed to bulk publish selected articles.', 'error');
-        } finally {
-          setPublishing(false);
-        }
+    if (!issueNumber) {
+      errors.issueNumber = 'Issue Number is required';
+    } else {
+      const num = parseInt(issueNumber, 10);
+      if (isNaN(num) || num <= 0 || !/^\d+$/.test(issueNumber)) {
+        errors.issueNumber = 'Issue Number must be a positive integer';
       }
-    });
+    }
+
+    if (issn && !/^\d{4}-\d{4}$/.test(issn)) {
+      errors.issn = 'ISSN must be in XXXX-XXXX format';
+    }
+
+    return errors;
+  };
+
+  // Check duplicate combination client-side
+  const checkDuplicateIssue = async (vol: string, my: string, issueNum: number) => {
+    try {
+      const q = query(
+        collection(db, 'issues'),
+        where('volume', '==', vol),
+        where('monthYear', '==', my),
+        where('issueNumber', '==', issueNum)
+      );
+      const snap = await getDocs(q);
+      return !snap.empty;
+    } catch (err) {
+      console.error('Error checking duplicate issue:', err);
+      return false;
+    }
+  };
+
+  // Validation status
+  const errors = validateForm();
+  const isFormValid = Object.keys(errors).length === 0;
+
+  // Bulk publish metadata submit handler
+  const handleOpenPublishModal = () => {
+    setVolumeNo('');
+    setMonthYear('');
+    setIssueNumber('');
+    setIssn('');
+    setValidationErrors({});
+    setSubmitError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleMetadataSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError(null);
+
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    const parsedIssueNum = parseInt(issueNumber, 10);
+
+    setPublishing(true);
+    try {
+      // 1. Verify duplicate issue combination client-side
+      const isDuplicate = await checkDuplicateIssue(volumeNo, monthYear, parsedIssueNum);
+      if (isDuplicate) {
+        setSubmitError('This publication issue already exists. Please use a different Volume or Issue Number.');
+        setPublishing(false);
+        return;
+      }
+
+      // 2. Open final confirmation dialog
+      setPublishing(false); // release state temporarily for confirmation dialog block
+      confirm({
+        title: 'Publish Articles',
+        message: `Publish ${selectedIds.length} selected article(s)?\n\nVolume No.: ${volumeNo}\nMonth & Year: ${monthYear}\nIssue Number: ${parsedIssueNum}\nISSN: ${issn || 'None'}\n\nThis action cannot be undone.`,
+        confirmText: 'Publish',
+        onConfirm: async () => {
+          setPublishing(true);
+          try {
+            const response = await bulkPublishArticles(selectedIds, {
+              volumeNo,
+              monthYear,
+              issueNumber: parsedIssueNum,
+              issn: issn || undefined
+            });
+
+            if (response.success) {
+              const failures = response.failures || [];
+              const failedIds = failures.map((f: any) => f.id);
+              const successfulIds = selectedIds.filter(id => !failedIds.includes(id));
+
+              // Remove successfully published articles immediately
+              setArticles(prev => prev.filter(a => !successfulIds.includes(a.id)));
+              setSelectedIds(prev => prev.filter(id => failedIds.includes(id)));
+
+              // Close the modal
+              setIsModalOpen(false);
+
+              // Show success toast
+              showToast(
+                `Successfully published ${successfulIds.length} article(s) to Volume ${volumeNo}, Issue ${parsedIssueNum}, Month & Year ${monthYear}`,
+                'success'
+              );
+
+              // Reload Ready to Publish page data silently
+              loadData(true);
+            }
+          } catch (error: any) {
+            console.error('Bulk publish failed:', error);
+            const errMsg = error.response?.data?.error || 'Failed to bulk publish selected articles.';
+            showToast(errMsg, 'error');
+            setSubmitError(errMsg);
+          } finally {
+            setPublishing(false);
+          }
+        }
+      });
+    } catch (err: any) {
+      console.error('Submission validation failed:', err);
+      setPublishing(false);
+      showToast('Validation check failed.', 'error');
+    }
   };
 
   if (loading) {
@@ -224,23 +369,14 @@ const AdminReadyToPublish = () => {
             <RefreshCw size={14} className={cn("text-zinc-500 group-hover:text-black transition-colors", refreshing && "animate-spin text-black")} />
           </button>
 
-          {/* Bulk Publish Button */}
+          {/* Bulk Publish Trigger */}
           <button
-            onClick={handleBulkPublish}
+            onClick={handleOpenPublishModal}
             disabled={selectedIds.length === 0 || publishing}
             className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-md disabled:cursor-not-allowed cursor-pointer"
           >
-            {publishing ? (
-              <>
-                <Loader2 className="animate-spin" size={14} />
-                Publishing...
-              </>
-            ) : (
-              <>
-                <UploadCloud size={14} />
-                Publish Selected ({selectedIds.length})
-              </>
-            )}
+            <UploadCloud size={14} />
+            Publish Selected ({selectedIds.length})
           </button>
         </div>
       </div>
@@ -360,6 +496,189 @@ const AdminReadyToPublish = () => {
           </div>
         )}
       </div>
+
+      {/* Publication Metadata Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl overflow-hidden shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col border border-zinc-200">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50">
+              <div>
+                <h3 className="text-sm font-black text-black uppercase tracking-wider">Publish Articles</h3>
+                <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Enter publication metadata for {selectedIds.length} article(s)</p>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                disabled={publishing}
+                className="p-2 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Close Publish Articles Modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body / Scrollable Form */}
+            <form onSubmit={handleMetadataSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+              {submitError && (
+                <div className="p-3.5 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-2.5 text-rose-600 text-xs font-medium">
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                  <span>{submitError}</span>
+                </div>
+              )}
+
+              {/* Volume Number */}
+              <div>
+                <label htmlFor="volumeNo" className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
+                  Volume No. <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="volumeNo"
+                  placeholder="e.g. 23"
+                  maxLength={20}
+                  value={volumeNo}
+                  onChange={(e) => {
+                    setVolumeNo(e.target.value);
+                    if (validationErrors.volumeNo) {
+                      setValidationErrors(prev => ({ ...prev, volumeNo: '' }));
+                    }
+                  }}
+                  disabled={publishing}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-black outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                {validationErrors.volumeNo && (
+                  <p className="text-[10px] text-rose-500 font-bold mt-1 px-1">{validationErrors.volumeNo}</p>
+                )}
+              </div>
+
+              {/* Month & Year */}
+              <div>
+                <label htmlFor="monthYear" className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
+                  Month & Year <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="month"
+                  id="monthYear"
+                  value={monthYear}
+                  onChange={(e) => {
+                    setMonthYear(e.target.value);
+                    if (validationErrors.monthYear) {
+                      setValidationErrors(prev => ({ ...prev, monthYear: '' }));
+                    }
+                  }}
+                  disabled={publishing}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-black outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                {validationErrors.monthYear && (
+                  <p className="text-[10px] text-rose-500 font-bold mt-1 px-1">{validationErrors.monthYear}</p>
+                )}
+              </div>
+
+              {/* Issue Number */}
+              <div>
+                <label htmlFor="issueNumber" className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
+                  Issue Number <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="issueNumber"
+                  min="1"
+                  step="1"
+                  placeholder="e.g. 2"
+                  value={issueNumber}
+                  onChange={(e) => {
+                    setIssueNumber(e.target.value);
+                    if (validationErrors.issueNumber) {
+                      setValidationErrors(prev => ({ ...prev, issueNumber: '' }));
+                    }
+                  }}
+                  disabled={publishing}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-black outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                {validationErrors.issueNumber && (
+                  <p className="text-[10px] text-rose-500 font-bold mt-1 px-1">{validationErrors.issueNumber}</p>
+                )}
+              </div>
+
+              {/* ISSN Number */}
+              <div>
+                <label htmlFor="issn" className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5 px-1">
+                  ISSN Number (Optional)
+                </label>
+                <input
+                  type="text"
+                  id="issn"
+                  placeholder="e.g. 0973-2721"
+                  value={issn}
+                  onChange={(e) => {
+                    setIssn(e.target.value);
+                    if (validationErrors.issn) {
+                      setValidationErrors(prev => ({ ...prev, issn: '' }));
+                    }
+                  }}
+                  disabled={publishing}
+                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold focus:bg-white focus:border-black outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                {validationErrors.issn && (
+                  <p className="text-[10px] text-rose-500 font-bold mt-1 px-1">{validationErrors.issn}</p>
+                )}
+              </div>
+
+              {/* Live Preview Section */}
+              <div className="mt-6 p-4 bg-zinc-50 border border-zinc-100 rounded-2xl">
+                <h4 className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-3">Publication Details</h4>
+                <div className="space-y-2 text-xs font-bold text-zinc-800">
+                  <div className="flex justify-between border-b border-zinc-100/50 pb-1.5">
+                    <span className="opacity-50 font-normal">Volume:</span>
+                    <span>{volumeNo || '--'}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-zinc-100/50 pb-1.5">
+                    <span className="opacity-50 font-normal">Month & Year:</span>
+                    <span>{monthYear || '--'}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-zinc-100/50 pb-1.5">
+                    <span className="opacity-50 font-normal">Issue No.:</span>
+                    <span>{issueNumber || '--'}</span>
+                  </div>
+                  <div className="flex justify-between pb-0.5">
+                    <span className="opacity-50 font-normal">ISSN:</span>
+                    <span>{issn || '--'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer / Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-100 bg-white no-print">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  disabled={publishing}
+                  className="px-4 py-2.5 text-xs font-bold text-zinc-500 hover:text-black transition-all bg-white hover:bg-zinc-100 border border-zinc-200 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!isFormValid || publishing}
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white text-xs font-bold rounded-xl transition-all shadow-md disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {publishing ? (
+                    <>
+                      <Loader2 className="animate-spin" size={14} />
+                      Publishing...
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud size={14} />
+                      Publish Articles
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
