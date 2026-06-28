@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
 import GlobalHeader from '../components/GlobalHeader';
@@ -85,6 +85,7 @@ const AdminLayout = () => {
     { name: 'Reviewers', path: '/admin/reviewers', icon: Users, badge: counts.reviewers > 0 ? counts.reviewers : null },
     { name: 'Authors', path: '/admin/authors-list', icon: Users },
     { name: 'Articles', path: '/admin/articles', icon: FileText },
+    { name: 'Ready to Publish', path: '/admin/ready-to-publish', icon: UploadCloud },
     { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: counts.notifications > 0 ? counts.notifications : null },
   ];
 

@@ -732,6 +732,71 @@ router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
   }
 });
 
+// Admin Bulk Publish Articles
+router.patch('/bulk-publish', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+  try {
+    const { articleIds } = req.body;
+
+    if (!articleIds || !Array.isArray(articleIds) || articleIds.length === 0) {
+      return res.status(400).json({ error: 'Article IDs are required and must be a non-empty array' });
+    }
+
+    const batch = db.batch();
+    const failures: { id: string; error: string }[] = [];
+    let publishedCount = 0;
+
+    // Fetch all requested articles in parallel
+    const promises = articleIds.map(id => db.collection('articles').doc(id).get());
+    const docs = await Promise.all(promises);
+
+    docs.forEach(doc => {
+      const id = doc.id;
+      if (!doc.exists) {
+        failures.push({ id, error: 'Article not found' });
+        return;
+      }
+
+      const data = doc.data()!;
+      if (data.status === 'published') {
+        failures.push({ id, error: 'Article is already published' });
+        return;
+      }
+
+      const isApprovedUnderReview = 
+        data.status === 'under_review' && 
+        data.reviewerFeedback && 
+        (data.reviewerFeedback.recommendation === 'Approved' || data.reviewerFeedback.recommendation === 'Accepted');
+      
+      const isReadyToPublish = data.status === 'accepted' || isApprovedUnderReview;
+
+      if (!isReadyToPublish) {
+        failures.push({ id, error: `Article is in status "${data.status}" and is not ready to publish` });
+        return;
+      }
+
+      // Add to Firestore batch update
+      batch.update(doc.ref, {
+        status: 'published',
+        updatedAt: new Date()
+      });
+      publishedCount++;
+    });
+
+    if (publishedCount > 0) {
+      await batch.commit();
+    }
+
+    res.json({
+      success: true,
+      publishedCount,
+      failures
+    });
+  } catch (error: any) {
+    console.error('Bulk publish articles error:', error);
+    res.status(500).json({ error: error.message || 'Failed to bulk publish articles' });
+  }
+});
+
 // Admin Assign Reviewer
 router.patch('/:id/assign', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
   try {

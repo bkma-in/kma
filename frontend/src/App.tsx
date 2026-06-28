@@ -17,6 +17,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminAuthors from './pages/admin/AdminAuthors';
 import AdminAuthorsList from './pages/admin/AdminAuthorsList';
 import AdminArticles from './pages/admin/AdminArticles';
+import AdminReadyToPublish from './pages/admin/AdminReadyToPublish';
 import ReviewerLayout from './layouts/ReviewerLayout';
 import ReviewerDashboard from './pages/reviewer/ReviewerDashboard';
 import ReviewerArticles from './pages/reviewer/ReviewerArticles';
@@ -198,6 +199,7 @@ function AdminRoutes() {
         <Route path="reviewers" element={<AdminAuthors />} />
         <Route path="authors-list" element={<AdminAuthorsList />} />
         <Route path="articles" element={<AdminArticles />} />
+        <Route path="ready-to-publish" element={<AdminReadyToPublish />} />
         <Route path="notifications" element={<Notifications />} />
       </Route>
     </Routes>
