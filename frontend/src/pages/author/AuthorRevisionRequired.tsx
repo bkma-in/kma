@@ -19,7 +19,9 @@ import { db, auth } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useNotification } from '../../utils/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLocation } from 'react-router-dom';
 import { formatDate } from '../../utils/dateHelpers';
+import { getPdfUrl } from '../../services/article.service';
 
 // Types
 interface Version {
@@ -50,6 +52,7 @@ interface Article {
 const AuthorRevisionRequired = () => {
   const { confirm, showToast } = useNotification();
   const { currentUser } = useAuth();
+  const location = useLocation();
   
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +60,7 @@ const AuthorRevisionRequired = () => {
   
   // Edit modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [editAbstract, setEditAbstract] = useState('');
   const [editFile, setEditFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -104,12 +108,27 @@ const AuthorRevisionRequired = () => {
       setArticles(fetchedArticles);
       setLoading(false);
 
-      // Keep selection in sync if it changes or gets deleted
-      setSelectedArticle(prev => {
-        if (!prev) return null;
-        const current = fetchedArticles.find(a => a.id === prev.id);
-        return current || null;
-      });
+      // Honor the notification deep-link by checking location state highlightId
+      const state = location.state as { highlightId?: string } | null;
+      if (state?.highlightId) {
+        const matchingArticle = fetchedArticles.find(a => a.id === state.highlightId);
+        if (matchingArticle) {
+          setSelectedArticle(matchingArticle);
+        } else {
+          setSelectedArticle(prev => {
+            if (!prev) return null;
+            const current = fetchedArticles.find(a => a.id === prev.id);
+            return current || null;
+          });
+        }
+      } else {
+        // Keep selection in sync if it changes or gets deleted
+        setSelectedArticle(prev => {
+          if (!prev) return null;
+          const current = fetchedArticles.find(a => a.id === prev.id);
+          return current || null;
+        });
+      }
     }, (error) => {
       console.error('Failed to load revision required articles:', error);
       showToast('Failed to load articles.', 'error');
@@ -117,10 +136,11 @@ const AuthorRevisionRequired = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, location]);
 
   // Handle Edit click
   const handleOpenEdit = (article: Article) => {
+    setEditingArticle(article);
     setEditAbstract(article.abstract);
     setEditFile(null);
     setEditError('');
@@ -147,7 +167,7 @@ const AuthorRevisionRequired = () => {
 
   // Submit edit changes (keeping status as revision_requested)
   const handleSaveEdits = async () => {
-    if (!selectedArticle) return;
+    if (!editingArticle) return;
     if (!editAbstract.trim()) {
       setEditError('Abstract is required.');
       return;
@@ -158,20 +178,21 @@ const AuthorRevisionRequired = () => {
     try {
       const payload = new FormData();
       payload.append('abstract', editAbstract);
-      payload.append('title', selectedArticle.title);
+      payload.append('title', editingArticle.title);
       payload.append('status', 'revision_requested'); // explicitly keep status
       
       if (editFile) {
         payload.append('pdf', editFile);
       }
 
-      const response = await api.put(`/articles/${selectedArticle.id}`, payload, {
+      const response = await api.put(`/articles/${editingArticle.id}`, payload, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       if (response.data.success) {
         showToast('Changes saved successfully.', 'success');
         setIsEditModalOpen(false);
+        setEditingArticle(null);
       }
     } catch (error: any) {
       console.error('Failed to save edits:', error);
@@ -182,9 +203,19 @@ const AuthorRevisionRequired = () => {
   };
 
   // Download PDF file
-  const handleDownload = (pdfUrl: string) => {
-    if (!pdfUrl) return;
-    window.open(pdfUrl, '_blank');
+  const handleDownload = async (articleId: string) => {
+    if (!articleId) return;
+    try {
+      const response = await getPdfUrl(articleId);
+      if (response.success && response.url) {
+        window.open(response.url, '_blank');
+      } else {
+        showToast('Failed to get signed PDF URL.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to download manuscript.', 'error');
+    }
   };
 
   // Resubmit final revision to Admin queue
@@ -290,7 +321,7 @@ const AuthorRevisionRequired = () => {
                                 <FileEdit size={16} />
                               </button>
                               <button
-                                onClick={() => handleDownload(article.pdfUrl || '')}
+                                onClick={() => handleDownload(article.id)}
                                 disabled={!article.pdfUrl}
                                 className="p-2 bg-zinc-50 hover:bg-zinc-100 text-zinc-600 rounded-lg transition-all disabled:opacity-50"
                                 title="View Submitted Version"
@@ -369,7 +400,7 @@ const AuthorRevisionRequired = () => {
                   Edit Article
                 </button>
                 <button
-                  onClick={() => handleDownload(selectedArticle.pdfUrl || '')}
+                  onClick={() => handleDownload(selectedArticle.id)}
                   disabled={!selectedArticle.pdfUrl}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer"
                 >
@@ -397,7 +428,7 @@ const AuthorRevisionRequired = () => {
       </div>
 
       {/* Edit/Revision Modal (Adapted dark themed layout) */}
-      {isEditModalOpen && selectedArticle && (
+      {isEditModalOpen && editingArticle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-zinc-900 text-white rounded-3xl overflow-hidden shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col border border-white/10 relative">
             
@@ -405,7 +436,7 @@ const AuthorRevisionRequired = () => {
             <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-zinc-950">
               <div>
                 <h3 className="text-sm font-black text-white uppercase tracking-wider font-['Outfit']">Edit Article</h3>
-                <p className="text-[10px] text-zinc-500 font-semibold mt-0.5 truncate max-w-xs">{selectedArticle.title}</p>
+                <p className="text-[10px] text-zinc-500 font-semibold mt-0.5 truncate max-w-xs">{editingArticle.title}</p>
               </div>
               <button
                 onClick={() => setIsEditModalOpen(false)}
@@ -483,7 +514,7 @@ const AuthorRevisionRequired = () => {
                   ) : (
                     <div>
                       <p className="text-xs font-bold text-zinc-300">Choose a new PDF file</p>
-                      <p className="text-[10px] text-zinc-600 mt-1 uppercase">Leave blank to keep existing file: {selectedArticle.pdfName}</p>
+                      <p className="text-[10px] text-zinc-600 mt-1 uppercase">Leave blank to keep existing file: {editingArticle.pdfName}</p>
                     </div>
                   )}
                 </div>
