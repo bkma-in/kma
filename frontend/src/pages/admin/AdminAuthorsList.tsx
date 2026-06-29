@@ -218,8 +218,12 @@ const AdminAuthorsList = () => {
                 <tr key={author.id} className="group hover:bg-zinc-50/30 transition-colors">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
-                        <Users size={20} />
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm overflow-hidden">
+                        {author.profileImage ? (
+                          <img src={author.profileImage} alt={author.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Users size={20} />
+                        )}
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-black font-['Outfit']">{author.name}</h3>
@@ -236,13 +240,12 @@ const AdminAuthorsList = () => {
                     {new Date(author.regDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </td>
                   <td className="px-6 py-5">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end">
                       <button 
                         onClick={() => openDetails(author)}
-                        className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-black transition-all"
-                        title="View Detailed Profile"
+                        className="px-4 py-2 bg-black hover:bg-zinc-800 text-white rounded-lg text-[10px] font-black tracking-widest transition-all uppercase cursor-pointer"
                       >
-                        <Eye size={18} />
+                        View Profile
                       </button>
                     </div>
                   </td>

@@ -281,7 +281,8 @@ router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRe
         experience: data.experience || '',
         regDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
         status: data.status || 'Pending',
-        rejectionReason: data.rejectionReason || ''
+        rejectionReason: data.rejectionReason || '',
+        profileImage: data.profileImage || null
       };
     });
 

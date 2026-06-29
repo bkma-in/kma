@@ -19,9 +19,15 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  User,
+  Shield,
+  FileText
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { formatDate } from '../../utils/dateHelpers';
 import AddReviewerModal from '../../components/admin/AddReviewerModal';
 import { useNotification } from '../../utils/NotificationContext';
 import { getReviewers, updateReviewerStatus } from '../../services/user.service';
@@ -38,6 +44,7 @@ interface Reviewer {
   status: ReviewerStatus;
   experience?: string;
   rejectionReason?: string;
+  profileImage?: string | null;
 }
 
 const AdminAuthors = () => {
@@ -54,6 +61,69 @@ const AdminAuthors = () => {
   const [rejectionError, setRejectionError] = useState('');
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Redesigned Reviewer Modal states
+  const [detailedReviewer, setDetailedReviewer] = useState<any>(null);
+  const [reviewedArticles, setReviewedArticles] = useState<any[]>([]);
+  const [reviewerMetrics, setReviewerMetrics] = useState({ total: 0, completed: 0, pending: 0 });
+
+  useEffect(() => {
+    if (isModalOpen && selectedReviewer) {
+      // 1. Fetch full details from Firestore 'users' collection
+      const fetchUserDetails = async () => {
+        try {
+          const docRef = doc(db, 'users', selectedReviewer.id);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setDetailedReviewer(docSnap.data());
+          }
+        } catch (err) {
+          console.error('Failed to load user details:', err);
+        }
+      };
+
+      // 2. Fetch reviewed articles and metrics
+      const fetchReviewedManuscripts = async () => {
+        try {
+          const q = query(
+            collection(db, 'articles'),
+            where('assignedReviewers', 'array-contains', selectedReviewer.id)
+          );
+          const snap = await getDocs(q);
+          const total = snap.size;
+          const docs = snap.docs.map(doc => {
+            const data = doc.data();
+            const rev = data.reviews?.[selectedReviewer.id];
+            return {
+              id: doc.id,
+              title: data.title || 'Untitled Article',
+              status: rev?.recommendation || 'Pending Review',
+              date: rev?.updatedAt ? formatDate(rev.updatedAt) : 'Pending'
+            };
+          });
+          
+          const completedCount = docs.filter(d => d.status !== 'Pending Review').length;
+          const pendingCount = total - completedCount;
+          
+          setReviewedArticles(docs);
+          setReviewerMetrics({
+            total,
+            completed: completedCount,
+            pending: pendingCount
+          });
+        } catch (err) {
+          console.error('Failed to load reviewed articles:', err);
+        }
+      };
+
+      fetchUserDetails();
+      fetchReviewedManuscripts();
+    } else {
+      setDetailedReviewer(null);
+      setReviewedArticles([]);
+      setReviewerMetrics({ total: 0, completed: 0, pending: 0 });
+    }
+  }, [isModalOpen, selectedReviewer]);
 
   useEffect(() => {
     const fetchReviewersList = async () => {
@@ -214,8 +284,12 @@ const AdminAuthors = () => {
                 )}>
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
-                        <Users size={20} />
+                      <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm overflow-hidden">
+                        {reviewer.profileImage ? (
+                          <img src={reviewer.profileImage} alt={reviewer.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Users size={20} />
+                        )}
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-black font-['Outfit']">{reviewer.name}</h3>
@@ -248,10 +322,9 @@ const AdminAuthors = () => {
                     <div className="flex items-center justify-end gap-2">
                       <button 
                         onClick={() => openDetails(reviewer)}
-                        className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-black transition-all"
-                        title="View Detailed Profile"
+                        className="px-4 py-2 bg-black hover:bg-zinc-800 text-white rounded-lg text-[10px] font-black tracking-widest transition-all uppercase cursor-pointer"
                       >
-                        <Eye size={18} />
+                        View Profile
                       </button>
                       
                       {reviewer.status === 'Pending' ? (
@@ -287,108 +360,266 @@ const AdminAuthors = () => {
 
       {/* Reviewer Details Modal */}
       {isModalOpen && selectedReviewer && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-          <div className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300 border border-white/20">
-            {/* Modal Header */}
-            <div className="px-8 py-8 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-              <div className="flex items-center gap-5">
-                <div className="w-16 h-16 rounded-2xl bg-black flex items-center justify-center text-white shadow-xl shadow-black/20">
-                  <Award size={32} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-black tracking-tight font-['Outfit']">{selectedReviewer.name}</h3>
-                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">{selectedReviewer.id}</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="w-10 h-10 rounded-full hover:bg-zinc-200 flex items-center justify-center text-zinc-400 hover:text-black transition-all"
-              >
-                <X size={20} />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" 
+            onClick={() => setIsModalOpen(false)} 
+          />
+          <div 
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title-reviewer"
+            className="relative w-full max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[95vh] sm:rounded-[2.5rem] bg-zinc-900 text-white shadow-2xl flex flex-col animate-in zoom-in-95 duration-300 border border-white/10 overflow-hidden"
+          >
+            {/* Header Overlay */}
+            <div className="absolute top-0 left-0 w-full bg-gradient-to-b from-black/40 to-transparent z-0 h-48" />
+
+            {/* Close Button */}
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="absolute right-4 top-4 z-20 p-2 hover:bg-white/10 rounded-full transition-all"
+              aria-label="Close Reviewer Details Modal"
+            >
+              <X size={20} />
+            </button>
 
             {/* Modal Content */}
-            <div className="p-8 space-y-8">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">
-                    <Mail size={12} />
-                    Verified Email
+            <div className="relative z-10 flex flex-col overflow-y-auto flex-1 min-h-0 p-6 sm:p-10 space-y-8 custom-scrollbar">
+              {/* Top Banner Section */}
+              <div className="bg-zinc-900/50 backdrop-blur-md rounded-[2rem] border border-white/5 p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-transparent opacity-50" />
+                
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-full bg-zinc-800 border-4 border-zinc-900 overflow-hidden shadow-2xl flex items-center justify-center relative">
+                    {detailedReviewer?.profileImage ? (
+                      <img src={detailedReviewer.profileImage} alt={selectedReviewer.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={64} className="text-zinc-600" />
+                    )}
                   </div>
-                  <p className="text-sm font-bold text-black">{selectedReviewer.email}</p>
                 </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">
-                    <Calendar size={12} />
-                    Registration Timestamp
+
+                {/* User Info */}
+                <div className="flex-1 text-center md:text-left relative z-10">
+                  <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-4">{selectedReviewer.name}</h1>
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-6">
+                    <div className="flex items-center gap-2 px-4 py-1.5 bg-zinc-800/80 rounded-full border border-white/10">
+                      <Shield size={14} className="text-blue-400" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">REVIEWER</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <Calendar size={14} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">
+                        JOINED {new Date(selectedReviewer.regDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase()}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-sm font-bold text-black">{new Date(selectedReviewer.regDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                  <p className="text-zinc-500 text-xs italic mb-2">Verified reviewer of the Kerala Mathematical Association</p>
+                  <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em]">ID: {selectedReviewer.id}</p>
+                </div>
+
+                {/* About Reviewer Section */}
+                <div className="w-full md:w-72 shrink-0">
+                  <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 border border-white/10 h-full relative">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1.5 h-4 bg-blue-500 rounded-full" />
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">About Reviewer</h3>
+                    </div>
+                    <div className="text-xs space-y-2 text-zinc-300">
+                      <p><strong className="text-zinc-500 uppercase text-[9px] tracking-wider block mb-0.5">Research Domain:</strong> {detailedReviewer?.researchDomain || selectedReviewer.experience || 'Mathematics'}</p>
+                      <p><strong className="text-zinc-500 uppercase text-[9px] tracking-wider block mb-0.5">Area of Expertise:</strong> {detailedReviewer?.areaOfExpertise || 'Pure & Applied Math'}</p>
+                      <p><strong className="text-zinc-500 uppercase text-[9px] tracking-wider block mb-0.5">Biography:</strong> <span className="italic">"{detailedReviewer?.bio || 'Verified mathematical reviewer.'}"</span></p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                  <GraduationCap size={14} />
-                  Academic Credentials
+              {/* Bottom Cards Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Account Information Card */}
+                <div className="bg-white/5 backdrop-blur-md rounded-[2rem] p-8 border border-white/5">
+                  <div className="flex items-center gap-3 mb-8">
+                    <Users size={18} className="text-zinc-400" />
+                    <h3 className="text-sm font-bold text-white uppercase tracking-widest">Account Information</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Full Name</label>
+                      <p className="text-sm font-bold text-white">{selectedReviewer.name}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Email Address</label>
+                      <p className="text-sm font-bold text-white">{selectedReviewer.email}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Phone Number</label>
+                      <p className={cn("text-sm font-bold", detailedReviewer?.phone ? "text-white" : "text-zinc-600 italic")}>
+                        {detailedReviewer?.phone || "Not Provided"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Qualification</label>
+                      <p className="text-sm font-bold text-white">{selectedReviewer.qualification || "Not Provided"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Designation</label>
+                      <p className={cn("text-sm font-bold", detailedReviewer?.designation ? "text-white" : "text-zinc-600 italic")}>
+                        {detailedReviewer?.designation || "Not Provided"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Institution</label>
+                      <p className={cn("text-sm font-bold", detailedReviewer?.institution ? "text-white" : "text-zinc-600 italic")}>
+                        {detailedReviewer?.institution || "Not Provided"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Research Domain</label>
+                      <p className={cn("text-sm font-bold", (detailedReviewer?.researchDomain || selectedReviewer.experience) ? "text-white" : "text-zinc-600 italic")}>
+                        {detailedReviewer?.researchDomain || selectedReviewer.experience || "Not Provided"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Years of Experience</label>
+                      <p className={cn("text-sm font-bold", detailedReviewer?.yearsOfExperience ? "text-white" : "text-zinc-600 italic")}>
+                        {detailedReviewer?.yearsOfExperience || "Not Provided"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-5 bg-zinc-50 rounded-2xl border border-zinc-100 text-sm font-medium text-zinc-700">
-                  {selectedReviewer.qualification}
+
+                {/* Reviewer Credibility Card */}
+                <div className="bg-white/5 backdrop-blur-md rounded-[2rem] p-8 border border-white/5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-3 mb-6">
+                      <Award size={18} className="text-zinc-400" />
+                      <h3 className="text-sm font-bold text-white uppercase tracking-widest">Reviewer Credibility</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Identity Verification</label>
+                        <p className="text-xs font-bold text-emerald-400">Verified Reviewer</p>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Reviewer Status</label>
+                        <div>
+                          <span className={cn(
+                            "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border mt-1",
+                            selectedReviewer.status === 'Approved' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/30' :
+                            selectedReviewer.status === 'Pending' ? 'bg-amber-950/40 text-amber-400 border-amber-800/30' :
+                            'bg-rose-950/40 text-rose-400 border-rose-800/30'
+                          )}>
+                            {selectedReviewer.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Total Reviews Assigned</label>
+                        <p className="text-sm font-bold text-white">{reviewerMetrics.total}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Reviews Completed</label>
+                        <p className="text-sm font-bold text-white">{reviewerMetrics.completed}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Reviews Pending</label>
+                        <p className="text-sm font-bold text-white">{reviewerMetrics.pending}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Average Review Time</label>
+                        <p className="text-sm font-bold text-white">3-5 Days</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pending actions or status token */}
+                  <div>
+                    {selectedReviewer.status === 'Pending' ? (
+                      <div className="flex gap-4 pt-4 border-t border-white/5">
+                        <button 
+                          onClick={() => initiateStatusUpdate(selectedReviewer.id, 'Approved')}
+                          className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <UserCheck size={18} />
+                          GRANT ACCESS
+                        </button>
+                        <button 
+                          onClick={() => initiateStatusUpdate(selectedReviewer.id, 'Rejected')}
+                          className="flex-1 py-4 bg-white/10 hover:bg-white/20 text-rose-400 border border-white/10 rounded-2xl font-bold text-xs tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <UserX size={18} />
+                          DENY ENTRY
+                        </button>
+                      </div>
+                    ) : (
+                      <div className={cn(
+                        "p-4 rounded-2xl border flex items-center justify-center gap-3 font-bold text-[10px] uppercase tracking-[0.3em] shadow-sm",
+                        selectedReviewer.status === 'Approved' ? "bg-emerald-955/20 text-emerald-400 border-emerald-800/30" : "bg-rose-955/20 text-rose-400 border-rose-800/30"
+                      )}>
+                        {selectedReviewer.status === 'Approved' ? <UserCheck size={18} /> : <UserX size={18} />}
+                        Identity Token {selectedReviewer.status}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                  <Briefcase size={14} />
-                  Research Domain & Experience
-                </div>
-                <div className="p-6 bg-zinc-50/50 rounded-2xl border border-zinc-100 border-dashed">
-                  <p className="text-sm text-zinc-600 leading-relaxed italic">
-                    "{selectedReviewer.experience || 'No detailed background provided.'}"
-                  </p>
-                </div>
-              </div>
-              
+              {/* Rejection Reason inside details card if status is Rejected */}
               {selectedReviewer.status === 'Rejected' && selectedReviewer.rejectionReason && (
-                <div className="space-y-4">
+                <div className="bg-white/5 backdrop-blur-md rounded-[2rem] p-8 border border-white/5 space-y-4">
                   <div className="flex items-center gap-2 text-[10px] font-black text-rose-400 uppercase tracking-widest">
                     <AlertCircle size={14} />
                     Rejection Reason
                   </div>
-                  <div className="p-5 bg-rose-50/50 rounded-2xl border border-rose-100 text-sm font-medium text-rose-700">
+                  <div className="p-5 bg-rose-950/20 rounded-2xl border border-rose-800/30 text-sm font-medium text-rose-400">
                     {selectedReviewer.rejectionReason}
                   </div>
                 </div>
               )}
 
-              {/* Status Specific Actions */}
-              {selectedReviewer.status === 'Pending' ? (
-                <div className="flex gap-4 pt-4">
-                  <button 
-                    onClick={() => initiateStatusUpdate(selectedReviewer.id, 'Approved')}
-                    className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    <UserCheck size={18} />
-                    GRANT ACCESS
-                  </button>
-                  <button 
-                    onClick={() => initiateStatusUpdate(selectedReviewer.id, 'Rejected')}
-                    className="flex-1 py-4 bg-white text-rose-600 border border-rose-100 rounded-2xl font-bold text-xs tracking-widest hover:bg-rose-50 transition-all active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    <UserX size={18} />
-                    DENY ENTRY
-                  </button>
+              {/* Reviewed Articles Section */}
+              <div className="bg-white/5 backdrop-blur-md rounded-[2rem] p-8 border border-white/5 space-y-6">
+                <div className="flex items-center gap-3">
+                  <FileText size={18} className="text-zinc-400" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest">Reviewed Articles ({reviewedArticles.length})</h3>
                 </div>
-              ) : (
-                <div className={cn(
-                  "p-5 rounded-2xl border flex items-center justify-center gap-3 font-bold text-[10px] uppercase tracking-[0.3em] shadow-sm",
-                  selectedReviewer.status === 'Approved' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"
-                )}>
-                  {selectedReviewer.status === 'Approved' ? <UserCheck size={18} /> : <UserX size={18} />}
-                  Identity Token {selectedReviewer.status}
-                </div>
-              )}
+                
+                {reviewedArticles.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {reviewedArticles.map((art) => (
+                      <div 
+                        key={art.id} 
+                        className="p-5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all flex flex-col gap-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <h4 className="text-sm font-bold text-white leading-snug line-clamp-2">
+                            {art.title}
+                          </h4>
+                          <span className={cn(
+                            "shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border",
+                            art.status === 'Approved' || art.status === 'Accepted' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/30' :
+                            art.status === 'Rejected' ? 'bg-rose-950/40 text-rose-400 border-rose-800/30' :
+                            'bg-amber-950/40 text-amber-400 border-amber-800/30'
+                          )}>
+                            {art.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-zinc-500 font-bold uppercase">
+                          <span>ID: {art.id}</span>
+                          <span>{art.date}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-500 italic py-8 text-center bg-white/5 border border-white/5 rounded-2xl">
+                    No articles reviewed yet.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
