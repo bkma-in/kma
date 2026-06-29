@@ -12,6 +12,7 @@ import MyArticles from './pages/author/MyArticles';
 import SubmitArticle from './pages/author/SubmitArticle';
 import Notifications from './pages/author/Notifications';
 import Drafts from './pages/author/Drafts';
+import AuthorRevisionRequired from './pages/author/AuthorRevisionRequired';
 import AdminLayout from './layouts/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminAuthors from './pages/admin/AdminAuthors';
@@ -184,6 +185,7 @@ function AuthorRoutes() {
         <Route path="articles" element={<MyArticles />} />
         <Route path="submit" element={<SubmitArticle />} />
         <Route path="drafts" element={<Drafts />} />
+        <Route path="revision-required" element={<AuthorRevisionRequired />} />
         <Route path="notifications" element={<Notifications />} />
       </Route>
     </Routes>

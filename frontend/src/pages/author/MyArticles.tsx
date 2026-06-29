@@ -33,7 +33,7 @@ import { auth, db } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 // Types
-type Status = 'Submitted' | 'Under Review' | 'Needs Revision' | 'Approved' | 'Rejected';
+type Status = 'Submitted' | 'Under Review' | 'Revision Required' | 'Approved' | 'Rejected';
 
 interface Version {
   version: number;
@@ -242,7 +242,7 @@ const MyArticles = () => {
     switch(backendStatus) {
       case 'submitted': return 'Submitted';
       case 'under_review': return 'Under Review';
-      case 'revision_requested': return 'Needs Revision';
+      case 'revision_requested': return 'Revision Required';
       case 'accepted': return 'Approved';
       case 'rejected': return 'Rejected';
       default: return 'Submitted';
@@ -254,7 +254,7 @@ const MyArticles = () => {
       case 'Draft': return 'bg-zinc-100 text-zinc-600 border-zinc-200';
       case 'Submitted': return 'bg-blue-50 text-blue-600 border-blue-100';
       case 'Under Review': return 'bg-amber-50 text-amber-600 border-amber-100';
-      case 'Needs Revision': return 'bg-rose-50 text-rose-600 border-rose-100';
+      case 'Revision Required': return 'bg-rose-50 text-rose-600 border-rose-100';
       case 'Approved': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
       case 'Rejected': return 'bg-zinc-100 text-zinc-500 border-zinc-200';
     }
@@ -265,7 +265,7 @@ const MyArticles = () => {
       case 'Draft': return <Edit2 size={12} />;
       case 'Submitted': return <Clock size={12} />;
       case 'Under Review': return <History size={12} />;
-      case 'Needs Revision': return <AlertCircle size={12} />;
+      case 'Revision Required': return <AlertCircle size={12} />;
       case 'Approved': return <CheckCircle2 size={12} />;
       case 'Rejected': return <Ban size={12} />;
     }
@@ -366,7 +366,7 @@ const MyArticles = () => {
   };
 
   const handleEdit = (article: Article) => {
-    if (article.status !== 'Needs Revision') return;
+    if (article.status !== 'Revision Required') return;
     setRevisionArticle(article);
     setRevisionAbstract(article.abstract);
     setRevisionFile(null);
@@ -577,7 +577,7 @@ const MyArticles = () => {
                     All Status
                   </button>
                   
-                  {(['Submitted', 'Under Review', 'Needs Revision', 'Approved', 'Rejected'] as Status[]).map((status) => (
+                  {(['Submitted', 'Under Review', 'Revision Required', 'Approved', 'Rejected'] as Status[]).map((status) => (
                     <button
                       key={status}
                       onClick={() => { setStatusFilter(status); setIsFilterOpen(false); }}
@@ -590,7 +590,7 @@ const MyArticles = () => {
                         "w-1.5 h-1.5 rounded-full",
                         status === 'Submitted' && "bg-blue-500",
                         status === 'Under Review' && "bg-amber-500",
-                        status === 'Needs Revision' && "bg-rose-500",
+                        status === 'Revision Required' && "bg-rose-500",
                         status === 'Approved' && "bg-emerald-500",
                         status === 'Rejected' && "bg-zinc-500"
                       )} />
@@ -705,14 +705,14 @@ const MyArticles = () => {
                         </button>
                         <button 
                           onClick={() => handleEdit(article)}
-                          disabled={article.status !== 'Needs Revision'}
+                          disabled={article.status !== 'Revision Required'}
                           className={cn(
                             "p-2 rounded-lg transition-all",
-                            article.status === 'Needs Revision' 
+                            article.status === 'Revision Required' 
                               ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50 animate-pulse" 
                               : "text-zinc-200 cursor-not-allowed"
                           )}
-                          title={article.status === 'Needs Revision' ? 'Submit Revision' : `Editing locked (${article.status})`}
+                          title={article.status === 'Revision Required' ? 'Submit Revision' : `Editing locked (${article.status})`}
                         >
                           <Edit2 size={18} />
                         </button>
@@ -923,7 +923,7 @@ const MyArticles = () => {
                 </div>
 
                 {/* Reviewer Feedback / Revision Request Details (For Authors) */}
-                {selectedArticle.status === 'Needs Revision' && (
+                {selectedArticle.status === 'Revision Required' && (
                   <div className="space-y-4 animate-in fade-in duration-300">
                     <div className="flex items-center gap-2 text-[10px] font-black text-rose-600 uppercase tracking-widest">
                       <AlertCircle size={14} />
@@ -933,7 +933,7 @@ const MyArticles = () => {
                       {/* Admin Note */}
                       {selectedArticle.adminNote && (
                         <div>
-                          <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 font-['Outfit']">Editor's Instructions</h4>
+                          <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 font-['Outfit']">Rejected Reason / Reviewer Comments</h4>
                           <p className="text-xs text-zinc-700 leading-relaxed font-sans bg-white p-4 rounded-xl border border-rose-200/50">
                             "{selectedArticle.adminNote}"
                           </p>
@@ -949,7 +949,7 @@ const MyArticles = () => {
                               <div className="flex justify-between items-center">
                                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-wider font-['Outfit']">{key}</span>
                                 <span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded text-[8px] font-bold uppercase tracking-wide border border-amber-100 font-['Outfit']">
-                                  {review.recommendation || 'Needs Revision'}
+                                  {review.recommendation || 'Revision Required'}
                                 </span>
                               </div>
                               <p className="text-xs text-zinc-600 italic leading-relaxed font-sans">
@@ -1017,16 +1017,16 @@ const MyArticles = () => {
                   <div className="flex items-center gap-3">
                     <button 
                       onClick={() => handleEdit(selectedArticle)}
-                      disabled={selectedArticle.status !== 'Needs Revision'}
+                      disabled={selectedArticle.status !== 'Revision Required'}
                       className={cn(
                         "flex items-center gap-2 px-6 py-4 rounded-2xl font-bold text-[10px] tracking-[0.2em] transition-all uppercase shadow-xl shadow-black/5",
-                        selectedArticle.status === 'Needs Revision'
+                        selectedArticle.status === 'Revision Required'
                           ? "bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 animate-pulse"
                           : "bg-zinc-50 border border-zinc-100 text-zinc-300 cursor-not-allowed"
                       )}
                     >
                       <Edit2 size={16} />
-                      {selectedArticle.status === 'Needs Revision' ? 'Submit Revision' : 'Edit Locked'}
+                      {selectedArticle.status === 'Revision Required' ? 'Submit Revision' : 'Edit Locked'}
                     </button>
                     <button 
                       onClick={() => handleDelete(selectedArticle)}

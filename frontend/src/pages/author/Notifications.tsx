@@ -144,7 +144,7 @@ const Notifications = () => {
           iconBg: 'bg-amber-50',
           iconColor: 'text-amber-600',
           action: 'EDIT MANUSCRIPT',
-          onClick: () => navigate(`${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId } })
+          onClick: () => navigate(rolePathPrefix === '/author' ? '/author/revision-required' : `${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId } })
         };
       default:
         return {

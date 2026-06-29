@@ -49,7 +49,10 @@ export const updateArticleStatus = async (id: string, status: string, extraData?
   return response.data;
 };
 
-export const bulkPublishArticles = async (articleIds: string[]) => {
-  const response = await api.patch('/articles/bulk-publish', { articleIds });
+export const bulkPublishArticles = async (
+  articleIds: string[],
+  metadata: { volumeNo: string; monthYear: string; issueNumber: number; issn?: string }
+) => {
+  const response = await api.patch('/articles/bulk-publish', { articleIds, ...metadata });
   return response.data;
 };

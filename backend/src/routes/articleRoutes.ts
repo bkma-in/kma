@@ -669,8 +669,8 @@ router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
         updateData.pdfName = pdfFile.originalname;
       }
 
-      // Auto-set status back to submitted after revision
-      updateData.status = 'submitted';
+      // Auto-set status back to submitted after revision unless explicitly requested to stay in revision_requested
+      updateData.status = status === 'revision_requested' ? 'revision_requested' : 'submitted';
 
     } else {
       // DRAFT MODE: Full editing allowed (Continuity flow)
@@ -735,19 +735,42 @@ router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
 // Admin Bulk Publish Articles
 router.patch('/bulk-publish', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
   try {
-    const { articleIds } = req.body;
+    const { articleIds, volumeNo, monthYear, issueNumber, issn } = req.body;
 
     if (!articleIds || !Array.isArray(articleIds) || articleIds.length === 0) {
       return res.status(400).json({ error: 'Article IDs are required and must be a non-empty array' });
     }
 
+    if (!volumeNo || !monthYear || issueNumber === undefined) {
+      return res.status(400).json({ error: 'Volume Number, Month & Year, and Issue Number are required' });
+    }
+
+    const parsedIssueNumber = parseInt(issueNumber, 10);
+    if (isNaN(parsedIssueNumber) || parsedIssueNumber <= 0) {
+      return res.status(400).json({ error: 'Issue Number must be a positive integer' });
+    }
+
+    // Verify duplicate issue combination: Volume No. + Month & Year + Issue Number
+    const existingIssues = await db.collection('issues')
+      .where('volume', '==', volumeNo)
+      .where('monthYear', '==', monthYear)
+      .where('issueNumber', '==', parsedIssueNumber)
+      .get();
+
+    if (!existingIssues.empty) {
+      return res.status(400).json({ error: 'This publication issue already exists. Please use a different Volume or Issue Number.' });
+    }
+
     const batch = db.batch();
     const failures: { id: string; error: string }[] = [];
     let publishedCount = 0;
+    const successfulArticleIds: string[] = [];
 
     // Fetch all requested articles in parallel
     const promises = articleIds.map(id => db.collection('articles').doc(id).get());
     const docs = await Promise.all(promises);
+
+    const issueRef = db.collection('issues').doc();
 
     docs.forEach(doc => {
       const id = doc.id;
@@ -777,12 +800,34 @@ router.patch('/bulk-publish', requireAuth, requireRole(['admin']), async (req: A
       // Add to Firestore batch update
       batch.update(doc.ref, {
         status: 'published',
+        issueId: issueRef.id,
+        volumeNo: volumeNo,
+        monthYear: monthYear,
+        issueNumber: parsedIssueNumber,
+        issn: issn || null,
+        publishedAt: new Date(),
         updatedAt: new Date()
       });
+      successfulArticleIds.push(id);
       publishedCount++;
     });
 
     if (publishedCount > 0) {
+      // Create the single issue record representing the batch publication details
+      const newIssue = {
+        issueId: issueRef.id,
+        title: `Volume ${volumeNo}, Issue ${parsedIssueNumber} (${monthYear})`,
+        volume: volumeNo,
+        issueNumber: parsedIssueNumber,
+        monthYear: monthYear,
+        issn: issn || null,
+        articleIds: successfulArticleIds,
+        publishedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      batch.set(issueRef, newIssue);
+
       await batch.commit();
     }
 
