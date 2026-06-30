@@ -146,7 +146,9 @@ export const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
             </div>
 
             {/* Cheque realization notice */}
-            <p className="receipt-cheque-notice">* Cheques are subject to realisation</p>
+            {paymentMethod?.toLowerCase().includes('cheque') && (
+              <p className="receipt-cheque-notice">* Cheques are subject to realisation</p>
+            )}
           </div>
 
           {/* Footer Right: Executive Editor signature area */}
