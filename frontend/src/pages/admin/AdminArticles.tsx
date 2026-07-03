@@ -253,7 +253,7 @@ const AdminArticles = () => {
     // If statusFilter is 'All', exclude 'Ready to Publish', 'Published', and 'Revision Requested'
     // so they disappear from the active review queue immediately.
     const matchesStatus = statusFilter === 'All'
-      ? (art.status !== 'Ready to Publish' && art.status !== 'Published' && art.status !== 'Revision Requested')
+      ? (art.status !== 'Ready to Publish' && art.status !== 'Published' && art.status !== 'Revision Requested' && art.status !== 'Rejected' && art.status !== 'Desk Rejected')
       : art.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -471,10 +471,9 @@ const AdminArticles = () => {
                         <>
                           <button
                             onClick={() => {
-                              // Verify eligibility: Must have an Approved or Accepted recommendation
+                              // Verify eligibility: Must have an Approved or Accepted recommendation in authoritative reviewerFeedback
                               const hasApprovedReview = 
-                                (article.reviewerFeedback && (article.reviewerFeedback.recommendation === 'Approved' || article.reviewerFeedback.recommendation === 'Accepted')) ||
-                                (article.reviews && Object.values(article.reviews).some((r: any) => r.recommendation === 'Approved' || r.recommendation === 'Accepted'));
+                                !!(article.reviewerFeedback && (article.reviewerFeedback.recommendation === 'Approved' || article.reviewerFeedback.recommendation === 'Accepted'));
 
                               if (!hasApprovedReview) {
                                 showToast('This article is not eligible for publication. It must have an Approved or Accepted recommendation from a reviewer.', 'error');

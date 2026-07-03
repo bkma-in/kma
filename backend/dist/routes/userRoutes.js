@@ -244,7 +244,8 @@ router.get('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requ
                 experience: data.experience || '',
                 regDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
                 status: data.status || 'Pending',
-                rejectionReason: data.rejectionReason || ''
+                rejectionReason: data.rejectionReason || '',
+                profileImage: data.profileImage || null
             };
         });
         // In-memory sort by regDate descending

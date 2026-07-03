@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Search,
   FileText,
@@ -56,16 +56,58 @@ const AdminReadyToPublish = () => {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Close modal on Esc keypress
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+
+  // Close modal on Esc keypress & Focus trap accessibility
   useEffect(() => {
     if (isModalOpen) {
+      previousActiveElement.current = document.activeElement as HTMLElement;
+
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape' && !publishing) {
           setIsModalOpen(false);
         }
+
+        if (e.key === 'Tab' && modalRef.current) {
+          const focusableElements = modalRef.current.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusableElements.length > 0) {
+            const firstElement = focusableElements[0] as HTMLElement;
+            const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+            if (e.shiftKey) {
+              if (document.activeElement === firstElement) {
+                lastElement.focus();
+                e.preventDefault();
+              }
+            } else {
+              if (document.activeElement === lastElement) {
+                firstElement.focus();
+                e.preventDefault();
+              }
+            }
+          }
+        }
       };
+
+      if (modalRef.current) {
+        const firstInput = modalRef.current.querySelector('input, select, textarea, button') as HTMLElement;
+        if (firstInput) {
+          firstInput.focus();
+        } else {
+          modalRef.current.focus();
+        }
+      }
+
       document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+        if (previousActiveElement.current) {
+          previousActiveElement.current.focus();
+        }
+      };
     }
   }, [isModalOpen, publishing]);
 
@@ -222,7 +264,7 @@ const AdminReadyToPublish = () => {
       }
     }
 
-    if (issn && !/^\d{4}-\d{4}$/.test(issn)) {
+    if (issn && !/^\d{4}-\d{3}[\dXx]$/.test(issn)) {
       errors.issn = 'ISSN must be in XXXX-XXXX format';
     }
 
@@ -500,7 +542,7 @@ const AdminReadyToPublish = () => {
       {/* Publication Metadata Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-3xl overflow-hidden shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col border border-zinc-200">
+          <div ref={modalRef} role="dialog" aria-modal="true" tabIndex={-1} className="bg-white rounded-3xl overflow-hidden shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col border border-zinc-200 outline-none">
             {/* Modal Header */}
             <div className="px-6 py-5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50">
               <div>

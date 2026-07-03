@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useNotification } from '../utils/NotificationContext';
-import { auth } from '../config/firebase';
+import { auth, db } from '../config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { cn } from '../utils/cn';
 
 const AcceptInvitation = () => {
@@ -35,6 +36,27 @@ const AcceptInvitation = () => {
     });
     return unsubscribe;
   }, []);
+
+  const [inviterProfileImage, setInviterProfileImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (article?.authorId) {
+      const fetchInviterPhoto = async () => {
+        try {
+          const docRef = doc(db, 'users', article.authorId);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists() && docSnap.data().profileImage) {
+            setInviterProfileImage(docSnap.data().profileImage);
+          }
+        } catch (err) {
+          console.error('Failed to load inviter profile photo:', err);
+        }
+      };
+      fetchInviterPhoto();
+    } else {
+      setInviterProfileImage(null);
+    }
+  }, [article?.authorId]);
 
   const queryParams = new URLSearchParams(window.location.search);
   const articleIdFromUrl = queryParams.get('articleId');
@@ -139,8 +161,12 @@ const AcceptInvitation = () => {
         <div className="p-10 space-y-8">
           <div className="space-y-6">
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center shrink-0">
-                <User size={20} className="text-zinc-500" />
+              <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center shrink-0 overflow-hidden">
+                {inviterProfileImage ? (
+                  <img src={inviterProfileImage} alt="Inviter" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={20} className="text-zinc-500" />
+                )}
               </div>
               <div>
                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Invited By</p>

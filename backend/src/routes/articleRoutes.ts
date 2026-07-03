@@ -723,8 +723,12 @@ router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
         updateData.pdfName = pdfFile.originalname;
       }
 
-      // Auto-set status back to submitted after revision unless explicitly requested to stay in revision_requested
-      updateData.status = status === 'revision_requested' ? 'revision_requested' : 'submitted';
+      // Only resubmit to submitted when status is exactly submitted. Otherwise, keep it as revision_requested.
+      if (status === 'submitted') {
+        updateData.status = 'submitted';
+      } else {
+        updateData.status = 'revision_requested';
+      }
 
     } else {
       // DRAFT MODE: Full editing allowed (Continuity flow)
@@ -804,95 +808,87 @@ router.patch('/bulk-publish', requireAuth, requireRole(['admin']), async (req: A
       return res.status(400).json({ error: 'Issue Number must be a positive integer' });
     }
 
-    // Verify duplicate issue combination: Volume No. + Month & Year + Issue Number
-    const existingIssues = await db.collection('issues')
-      .where('volume', '==', volumeNo)
-      .where('monthYear', '==', monthYear)
-      .where('issueNumber', '==', parsedIssueNumber)
-      .get();
+    // Deterministic issue ID derived from volume, monthYear, and issueNumber
+    const docId = `vol_${volumeNo}_issue_${parsedIssueNumber}_${monthYear.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+    const issueRef = db.collection('issues').doc(docId);
 
-    if (!existingIssues.empty) {
-      return res.status(400).json({ error: 'This publication issue already exists. Please use a different Volume or Issue Number.' });
-    }
-
-    const batch = db.batch();
-    const failures: { id: string; error: string }[] = [];
-    let publishedCount = 0;
-    const successfulArticleIds: string[] = [];
-
-    // Fetch all requested articles in parallel
-    const promises = articleIds.map(id => db.collection('articles').doc(id).get());
-    const docs = await Promise.all(promises);
-
-    const issueRef = db.collection('issues').doc();
-
-    docs.forEach(doc => {
-      const id = doc.id;
-      if (!doc.exists) {
-        failures.push({ id, error: 'Article not found' });
-        return;
+    await db.runTransaction(async (transaction) => {
+      // Check if the issue already exists
+      const issueDoc = await transaction.get(issueRef);
+      if (issueDoc.exists) {
+        throw new Error('This publication issue already exists. Please use a different Volume or Issue Number.');
       }
 
-      const data = doc.data()!;
-      if (data.status === 'published') {
-        failures.push({ id, error: 'Article is already published' });
-        return;
-      }
+      // Fetch all requested articles
+      const docRefs = articleIds.map(id => db.collection('articles').doc(id));
+      const articleDocs = await Promise.all(docRefs.map(ref => transaction.get(ref)));
 
-      const isApprovedUnderReview = 
-        data.status === 'under_review' && 
-        data.reviewerFeedback && 
-        (data.reviewerFeedback.recommendation === 'Approved' || data.reviewerFeedback.recommendation === 'Accepted');
-      
-      const isReadyToPublish = data.status === 'accepted' || isApprovedUnderReview;
+      const successfulArticleIds: string[] = [];
+      let publishedCount = 0;
 
-      if (!isReadyToPublish) {
-        failures.push({ id, error: `Article is in status "${data.status}" and is not ready to publish` });
-        return;
-      }
+      articleDocs.forEach((doc) => {
+        const id = doc.id;
+        if (!doc.exists) {
+          throw new Error(`Article ${id} not found`);
+        }
 
-      // Add to Firestore batch update
-      batch.update(doc.ref, {
-        status: 'published',
-        issueId: issueRef.id,
-        volumeNo: volumeNo,
-        monthYear: monthYear,
-        issueNumber: parsedIssueNumber,
-        issn: issn || null,
-        publishedAt: new Date(),
-        updatedAt: new Date()
+        const data = doc.data()!;
+        if (data.status === 'published') {
+          throw new Error(`Article ${id} is already published`);
+        }
+
+        const isApprovedUnderReview = 
+          data.status === 'under_review' && 
+          data.reviewerFeedback && 
+          (data.reviewerFeedback.recommendation === 'Approved' || data.reviewerFeedback.recommendation === 'Accepted');
+        
+        const isReadyToPublish = data.status === 'accepted' || isApprovedUnderReview;
+
+        if (!isReadyToPublish) {
+          throw new Error(`Article ${id} is not ready to publish`);
+        }
+
+        transaction.update(doc.ref, {
+          status: 'published',
+          issueId: issueRef.id,
+          volume: volumeNo,
+          volumeNo: volumeNo,
+          monthYear: monthYear,
+          issueNumber: parsedIssueNumber,
+          issn: issn || null,
+          publishedAt: new Date(),
+          updatedAt: new Date()
+        });
+
+        successfulArticleIds.push(id);
+        publishedCount++;
       });
-      successfulArticleIds.push(id);
-      publishedCount++;
+
+      if (publishedCount > 0) {
+        const newIssue = {
+          issueId: issueRef.id,
+          title: `Volume ${volumeNo}, Issue ${parsedIssueNumber} (${monthYear})`,
+          volume: volumeNo,
+          issueNumber: parsedIssueNumber,
+          monthYear: monthYear,
+          issn: issn || null,
+          articleIds: successfulArticleIds,
+          publishedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        transaction.set(issueRef, newIssue);
+      }
     });
-
-    if (publishedCount > 0) {
-      // Create the single issue record representing the batch publication details
-      const newIssue = {
-        issueId: issueRef.id,
-        title: `Volume ${volumeNo}, Issue ${parsedIssueNumber} (${monthYear})`,
-        volume: volumeNo,
-        issueNumber: parsedIssueNumber,
-        monthYear: monthYear,
-        issn: issn || null,
-        articleIds: successfulArticleIds,
-        publishedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      batch.set(issueRef, newIssue);
-
-      await batch.commit();
-    }
 
     res.json({
       success: true,
-      publishedCount,
-      failures
+      publishedCount: articleIds.length,
+      failures: []
     });
   } catch (error: any) {
-    console.error('Bulk publish articles error:', error);
-    res.status(500).json({ error: error.message || 'Failed to bulk publish articles' });
+    console.error('Bulk publish transaction error:', error);
+    res.status(400).json({ error: error.message || 'Failed to bulk publish articles' });
   }
 });
 
