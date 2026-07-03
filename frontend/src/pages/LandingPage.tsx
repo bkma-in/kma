@@ -23,7 +23,7 @@ import EditorialBoardModal from '../components/EditorialBoardModal';
 import PricingModal from '../components/PricingModal';
 import { useAuth } from '../context/AuthContext';
 import { getDashboardByRole } from '../utils/auth';
-import { getPublishedArticles } from '../services/article.service';
+import { getPublishedArticles, getPdfUrl } from '../services/article.service';
 
 // --- Types ---
 interface Article {
@@ -43,6 +43,22 @@ const LandingPage: React.FC = () => {
   const { currentUser, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const isLoggedIn = !!currentUser;
+  const handleDownloadPdf = async (articleId: string) => {
+    if (!isLoggedIn) {
+      navigate('/auth');
+      return;
+    }
+    try {
+      const res = await getPdfUrl(articleId);
+      if (res.success && res.url) {
+        window.open(res.url, '_blank');
+      } else {
+        alert('Failed to retrieve PDF link. Please ensure you have an active subscription for this issue.');
+      }
+    } catch (err: any) {
+      alert('Download error: ' + (err.response?.data?.error || err.message || err));
+    }
+  };
   const [activeArticle, setActiveArticle] = useState<Article | null>(null);
   const [viewState, setViewState] = useState<'landing' | 'paywall' | 'full'>('landing');
   const [purchasedArticles, setPurchasedArticles] = useState<string[]>([]);
@@ -206,7 +222,10 @@ const LandingPage: React.FC = () => {
               <CheckCircle2 size={12} /> Purchased
             </span>
             {article.pdfAvailable && (
-              <button className="flex items-center gap-2 px-4 py-2 bg-zinc-100 hover:bg-black hover:text-white rounded-lg text-[10px] font-black tracking-widest transition-all uppercase">
+              <button 
+                onClick={() => handleDownloadPdf(article.id)}
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-100 hover:bg-black hover:text-white rounded-lg text-[10px] font-black tracking-widest transition-all uppercase cursor-pointer"
+              >
                 <Download size={14} /> PDF
               </button>
             )}
@@ -272,7 +291,7 @@ const LandingPage: React.FC = () => {
               <img src={logo} alt="BKMA Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="font-['Playfair_Display'] font-black text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl leading-[1.1] sm:leading-tight tracking-[-0.01em] [word-spacing:0.18em] block lg:whitespace-nowrap">
-              Bulletin Of Kerala Mathematical Association
+              Bulletin of Kerala Mathematical Association
             </h1>
           </div>
 

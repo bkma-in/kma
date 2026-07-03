@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSubscription } from '../../utils/SubscriptionContext';
-import { getPublishedArticles } from '../../services/article.service';
+import { getPublishedArticles, getPdfUrl } from '../../services/article.service';
 
 const ReaderDashboard = () => {
   const navigate = useNavigate();
@@ -39,6 +39,19 @@ const ReaderDashboard = () => {
     };
     fetchPublished();
   }, []);
+
+  const handleReadFull = async (articleId: string) => {
+    try {
+      const res = await getPdfUrl(articleId);
+      if (res.success && res.url) {
+        window.open(res.url, '_blank');
+      } else {
+        console.error('Failed to retrieve PDF link');
+      }
+    } catch (err) {
+      console.error('Error downloading article:', err);
+    }
+  };
 
   const stats = [
     { label: 'Published Papers', value: articles.length.toString(), icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -149,7 +162,10 @@ const ReaderDashboard = () => {
 
                 <div className="shrink-0 flex items-center gap-4">
                   {isSubscribed ? (
-                    <button className="px-5 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 transition-all flex items-center gap-2">
+                    <button 
+                      onClick={() => handleReadFull(art.id)}
+                      className="px-5 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 transition-all flex items-center gap-2 cursor-pointer"
+                    >
                       Read Full <ChevronRight size={14} />
                     </button>
                   ) : (

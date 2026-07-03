@@ -335,6 +335,30 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
       }
     }
 
+    // Cleanup invitations subcollection to prevent orphaned subcollection items
+    const invitationsSnapshot = await articleRef.collection('invitations').get();
+    if (!invitationsSnapshot.empty) {
+      const inviteBatch = db.batch();
+      invitationsSnapshot.docs.forEach(inviteDoc => {
+        inviteBatch.delete(inviteDoc.ref);
+      });
+      await inviteBatch.commit();
+      console.log(`[ROUTE-CLEANUP] Cleaned up ${invitationsSnapshot.size} co-author invitations for article ${id}`);
+    }
+
+    // Cleanup notifications related to this article
+    const notificationsSnapshot = await db.collection('notifications')
+      .where('metadata.articleId', '==', id)
+      .get();
+    if (!notificationsSnapshot.empty) {
+      const notifBatch = db.batch();
+      notificationsSnapshot.docs.forEach(notifDoc => {
+        notifBatch.delete(notifDoc.ref);
+      });
+      await notifBatch.commit();
+      console.log(`[ROUTE-CLEANUP] Cleaned up ${notificationsSnapshot.size} notifications for article ${id}`);
+    }
+
     await articleRef.delete();
     res.json({ success: true, message: 'Article deleted successfully' });
 
@@ -550,7 +574,37 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Forbidden: Requires active subscription for this issue' });
     }
 
-    const signedUrl = await getSignedPdfUrl(article.pdfUrl);
+    const key = (req.query.key as string) || article.pdfUrl;
+
+    if (!key) {
+      return res.status(400).json({ error: 'No document has been uploaded for this article' });
+    }
+
+    // Security check: ensure the requested key is associated with this article
+    let keyValid = (key === article.pdfUrl);
+    let originalName = article.pdfName || 'manuscript.pdf';
+
+    if (!keyValid && Array.isArray(article.revisionHistory)) {
+      const matchingRev = article.revisionHistory.find((rev: any) => rev.pdfUrl === key);
+      if (matchingRev) {
+        keyValid = true;
+        originalName = matchingRev.pdfName || 'revision_manuscript.pdf';
+      }
+    }
+
+    if (!keyValid && article.reviews) {
+      const matchingReview = Object.values(article.reviews).find((rev: any) => rev.reviewedFile === key) as any;
+      if (matchingReview) {
+        keyValid = true;
+        originalName = matchingReview.reviewedFileName || 'reviewer_assessment.pdf';
+      }
+    }
+
+    if (!keyValid) {
+      return res.status(403).json({ error: 'Forbidden: Requested file key does not belong to this article' });
+    }
+
+    const signedUrl = await getSignedPdfUrl(key, originalName);
     res.json({ success: true, url: signedUrl });
 
   } catch (error) {
@@ -872,7 +926,7 @@ router.patch('/:id/assign', requireAuth, requireRole(['admin']), async (req: Aut
 });
 
 // Reviewer/Admin Update Status
-router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), async (req: AuthRequest, res) => {
+router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), upload.single('reviewedFile'), async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
     const { role, uid } = req.user!;
@@ -890,12 +944,20 @@ router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), asy
       const title = articleData?.title || 'Untitled Article';
       const normalizedRecommendation = normalizeRecommendation(recommendation || '');
 
+      let reviewedFileKey = null;
+      let reviewedFileName = null;
+      if (req.file) {
+        reviewedFileKey = await uploadPdfToR2(req.file.buffer, req.file.originalname, uid, req.file.mimetype);
+        reviewedFileName = req.file.originalname;
+      }
+
       // Reviewer logs their own feedback in the 'reviews' map
       await articleRef.update({
         [`reviews.${uid}`]: {
           remarks: remarks || '',
           recommendation: normalizedRecommendation,
-          reviewedFile: reviewedFile || null,
+          reviewedFile: reviewedFileKey || reviewedFile || null,
+          reviewedFileName: reviewedFileName || null,
           reviewerName,
           updatedAt: new Date()
         },

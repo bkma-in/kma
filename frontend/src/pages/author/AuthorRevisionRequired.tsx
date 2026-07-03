@@ -15,13 +15,13 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
+import { getPdfUrl } from '../../services/article.service';
 import { db, auth } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useNotification } from '../../utils/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { formatDate } from '../../utils/dateHelpers';
-import { getPdfUrl } from '../../services/article.service';
 
 // Types
 interface Version {
@@ -203,18 +203,22 @@ const AuthorRevisionRequired = () => {
   };
 
   // Download PDF file
-  const handleDownload = async (articleId: string) => {
-    if (!articleId) return;
+  const handleDownload = async (pdfUrl: string, articleId: string) => {
+    if (!pdfUrl) return;
+    if (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')) {
+      window.open(pdfUrl, '_blank');
+      return;
+    }
     try {
-      const response = await getPdfUrl(articleId);
-      if (response.success && response.url) {
-        window.open(response.url, '_blank');
+      showToast('Generating secure download link...', 'info');
+      const res = await getPdfUrl(`${articleId}?key=${encodeURIComponent(pdfUrl)}`);
+      if (res.success && res.url) {
+        window.open(res.url, '_blank');
       } else {
-        showToast('Failed to get signed PDF URL.', 'error');
+        showToast('Failed to retrieve PDF download link.', 'error');
       }
-    } catch (err) {
-      console.error(err);
-      showToast('Failed to download manuscript.', 'error');
+    } catch (err: any) {
+      showToast('Error downloading PDF: ' + (err.response?.data?.error || err.message || err), 'error');
     }
   };
 
@@ -321,7 +325,7 @@ const AuthorRevisionRequired = () => {
                                 <FileEdit size={16} />
                               </button>
                               <button
-                                onClick={() => handleDownload(article.id)}
+                                onClick={() => handleDownload(article.pdfUrl || '', article.id)}
                                 disabled={!article.pdfUrl}
                                 className="p-2 bg-zinc-50 hover:bg-zinc-100 text-zinc-600 rounded-lg transition-all disabled:opacity-50"
                                 title="View Submitted Version"
@@ -400,7 +404,7 @@ const AuthorRevisionRequired = () => {
                   Edit Article
                 </button>
                 <button
-                  onClick={() => handleDownload(selectedArticle.id)}
+                  onClick={() => handleDownload(selectedArticle.pdfUrl || '', selectedArticle.id)}
                   disabled={!selectedArticle.pdfUrl}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer"
                 >
