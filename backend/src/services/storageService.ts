@@ -11,7 +11,7 @@ import crypto from 'crypto';
  * @param authorId The ID of the author uploading the article.
  * @returns The object key of the uploaded PDF.
  */
-export const uploadPdfToR2 = async (fileBuffer: Buffer, originalName: string, authorId: string): Promise<string> => {
+export const uploadPdfToR2 = async (fileBuffer: Buffer, originalName: string, authorId: string, mimeType?: string): Promise<string> => {
   // Runtime credential validation
   if (!config.r2.accountId || !config.r2.accessKeyId || !config.r2.secretAccessKey || !config.r2.bucketName) {
     console.error('[STORAGE-SERVICE] Missing Cloudflare R2 configuration.');
@@ -34,7 +34,7 @@ export const uploadPdfToR2 = async (fileBuffer: Buffer, originalName: string, au
       Bucket: config.r2.bucketName,
       Key: filename,
       Body: fileBuffer,
-      ContentType: 'application/pdf',
+      ContentType: mimeType || 'application/pdf',
       Metadata: {
         originalName: originalName,
         authorId: authorId,
@@ -54,9 +54,10 @@ export const uploadPdfToR2 = async (fileBuffer: Buffer, originalName: string, au
 /**
  * Generates a presigned URL valid for downloading the PDF from R2.
  * @param objectKey The key of the PDF object in R2.
+ * @param originalName Optional original filename to preserve on download.
  * @returns A promise resolving to the presigned download URL.
  */
-export const getSignedPdfUrl = async (objectKey: string): Promise<string> => {
+export const getSignedPdfUrl = async (objectKey: string, originalName?: string): Promise<string> => {
   if (!config.r2.accountId || !config.r2.accessKeyId || !config.r2.secretAccessKey || !config.r2.bucketName) {
     console.error('[STORAGE-SERVICE] Missing Cloudflare R2 configuration.');
     throw new Error('Cloudflare R2 is not configured properly on the server.');
@@ -67,12 +68,13 @@ export const getSignedPdfUrl = async (objectKey: string): Promise<string> => {
     throw new Error('Object key is required to generate download URL.');
   }
 
-  console.log(`[STORAGE-SERVICE] Download requested: "${objectKey}"`);
+  console.log(`[STORAGE-SERVICE] Download requested: "${objectKey}" (originalName: "${originalName || 'none'}")`);
 
   try {
     const command = new GetObjectCommand({
       Bucket: config.r2.bucketName,
       Key: objectKey,
+      ...(originalName ? { ResponseContentDisposition: `inline; filename="${originalName.replace(/"/g, '\\"')}"` } : {})
     });
 
     // Signed URL valid for 1 hour (3600 seconds)

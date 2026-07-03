@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
-import { getArticles, assignReviewers as assignReviewersService, updateArticleStatus } from '../../services/article.service';
+import { getArticles, assignReviewers as assignReviewersService, updateArticleStatus, getPdfUrl } from '../../services/article.service';
 import { getReviewers } from '../../services/user.service';
 import { formatDate } from '../../utils/dateHelpers';
 
@@ -62,6 +62,7 @@ interface Article {
     remarks: string;
     recommendation: ReviewerRecommendation;
     reviewedFile?: string;
+    reviewedFileName?: string;
   };
   adminNote?: string;
   rejectionReason?: string;
@@ -69,6 +70,8 @@ interface Article {
     remarks: string;
     recommendation: ReviewerRecommendation;
     reviewerName?: string;
+    reviewedFile?: string;
+    reviewedFileName?: string;
     updatedAt?: any;
   }>;
 }
@@ -317,6 +320,21 @@ const AdminArticles = () => {
     }
   };
 
+  const handleDownload = async (articleId: string, title: string, key?: string) => {
+    try {
+      showToast(`Generating secure download link...`, 'info');
+      const urlParam = key ? `${articleId}?key=${encodeURIComponent(key)}` : articleId;
+      const res = await getPdfUrl(urlParam);
+      if (res.success && res.url) {
+        window.open(res.url, '_blank');
+      } else {
+        showToast('Failed to retrieve download link.', 'error');
+      }
+    } catch (err: any) {
+      showToast('Error downloading file: ' + (err.response?.data?.error || err.message || err), 'error');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -548,7 +566,11 @@ const AdminArticles = () => {
                         <p className="text-[9px] text-zinc-400 font-bold uppercase">Original Manuscript</p>
                       </div>
                     </div>
-                    <button className="p-2 hover:bg-zinc-100 rounded-lg transition-all text-zinc-400 hover:text-black">
+                    <button 
+                      onClick={() => handleDownload(selectedArticle.id, selectedArticle.title)}
+                      className="p-2 hover:bg-zinc-100 rounded-lg transition-all text-zinc-400 hover:text-black cursor-pointer"
+                      title="Download Original Manuscript"
+                    >
                       <Download size={18} />
                     </button>
                   </div>
@@ -684,6 +706,23 @@ const AdminArticles = () => {
                           <div className="bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/10 italic text-sm text-zinc-300 leading-relaxed font-sans">
                             "{review.remarks}"
                           </div>
+                          {review.reviewedFile && (
+                            <div className="mt-4 flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <FileText size={16} className="text-zinc-400" />
+                                <span className="text-xs font-bold text-zinc-300 truncate max-w-[200px]">
+                                  {review.reviewedFileName || 'Review Document'}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleDownload(selectedArticle.id, selectedArticle.title, review.reviewedFile)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black hover:bg-zinc-200 transition-colors rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer"
+                              >
+                                <Download size={12} />
+                                Download
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -730,8 +769,25 @@ const AdminArticles = () => {
                       <div className="space-y-4 relative z-10">
                         <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest">Reviewer Remarks</p>
                         <div className="bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/10 italic text-sm text-zinc-300 leading-relaxed font-sans">
-                          "{selectedArticle.reviewerFeedback.remarks}"
+                          "{selectedArticle.reviewerFeedback?.remarks}"
                         </div>
+                        {selectedArticle.reviewerFeedback?.reviewedFile && (
+                          <div className="mt-4 flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <FileText size={16} className="text-zinc-400 animate-pulse" />
+                              <span className="text-xs font-bold text-zinc-300 truncate max-w-[200px]">
+                                {selectedArticle.reviewerFeedback?.reviewedFileName || 'Review Document'}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => handleDownload(selectedArticle.id, selectedArticle.title, selectedArticle.reviewerFeedback?.reviewedFile)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black hover:bg-zinc-200 transition-colors rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer"
+                            >
+                              <Download size={12} />
+                              Download
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -987,7 +1043,11 @@ const AdminArticles = () => {
                         </div>
                       </div>
                       <div className="hidden sm:flex items-center gap-2 text-zinc-500">
-                        <button className="p-1 hover:text-white transition-colors" title="Download Original">
+                        <button 
+                          onClick={() => handleDownload(previewArticle.id, previewArticle.title)}
+                          className="p-1 hover:text-white transition-colors cursor-pointer" 
+                          title="Download Original"
+                        >
                           <Download size={14} />
                         </button>
                       </div>
@@ -1067,7 +1127,10 @@ const AdminArticles = () => {
                           </p>
                         </div>
                       </div>
-                      <button className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-lg text-xs font-bold transition-all uppercase shrink-0">
+                      <button 
+                        onClick={() => handleDownload(previewArticle.id, previewArticle.title)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-lg text-xs font-bold transition-all uppercase shrink-0 cursor-pointer"
+                      >
                         <Download size={14} /> Download DOCX
                       </button>
                     </div>

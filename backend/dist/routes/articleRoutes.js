@@ -323,6 +323,28 @@ router.delete('/:id', authMiddleware_1.requireAuth, async (req, res) => {
                 }
             }
         }
+        // Cleanup invitations subcollection to prevent orphaned subcollection items
+        const invitationsSnapshot = await articleRef.collection('invitations').get();
+        if (!invitationsSnapshot.empty) {
+            const inviteBatch = firebase_1.db.batch();
+            invitationsSnapshot.docs.forEach(inviteDoc => {
+                inviteBatch.delete(inviteDoc.ref);
+            });
+            await inviteBatch.commit();
+            console.log(`[ROUTE-CLEANUP] Cleaned up ${invitationsSnapshot.size} co-author invitations for article ${id}`);
+        }
+        // Cleanup notifications related to this article
+        const notificationsSnapshot = await firebase_1.db.collection('notifications')
+            .where('metadata.articleId', '==', id)
+            .get();
+        if (!notificationsSnapshot.empty) {
+            const notifBatch = firebase_1.db.batch();
+            notificationsSnapshot.docs.forEach(notifDoc => {
+                notifBatch.delete(notifDoc.ref);
+            });
+            await notifBatch.commit();
+            console.log(`[ROUTE-CLEANUP] Cleaned up ${notificationsSnapshot.size} notifications for article ${id}`);
+        }
         await articleRef.delete();
         res.json({ success: true, message: 'Article deleted successfully' });
     }
@@ -529,7 +551,31 @@ router.get('/:id/pdf', authMiddleware_1.requireAuth, async (req, res) => {
         if (!hasAccess) {
             return res.status(403).json({ error: 'Forbidden: Requires active subscription for this issue' });
         }
-        const signedUrl = await (0, storageService_1.getSignedPdfUrl)(article.pdfUrl);
+        const key = req.query.key || article.pdfUrl;
+        if (!key) {
+            return res.status(400).json({ error: 'No document has been uploaded for this article' });
+        }
+        // Security check: ensure the requested key is associated with this article
+        let keyValid = (key === article.pdfUrl);
+        let originalName = article.pdfName || 'manuscript.pdf';
+        if (!keyValid && Array.isArray(article.revisionHistory)) {
+            const matchingRev = article.revisionHistory.find((rev) => rev.pdfUrl === key);
+            if (matchingRev) {
+                keyValid = true;
+                originalName = matchingRev.pdfName || 'revision_manuscript.pdf';
+            }
+        }
+        if (!keyValid && article.reviews) {
+            const matchingReview = Object.values(article.reviews).find((rev) => rev.reviewedFile === key);
+            if (matchingReview) {
+                keyValid = true;
+                originalName = matchingReview.reviewedFileName || 'reviewer_assessment.pdf';
+            }
+        }
+        if (!keyValid) {
+            return res.status(403).json({ error: 'Forbidden: Requested file key does not belong to this article' });
+        }
+        const signedUrl = await (0, storageService_1.getSignedPdfUrl)(key, originalName);
         res.json({ success: true, url: signedUrl });
     }
     catch (error) {
@@ -628,8 +674,8 @@ router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRol
                 updateData.pdfUrl = objectKey;
                 updateData.pdfName = pdfFile.originalname;
             }
-            // Auto-set status back to submitted after revision
-            updateData.status = 'submitted';
+            // Auto-set status back to submitted after revision unless explicitly requested to stay in revision_requested
+            updateData.status = status === 'revision_requested' ? 'revision_requested' : 'submitted';
         }
         else {
             // DRAFT MODE: Full editing allowed (Continuity flow)
@@ -687,6 +733,98 @@ router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRol
         res.status(500).json({ error: 'Failed to update article' });
     }
 });
+// Admin Bulk Publish Articles
+router.patch('/bulk-publish', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
+    try {
+        const { articleIds, volumeNo, monthYear, issueNumber, issn } = req.body;
+        if (!articleIds || !Array.isArray(articleIds) || articleIds.length === 0) {
+            return res.status(400).json({ error: 'Article IDs are required and must be a non-empty array' });
+        }
+        if (!volumeNo || !monthYear || issueNumber === undefined) {
+            return res.status(400).json({ error: 'Volume Number, Month & Year, and Issue Number are required' });
+        }
+        const parsedIssueNumber = parseInt(issueNumber, 10);
+        if (isNaN(parsedIssueNumber) || parsedIssueNumber <= 0) {
+            return res.status(400).json({ error: 'Issue Number must be a positive integer' });
+        }
+        // Verify duplicate issue combination: Volume No. + Month & Year + Issue Number
+        const existingIssues = await firebase_1.db.collection('issues')
+            .where('volume', '==', volumeNo)
+            .where('monthYear', '==', monthYear)
+            .where('issueNumber', '==', parsedIssueNumber)
+            .get();
+        if (!existingIssues.empty) {
+            return res.status(400).json({ error: 'This publication issue already exists. Please use a different Volume or Issue Number.' });
+        }
+        const batch = firebase_1.db.batch();
+        const failures = [];
+        let publishedCount = 0;
+        const successfulArticleIds = [];
+        // Fetch all requested articles in parallel
+        const promises = articleIds.map(id => firebase_1.db.collection('articles').doc(id).get());
+        const docs = await Promise.all(promises);
+        const issueRef = firebase_1.db.collection('issues').doc();
+        docs.forEach(doc => {
+            const id = doc.id;
+            if (!doc.exists) {
+                failures.push({ id, error: 'Article not found' });
+                return;
+            }
+            const data = doc.data();
+            if (data.status === 'published') {
+                failures.push({ id, error: 'Article is already published' });
+                return;
+            }
+            const isApprovedUnderReview = data.status === 'under_review' &&
+                data.reviewerFeedback &&
+                (data.reviewerFeedback.recommendation === 'Approved' || data.reviewerFeedback.recommendation === 'Accepted');
+            const isReadyToPublish = data.status === 'accepted' || isApprovedUnderReview;
+            if (!isReadyToPublish) {
+                failures.push({ id, error: `Article is in status "${data.status}" and is not ready to publish` });
+                return;
+            }
+            // Add to Firestore batch update
+            batch.update(doc.ref, {
+                status: 'published',
+                issueId: issueRef.id,
+                volumeNo: volumeNo,
+                monthYear: monthYear,
+                issueNumber: parsedIssueNumber,
+                issn: issn || null,
+                publishedAt: new Date(),
+                updatedAt: new Date()
+            });
+            successfulArticleIds.push(id);
+            publishedCount++;
+        });
+        if (publishedCount > 0) {
+            // Create the single issue record representing the batch publication details
+            const newIssue = {
+                issueId: issueRef.id,
+                title: `Volume ${volumeNo}, Issue ${parsedIssueNumber} (${monthYear})`,
+                volume: volumeNo,
+                issueNumber: parsedIssueNumber,
+                monthYear: monthYear,
+                issn: issn || null,
+                articleIds: successfulArticleIds,
+                publishedAt: new Date(),
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+            batch.set(issueRef, newIssue);
+            await batch.commit();
+        }
+        res.json({
+            success: true,
+            publishedCount,
+            failures
+        });
+    }
+    catch (error) {
+        console.error('Bulk publish articles error:', error);
+        res.status(500).json({ error: error.message || 'Failed to bulk publish articles' });
+    }
+});
 // Admin Assign Reviewer
 router.patch('/:id/assign', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
     try {
@@ -716,7 +854,7 @@ router.patch('/:id/assign', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
     }
 });
 // Reviewer/Admin Update Status
-router.patch('/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin', 'reviewer']), async (req, res) => {
+router.patch('/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin', 'reviewer']), uploadMiddleware_1.upload.single('reviewedFile'), async (req, res) => {
     try {
         const id = req.params.id;
         const { role, uid } = req.user;
@@ -731,12 +869,19 @@ router.patch('/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
             const articleData = doc.data();
             const title = articleData?.title || 'Untitled Article';
             const normalizedRecommendation = normalizeRecommendation(recommendation || '');
+            let reviewedFileKey = null;
+            let reviewedFileName = null;
+            if (req.file) {
+                reviewedFileKey = await (0, storageService_1.uploadPdfToR2)(req.file.buffer, req.file.originalname, uid, req.file.mimetype);
+                reviewedFileName = req.file.originalname;
+            }
             // Reviewer logs their own feedback in the 'reviews' map
             await articleRef.update({
                 [`reviews.${uid}`]: {
                     remarks: remarks || '',
                     recommendation: normalizedRecommendation,
-                    reviewedFile: reviewedFile || null,
+                    reviewedFile: reviewedFileKey || reviewedFile || null,
+                    reviewedFileName: reviewedFileName || null,
                     reviewerName,
                     updatedAt: new Date()
                 },

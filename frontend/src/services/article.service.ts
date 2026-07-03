@@ -44,7 +44,34 @@ export const assignReviewers = async (id: string, reviewerIds: string[], reviewe
   return response.data;
 };
 
-export const updateArticleStatus = async (id: string, status: string, extraData?: { rejectionReason?: string; adminNote?: string; remarks?: string; recommendation?: string; reviewedFile?: any }) => {
+export const updateArticleStatus = async (
+  id: string,
+  status: string,
+  extraData?: {
+    rejectionReason?: string;
+    adminNote?: string;
+    remarks?: string;
+    recommendation?: string;
+    reviewedFile?: any;
+  }
+) => {
+  if (extraData?.reviewedFile instanceof File) {
+    const formData = new FormData();
+    formData.append('status', status);
+    if (extraData.rejectionReason) formData.append('rejectionReason', extraData.rejectionReason);
+    if (extraData.adminNote) formData.append('adminNote', extraData.adminNote);
+    if (extraData.remarks) formData.append('remarks', extraData.remarks);
+    if (extraData.recommendation) formData.append('recommendation', extraData.recommendation);
+    formData.append('reviewedFile', extraData.reviewedFile);
+
+    const response = await api.patch(`/articles/${id}/status`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
   const response = await api.patch(`/articles/${id}/status`, { status, ...extraData });
   return response.data;
 };

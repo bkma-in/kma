@@ -37,6 +37,17 @@ app.get('/', (req, res) => {
   res.send({ status: 'ok', message: 'KMA Backend is running' });
 });
 
+// Global error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[GLOBAL-ERROR-HANDLER]', err);
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || 'An unexpected error occurred';
+  res.status(status).json({
+    success: false,
+    error: message
+  });
+});
+
 app.listen(config.port, () => {
   console.log(`Server running on port ${config.port}`);
 });
