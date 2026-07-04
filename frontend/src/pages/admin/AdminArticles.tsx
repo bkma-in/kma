@@ -95,12 +95,15 @@ const AdminArticles = () => {
     }
   }, [searchParams]);
 
+
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   // Manuscript Preview System States
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isAssigningFromPreview, setIsAssigningFromPreview] = useState(false);
   const [isRejectingFromPreview, setIsRejectingFromPreview] = useState(false);
   const [rejectionReasonText, setRejectionReasonText] = useState('');
@@ -125,6 +128,27 @@ const AdminArticles = () => {
     expertise: string;
     availability: 'Available' | 'Busy' | 'On Leave';
   }
+
+  useEffect(() => {
+    if (!previewArticle) {
+      setPreviewUrl(null);
+      return;
+    }
+    const loadPreview = async () => {
+      setIsPreviewLoading(true);
+      try {
+        const response = await getPdfUrl(previewArticle.id);
+        if (response.success) {
+          setPreviewUrl(response.url);
+        }
+      } catch (error) {
+        console.error('Failed to load preview url', error);
+      } finally {
+        setIsPreviewLoading(false);
+      }
+    };
+    loadPreview();
+  }, [previewArticle]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -1052,62 +1076,26 @@ const AdminArticles = () => {
                       </div>
                     </div>
 
-                    {/* PDF Pages Container - Scrollable */}
-                    <div className="p-4 sm:p-8 bg-zinc-800/50 max-h-[450px] overflow-y-auto space-y-6 flex flex-col items-center custom-scrollbar">
-                      {/* Page 1 */}
-                      <div className="w-full max-w-2xl bg-white text-zinc-800 p-8 sm:p-12 shadow-xl border border-zinc-700/30 rounded-sm relative aspect-[1/1.4] flex flex-col font-serif">
-                        <div className="border-b border-zinc-200 pb-3 mb-6 text-[10px] font-sans font-bold text-zinc-400 tracking-wider flex justify-between">
-                          <span>KERALA MATHEMATICAL ASSOCIATION JOURNAL</span>
-                          <span>VOL. 42, 2024</span>
+                    {/* Real PDF Viewer inside the container */}
+                    <div className="w-full aspect-[4/5] bg-zinc-800 flex flex-col relative">
+                      {previewUrl ? (
+                        <iframe 
+                          src={`${previewUrl}#toolbar=0`} 
+                          className="w-full h-full border-none animate-in fade-in duration-300" 
+                          title="PDF Preview" 
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 gap-4 py-24 bg-zinc-900/40">
+                          {isPreviewLoading ? (
+                            <>
+                              <Loader2 className="w-8 h-8 animate-spin text-zinc-300" />
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] animate-pulse text-zinc-400">Establishing Secure Connection...</p>
+                            </>
+                          ) : (
+                            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Preview link unavailable</p>
+                          )}
                         </div>
-                        
-                        <h2 className="text-xl sm:text-2xl font-bold text-black text-center mb-4 leading-tight font-sans tracking-tight">
-                          {previewArticle.title}
-                        </h2>
-                        
-                        <p className="text-xs text-zinc-500 text-center mb-8 font-sans font-bold uppercase tracking-wider">
-                          {previewArticle.author}
-                        </p>
-
-                        <div className="text-xs space-y-4 leading-relaxed text-zinc-700 flex-1">
-                          <p className="font-bold font-sans uppercase text-[10px] tracking-wider text-black">1. INTRODUCTION</p>
-                          <p>
-                            In recent years, the intersection of advanced mathematics and computational modeling has catalyzed significant breakthroughs. This paper presents our initial findings on the subject. We outline a systematic framework that models relationships across multi-layered networks.
-                          </p>
-                          <p>
-                            The primary contribution of this research lies in establishing an invariant threshold that predicts state changes. We validate our model through empirical simulation data gathered over six months.
-                          </p>
-                          <p>
-                            Let $G = (V, E)$ be a directed graph modeling the communication channels. We define the boundary index using high-dimensional operators.
-                          </p>
-                        </div>
-                        
-                        <div className="mt-8 border-t border-zinc-100 pt-4 text-center text-[9px] font-sans font-medium text-zinc-400">
-                          Page 1 of 2
-                        </div>
-                      </div>
-
-                      {/* Page 2 */}
-                      <div className="w-full max-w-2xl bg-white text-zinc-800 p-8 sm:p-12 shadow-xl border border-zinc-700/30 rounded-sm relative aspect-[1/1.4] flex flex-col font-serif">
-                        <div className="border-b border-zinc-200 pb-3 mb-6 text-[10px] font-sans font-bold text-zinc-400 tracking-wider flex justify-between">
-                          <span>KERALA MATHEMATICAL ASSOCIATION JOURNAL</span>
-                          <span>VOL. 42, 2024</span>
-                        </div>
-
-                        <div className="text-xs space-y-4 leading-relaxed text-zinc-700 flex-1">
-                          <p className="font-bold font-sans uppercase text-[10px] tracking-wider text-black">2. METHODOLOGY & ANALYSIS</p>
-                          <p>
-                            We deploy a persistent homology solver that filters local perturbations to isolate macro-level invariants. The mathematical justification for this topological filter relies on the Stability Theorem for Persistence Diagrams.
-                          </p>
-                          <p>
-                            Specifically, we partition the dataset into discrete filtration steps. At each level, simplicial complexes are constructed. The generators of the homology groups $H_k(X)$ are tracked through the diagram.
-                          </p>
-                        </div>
-
-                        <div className="mt-8 border-t border-zinc-100 pt-4 text-center text-[9px] font-sans font-medium text-zinc-400">
-                          Page 2 of 2
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 ) : (
