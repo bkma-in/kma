@@ -29,7 +29,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
         localStorage.setItem('role', response.user.role);
         localStorage.setItem('userName', response.user.name);
         localStorage.setItem('userEmail', response.user.email);
-        localStorage.setItem('is_temp_password', 'false'); 
+        localStorage.setItem('is_temp_password', response.user.mustChangePassword ? 'true' : 'false'); 
         
         // Store role in localStorage for legacy components that still read it
         console.log('[LoginForm] Login successful. Navigating to dashboard for role:', response.user.role);

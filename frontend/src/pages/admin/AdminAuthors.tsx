@@ -30,7 +30,7 @@ import { db } from '../../config/firebase';
 import { formatDate } from '../../utils/dateHelpers';
 import AddReviewerModal from '../../components/admin/AddReviewerModal';
 import { useNotification } from '../../utils/NotificationContext';
-import { getReviewers, updateReviewerStatus } from '../../services/user.service';
+import { getReviewers, updateReviewerStatus, resendReviewerCredentials } from '../../services/user.service';
 
 // Types
 type ReviewerStatus = 'Pending' | 'Approved' | 'Rejected';
@@ -48,7 +48,7 @@ interface Reviewer {
 }
 
 const AdminAuthors = () => {
-  const { showToast } = useNotification();
+  const { confirm, showToast } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ReviewerStatus | 'All'>('All');
   const [selectedReviewer, setSelectedReviewer] = useState<Reviewer | null>(null);
@@ -204,6 +204,25 @@ const AdminAuthors = () => {
     setIsModalOpen(true);
   };
 
+  const handleResendCredentials = async (reviewer: Reviewer) => {
+    confirm({
+      title: 'Resend Credentials',
+      message: `Are you sure you want to regenerate and resend login credentials to ${reviewer.name} (${reviewer.email})?\n\nThis will invalidate their previous temporary password.`,
+      confirmText: 'Resend',
+      onConfirm: async () => {
+        try {
+          const response = await resendReviewerCredentials(reviewer.id);
+          if (response.success) {
+            showToast('Credentials have been sent successfully.', 'success');
+          }
+        } catch (error: any) {
+          console.error('Failed to resend credentials:', error);
+          showToast(error.response?.data?.error || 'Failed to resend credentials.', 'error');
+        }
+      }
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -344,6 +363,14 @@ const AdminAuthors = () => {
                             <X size={18} />
                           </button>
                         </>
+                      ) : reviewer.status === 'Approved' ? (
+                        <button 
+                          onClick={() => handleResendCredentials(reviewer)}
+                          className="px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-[10px] font-black tracking-widest text-zinc-700 rounded-lg transition-all border border-zinc-200 shadow-sm uppercase cursor-pointer"
+                          title="Resend Credentials"
+                        >
+                          Resend Credentials
+                        </button>
                       ) : (
                         <button className="p-2 text-zinc-200 cursor-not-allowed">
                           <MoreVertical size={18} />

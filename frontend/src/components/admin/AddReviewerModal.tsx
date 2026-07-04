@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, User, Mail, GraduationCap, Briefcase, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, User, Mail, GraduationCap, Briefcase, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { addReviewer } from '../../services/user.service';
+import { addReviewer, resendReviewerCredentials } from '../../services/user.service';
+import { useNotification } from '../../utils/NotificationContext';
 
 interface AddReviewerModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface AddReviewerModalProps {
 }
 
 const AddReviewerModal: React.FC<AddReviewerModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const { showToast } = useNotification();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -18,7 +20,9 @@ const AddReviewerModal: React.FC<AddReviewerModalProps> = ({ isOpen, onClose, on
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [tempPassword, setTempPassword] = useState('');
+  const [emailSent, setEmailSent] = useState(true);
+  const [createdReviewerId, setCreatedReviewerId] = useState('');
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
@@ -26,17 +30,21 @@ const AddReviewerModal: React.FC<AddReviewerModalProps> = ({ isOpen, onClose, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
 
     try {
       const response = await addReviewer(formData);
       if (response.success) {
-        setTempPassword(response.tempPassword);
+        setCreatedReviewerId(response.reviewer.id);
+        setEmailSent(!!response.emailSent);
         setIsSuccess(true);
         onSuccess(response.reviewer);
       }
-    } catch (error: any) {
-      console.error('Failed to create reviewer:', error);
-      alert(error.response?.data?.error || 'Failed to create reviewer user.');
+    } catch (err: any) {
+      console.error('Failed to create reviewer:', err);
+      const msg = err.response?.data?.error || 'Failed to create reviewer user.';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -44,6 +52,9 @@ const AddReviewerModal: React.FC<AddReviewerModalProps> = ({ isOpen, onClose, on
 
   const handleClose = () => {
     setIsSuccess(false);
+    setEmailSent(true);
+    setCreatedReviewerId('');
+    setError('');
     setFormData({ name: '', email: '', qualification: '', experience: '' });
     onClose();
   };
@@ -77,6 +88,12 @@ const AddReviewerModal: React.FC<AddReviewerModalProps> = ({ isOpen, onClose, on
         <div className="p-8">
           {!isSuccess ? (
             <form onSubmit={handleSubmit} className="space-y-6">
+              {error && (
+                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-xs font-bold text-rose-600 flex items-start gap-2 animate-shake">
+                  <AlertCircle size={16} className="shrink-0 text-rose-500 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+              )}
               <div className="space-y-4">
                 {/* Full Name */}
                 <div className="space-y-1.5">
@@ -165,38 +182,79 @@ const AddReviewerModal: React.FC<AddReviewerModalProps> = ({ isOpen, onClose, on
             </form>
           ) : (
             <div className="text-center py-8 space-y-6">
-              <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                <CheckCircle2 size={40} />
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-xl font-bold text-black">Reviewer Added Successfully!</h4>
-                <p className="text-sm text-zinc-500">An onboarding email has been sent to <span className="font-bold text-black">{formData.email}</span> with their login credentials.</p>
-              </div>
-              
-              <div className="p-6 bg-zinc-50 rounded-2xl border border-dashed border-zinc-200 space-y-4">
-                <div className="text-left space-y-1">
-                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Temporary Password</p>
-                  <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-zinc-100">
-                    <code className="text-blue-600 font-mono font-bold">{tempPassword}</code>
-                    <button 
-                      onClick={() => navigator.clipboard.writeText(tempPassword)}
-                      className="text-[10px] font-bold text-zinc-400 hover:text-black uppercase tracking-tighter"
+              {emailSent ? (
+                <>
+                  <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                    <CheckCircle2 size={40} />
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="text-xl font-bold text-black font-['Outfit']">Reviewer added successfully.</h4>
+                    <p className="text-sm text-zinc-500 font-medium">
+                      Login credentials have been sent to the reviewer's registered email address.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleClose}
+                    className="w-full py-4 bg-black text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-800 transition-all active:scale-95 cursor-pointer mt-4"
+                  >
+                    DONE
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                    <AlertCircle size={40} />
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="text-xl font-bold text-black font-['Outfit']">Reviewer created successfully.</h4>
+                    <p className="text-sm text-zinc-600 font-semibold">
+                      Unable to deliver login credentials via email.
+                    </p>
+                    <p className="text-xs text-zinc-400">
+                      Please click "Resend Credentials".
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-4 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="flex-1 py-4 bg-zinc-100 text-zinc-600 rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-200 transition-all active:scale-95 cursor-pointer"
                     >
-                      Copy
+                      CLOSE
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setIsLoading(true);
+                        try {
+                          const response = await resendReviewerCredentials(createdReviewerId);
+                          if (response.success) {
+                            showToast('Credentials have been sent successfully.', 'success');
+                            setEmailSent(true);
+                          }
+                        } catch (err: any) {
+                          console.error(err);
+                          const msg = err.response?.data?.error || 'Failed to resend credentials.';
+                          showToast(msg, 'error');
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }}
+                      disabled={isLoading}
+                      className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 size={18} className="animate-spin" />
+                          SENDING...
+                        </>
+                      ) : (
+                        'RESEND CREDENTIALS'
+                      )}
                     </button>
                   </div>
-                </div>
-                <p className="text-[10px] text-amber-600 font-medium bg-amber-50 p-2 rounded-lg">
-                  Note: The reviewer will be prompted to change this password upon their first login.
-                </p>
-              </div>
-
-              <button
-                onClick={handleClose}
-                className="w-full py-4 bg-black text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-800 transition-all active:scale-95"
-              >
-                DONE
-              </button>
+                </>
+              )}
             </div>
           )}
         </div>
