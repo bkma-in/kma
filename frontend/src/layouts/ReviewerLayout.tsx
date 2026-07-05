@@ -18,7 +18,10 @@ const ReviewerLayout = () => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [mustChangePassword, setMustChangePassword] = useState(localStorage.getItem('is_temp_password') === 'true');
+  const { currentUser } = useAuth();
+  const [mustChangePassword, setMustChangePassword] = useState(
+    currentUser?.mustChangePassword === true || localStorage.getItem('is_temp_password') === 'true'
+  );
 
   // Route protection & Dynamic User Data
   // App.tsx handles the primary Firebase auth check — no localStorage redirect here

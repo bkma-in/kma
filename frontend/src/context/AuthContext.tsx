@@ -14,7 +14,7 @@ const VALID_ROLES: Role[] = ['admin', 'reviewer', 'author', 'reader', 'dev'];
 
 // ─── Types ───────────────────────────────────────────────────────────
 interface AuthContextType {
-  currentUser: (User & { role: Role; name: string }) | null;
+  currentUser: (User & { role: Role; name: string; mustChangePassword?: boolean }) | null;
   loading: boolean;       // true until Firebase Auth SDK has initialized
   roleLoading: boolean;   // true while role is being fetched/verified from backend
   sessionExpired: boolean; // true when auth is lost (user must re-login)
@@ -26,14 +26,14 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // ─── Helper: Fetch role from backend with retry ──────────────────────
-async function fetchRoleFromBackend(retries = MAX_RETRY): Promise<{ role: Role; name: string }> {
+async function fetchRoleFromBackend(retries = MAX_RETRY): Promise<{ role: Role; name: string; mustChangePassword?: boolean }> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const response = await api.post('/auth/verify');
       if (response.data.success) {
-        const { role, name } = response.data.user;
+        const { role, name, mustChangePassword } = response.data.user;
         console.log(`[AuthContext] Role fetched from backend (attempt ${attempt}):`, role);
-        return { role, name };
+        return { role, name, mustChangePassword };
       }
       throw new Error('Backend verify returned success=false');
     } catch (error: any) {
@@ -53,7 +53,7 @@ async function fetchRoleFromBackend(retries = MAX_RETRY): Promise<{ role: Role; 
 
 // ─── Provider ────────────────────────────────────────────────────────
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<(User & { role: Role; name: string }) | null>(null);
+  const [currentUser, setCurrentUser] = useState<(User & { role: Role; name: string; mustChangePassword?: boolean }) | null>(null);
   const [loading, setLoading] = useState(true);        // Auth SDK init
   const [roleLoading, setRoleLoading] = useState(false); // Role verification
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       console.log(`[AUTH-DIAGNOSTIC] Fetching role from backend for UID: ${user.uid}...`);
-      const { role, name } = await fetchRoleFromBackend();
+      const { role, name, mustChangePassword } = await fetchRoleFromBackend();
 
       // Validate the retrieved role
       if (!role || !VALID_ROLES.includes(role)) {
@@ -85,14 +85,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setCurrentUser(prev => {
         // Only update if something actually changed
-        if (prev && prev.uid === user.uid && prev.role === role && prev.name === name) {
+        if (prev && prev.uid === user.uid && prev.role === role && prev.name === name && prev.mustChangePassword === mustChangePassword) {
           return prev;
         }
         // Log if role changed unexpectedly
         if (prev && prev.role !== role) {
           console.warn(`[AUTH-DIAGNOSTIC] ⚠️ ROLE CHANGED unexpectedly: "${prev.role}" → "${role}" for UID: ${user.uid}`);
         }
-        return { ...user, role, name };
+        return { ...user, role, name, mustChangePassword };
       });
 
       setSessionExpired(false);

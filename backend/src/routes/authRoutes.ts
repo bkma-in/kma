@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { auth, db } from '../config/firebase';
 import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
+import { logAuditEvent } from '../services/auditService';
 
 const router = Router();
 
@@ -8,6 +9,7 @@ const router = Router();
 router.post('/verify', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { uid, email, role, name } = req.user!;
+    let mustChangePassword = false;
     
     // Check approval status for reviewers
     if (role === 'reviewer') {
@@ -17,9 +19,22 @@ router.post('/verify', requireAuth, async (req: AuthRequest, res) => {
       if (status !== 'Approved') {
         return res.status(403).json({ error: `Your reviewer application is ${status}. You can log in after approval.` });
       }
+
+      mustChangePassword = userData?.mustChangePassword === true;
+
+      // Log reviewer first login exactly once
+      if (mustChangePassword && !userData?.firstLoginLogged) {
+        await db.collection('users').doc(uid).update({ firstLoginLogged: true });
+        await logAuditEvent('Reviewer First Login', uid);
+      }
+    } else {
+      // Check other users
+      const userDoc = await db.collection('users').doc(uid).get();
+      const userData = userDoc.exists ? userDoc.data() : null;
+      mustChangePassword = userData?.mustChangePassword === true;
     }
 
-    res.json({ success: true, user: { uid, email, role, name } });
+    res.json({ success: true, user: { uid, email, role, name, mustChangePassword } });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -85,6 +100,35 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Failed to register user' });
+  }
+});
+
+// Endpoint to change password securely and clear mustChangePassword status
+router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { uid } = req.user!;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+    }
+
+    // 1. Update password securely in Firebase Authentication
+    await auth.updateUser(uid, { password: newPassword });
+
+    // 2. Update Firestore user document
+    await db.collection('users').doc(uid).update({
+      mustChangePassword: false,
+      updatedAt: new Date()
+    });
+
+    // 3. Record Password Changed event in audit log
+    await logAuditEvent('Password Changed', uid);
+
+    res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (error: any) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: error.message || 'Failed to change password.' });
   }
 });
 

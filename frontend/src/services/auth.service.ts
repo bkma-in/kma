@@ -39,7 +39,8 @@ export const login = async (email: string, password: string) => {
         user: {
           email: response.data.user.email,
           name: response.data.user.name,
-          role: response.data.user.role
+          role: response.data.user.role,
+          mustChangePassword: !!response.data.user.mustChangePassword
         }
       };
     }
