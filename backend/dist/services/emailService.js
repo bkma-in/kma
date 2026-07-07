@@ -19,7 +19,7 @@ const sendTransactionalEmail = async (toEmail, toName, subject, htmlContent) => 
             throw new Error('BREVO_API_KEY is not set in environment variables');
         }
         const response = await client.transactionalEmails.sendTransacEmail({
-            sender: { name: "KMA Platform", email: "noreply@kma.example.com" },
+            sender: { name: "KMA Platform", email: env_1.config.brevo.senderEmail },
             to: [{ email: toEmail, name: toName }],
             subject: subject,
             htmlContent: htmlContent,
