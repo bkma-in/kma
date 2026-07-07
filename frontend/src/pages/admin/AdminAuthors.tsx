@@ -45,6 +45,7 @@ interface Reviewer {
   experience?: string;
   rejectionReason?: string;
   profileImage?: string | null;
+  mustChangePassword?: boolean;
 }
 
 const AdminAuthors = () => {
@@ -395,13 +396,15 @@ const AdminAuthors = () => {
                         </>
                       ) : reviewer.status === 'Approved' ? (
                         <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => handleResendCredentials(reviewer)}
-                            className="px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-[10px] font-black tracking-widest text-zinc-700 rounded-lg transition-all border border-zinc-200 shadow-sm uppercase cursor-pointer"
-                            title="Resend Credentials"
-                          >
-                            Resend
-                          </button>
+                          {reviewer.mustChangePassword && (
+                            <button 
+                              onClick={() => handleResendCredentials(reviewer)}
+                              className="px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-[10px] font-black tracking-widest text-zinc-700 rounded-lg transition-all border border-zinc-200 shadow-sm uppercase cursor-pointer"
+                              title="Resend Credentials"
+                            >
+                              Resend
+                            </button>
+                          )}
                           <button 
                             onClick={() => handleToggleActive(reviewer.id, 'Deactivated')}
                             className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-[10px] font-black tracking-widest text-rose-600 rounded-lg transition-all border border-rose-100 shadow-sm uppercase cursor-pointer"

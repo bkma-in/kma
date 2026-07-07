@@ -310,7 +310,8 @@ router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRe
         regDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
         status: data.status || 'Pending',
         rejectionReason: data.rejectionReason || '',
-        profileImage: data.profileImage || null
+        profileImage: data.profileImage || null,
+        mustChangePassword: data.mustChangePassword === true
       };
     });
 
@@ -506,7 +507,8 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
         qualification,
         experience,
         regDate: userData.createdAt.toISOString(),
-        status: 'Approved'
+        status: 'Approved',
+        mustChangePassword: true
       }
     });
   } catch (error: any) {
