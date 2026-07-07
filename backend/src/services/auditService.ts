@@ -1,7 +1,7 @@
 import { db } from '../config/firebase';
 
 export const logAuditEvent = async (
-  event: 'Reviewer Created' | 'Credentials Email Sent' | 'Credentials Email Failed' | 'Credentials Resent' | 'Reviewer First Login' | 'Password Changed',
+  event: 'Reviewer Created' | 'Credentials Email Sent' | 'Credentials Email Failed' | 'Credentials Resent' | 'Reviewer First Login' | 'Password Changed' | 'Reviewer Deactivated' | 'Reviewer Reactivated',
   reviewerId: string,
   adminId: string | null = null
 ) => {

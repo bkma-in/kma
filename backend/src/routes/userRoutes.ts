@@ -383,13 +383,14 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
   }
 });
 
-// Admin: Update reviewer status (Approve/Reject)
+// Admin: Update reviewer status (Approve/Reject/Deactivate/Reactivate)
 router.patch('/reviewers/:id/status', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+  const adminId = req.user!.uid;
   try {
     const id = req.params.id as string;
     const { status, rejectionReason } = req.body;
 
-    const validStatuses = ['Approved', 'Rejected', 'Pending'];
+    const validStatuses = ['Approved', 'Rejected', 'Pending', 'Deactivated'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
@@ -400,6 +401,9 @@ router.patch('/reviewers/:id/status', requireAuth, requireRole(['admin']), async
     if (!userDoc.exists) {
       return res.status(404).json({ error: 'Reviewer not found' });
     }
+
+    const userData = userDoc.data()!;
+    const previousStatus = userData.status;
 
     const updateData: any = {
       status,
@@ -412,12 +416,22 @@ router.patch('/reviewers/:id/status', requireAuth, requireRole(['admin']), async
       updateData.rejectionReason = '';
     }
 
+    // Handle account activation/deactivation in Firebase Auth and log audit events
+    if (status === 'Deactivated') {
+      await auth.updateUser(id, { disabled: true });
+      await auth.revokeRefreshTokens(id);
+      await logAuditEvent('Reviewer Deactivated', id, adminId);
+    } else if (status === 'Approved' && previousStatus === 'Deactivated') {
+      await auth.updateUser(id, { disabled: false });
+      await logAuditEvent('Reviewer Reactivated', id, adminId);
+    }
+
     await userRef.update(updateData);
 
     res.json({ success: true, reviewer: { ...userDoc.data(), ...updateData, id } });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update reviewer status error:', error);
-    res.status(500).json({ error: 'Failed to update reviewer status' });
+    res.status(500).json({ error: error.message || 'Failed to update reviewer status' });
   }
 });
 

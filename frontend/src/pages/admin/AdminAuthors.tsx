@@ -33,7 +33,7 @@ import { useNotification } from '../../utils/NotificationContext';
 import { getReviewers, updateReviewerStatus, resendReviewerCredentials } from '../../services/user.service';
 
 // Types
-type ReviewerStatus = 'Pending' | 'Approved' | 'Rejected';
+type ReviewerStatus = 'Pending' | 'Approved' | 'Rejected' | 'Deactivated';
 
 interface Reviewer {
   id: string;
@@ -223,6 +223,33 @@ const AdminAuthors = () => {
     });
   };
 
+  const handleToggleActive = async (reviewerId: string, newStatus: 'Approved' | 'Deactivated') => {
+    const isDeactivating = newStatus === 'Deactivated';
+    confirm({
+      title: isDeactivating ? 'Deactivate Reviewer' : 'Reactivate Reviewer',
+      message: isDeactivating 
+        ? 'Are you sure you want to deactivate this reviewer? They will be signed out and blocked from logging in immediately.'
+        : 'Are you sure you want to reactivate this reviewer? They will regain full access to their reviewer dashboard.',
+      confirmText: isDeactivating ? 'Deactivate' : 'Reactivate',
+      onConfirm: async () => {
+        try {
+          const response = await updateReviewerStatus(reviewerId, newStatus);
+          if (response.success) {
+            showToast(
+              isDeactivating ? 'Reviewer deactivated successfully.' : 'Reviewer reactivated successfully.', 
+              'success'
+            );
+            // Update local reviewers state list
+            setReviewers(prev => prev.map(r => r.id === reviewerId ? { ...r, status: newStatus } : r));
+          }
+        } catch (error: any) {
+          console.error(`Failed to ${isDeactivating ? 'deactivate' : 'reactivate'} reviewer:`, error);
+          showToast(error.response?.data?.error || `Failed to update reviewer status.`, 'error');
+        }
+      }
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -276,6 +303,7 @@ const AdminAuthors = () => {
                 <option value="Pending">Pending</option>
                 <option value="Approved">Approved</option>
                 <option value="Rejected">Rejected</option>
+                <option value="Deactivated">Deactivated</option>
               </select>
             </div>
           </div>
@@ -329,10 +357,12 @@ const AdminAuthors = () => {
                       "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm",
                       reviewer.status === 'Approved' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
                       reviewer.status === 'Rejected' ? "bg-rose-50 text-rose-600 border-rose-100" :
+                      reviewer.status === 'Deactivated' ? "bg-zinc-100 text-zinc-600 border-zinc-200" :
                       "bg-amber-50 text-amber-600 border-amber-100 animate-pulse"
                     )}>
                       {reviewer.status === 'Approved' ? <UserCheck size={12} /> : 
                        reviewer.status === 'Rejected' ? <UserX size={12} /> : 
+                       reviewer.status === 'Deactivated' ? <UserX size={12} className="text-zinc-500" /> :
                        <Clock size={12} />}
                       {reviewer.status}
                     </span>
@@ -364,12 +394,29 @@ const AdminAuthors = () => {
                           </button>
                         </>
                       ) : reviewer.status === 'Approved' ? (
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleResendCredentials(reviewer)}
+                            className="px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-[10px] font-black tracking-widest text-zinc-700 rounded-lg transition-all border border-zinc-200 shadow-sm uppercase cursor-pointer"
+                            title="Resend Credentials"
+                          >
+                            Resend
+                          </button>
+                          <button 
+                            onClick={() => handleToggleActive(reviewer.id, 'Deactivated')}
+                            className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-[10px] font-black tracking-widest text-rose-600 rounded-lg transition-all border border-rose-100 shadow-sm uppercase cursor-pointer"
+                            title="Deactivate Reviewer"
+                          >
+                            Deactivate
+                          </button>
+                        </div>
+                      ) : reviewer.status === 'Deactivated' ? (
                         <button 
-                          onClick={() => handleResendCredentials(reviewer)}
-                          className="px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-[10px] font-black tracking-widest text-zinc-700 rounded-lg transition-all border border-zinc-200 shadow-sm uppercase cursor-pointer"
-                          title="Resend Credentials"
+                          onClick={() => handleToggleActive(reviewer.id, 'Approved')}
+                          className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-[10px] font-black tracking-widest text-emerald-600 rounded-lg transition-all border border-emerald-100 shadow-sm uppercase cursor-pointer"
+                          title="Reactivate Reviewer"
                         >
-                          Resend Credentials
+                          Reactivate
                         </button>
                       ) : (
                         <button className="p-2 text-zinc-200 cursor-not-allowed">

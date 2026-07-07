@@ -16,6 +16,9 @@ router.post('/verify', requireAuth, async (req: AuthRequest, res) => {
       const userDoc = await db.collection('users').doc(uid).get();
       const userData = userDoc.exists ? userDoc.data() : null;
       const status = userData?.status || 'Pending';
+      if (status === 'Deactivated') {
+        return res.status(403).json({ error: 'Your reviewer account has been deactivated. Please contact administration.' });
+      }
       if (status !== 'Approved') {
         return res.status(403).json({ error: `Your reviewer application is ${status}. You can log in after approval.` });
       }
