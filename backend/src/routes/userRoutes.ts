@@ -7,21 +7,227 @@ import { uploadImage, deleteImage } from '../services/cloudinaryService';
 import { sendTransactionalEmail } from '../services/emailService';
 import { logAuditEvent } from '../services/auditService';
 
+import { config } from '../config/env';
+
 // Helper to send reviewer onboarding credentials via email
 const sendReviewerCredentialsEmail = async (name: string, email: string, tempPassword: string, req: any) => {
-  const origin = req.get('origin') || 'https://kma.example.com';
-  const reviewerLoginUrl = `${origin}/auth`;
+  const logoUrl = config.brevo.logoUrl;
+  const loginUrl = config.brevo.loginUrl;
+  const privacyPolicyUrl = config.brevo.privacyPolicyUrl;
+  const reviewerGuidelinesUrl = config.brevo.reviewerGuidelinesUrl;
+  const supportUrl = config.brevo.supportUrl;
+  const currentYear = new Date().getFullYear();
   const subject = 'Welcome to Kerala Mathematical Association Reviewer Portal';
   
   const htmlContent = `
-    <p>Hello ${name},</p>
-    <p>Your reviewer account has been successfully created.</p>
-    <h3 style="margin-top: 20px;">Login Credentials</h3>
-    <p><strong>Email:</strong><br/>${email}</p>
-    <p><strong>Temporary Password:</strong><br/>${tempPassword}</p>
-    <p><strong>Reviewer Login Portal:</strong><br/><a href="${reviewerLoginUrl}">${reviewerLoginUrl}</a></p>
-    <p style="margin-top: 20px; font-style: italic;">For security reasons, you will be required to change your password after your first login.</p>
-    <p>Regards,<br/>Kerala Mathematical Association</p>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Welcome to KMA Reviewer Portal</title>
+  <style type="text/css">
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100% !important;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+      background-color: #fafafa;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    img {
+      border: 0;
+      outline: none;
+      text-decoration: none;
+      display: block;
+    }
+    table {
+      border-collapse: collapse;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    td {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #fafafa;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafafa; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <!-- Main Email Container -->
+        <table border="0" cellpadding="0" cellspacing="0" width="600" style="width: 100% !important; max-width: 600px; background-color: #ffffff; border: 1px solid #e4e4e7; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px 40px; text-align: center;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
+                <tr>
+                  <td align="center" style="padding-bottom: 20px;">
+                    <img src="${logoUrl}" alt="BKMA Logo" width="80" height="80" style="width: 80px; height: 80px; display: block;" />
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #000000; letter-spacing: -0.02em; line-height: 1.2;">Bulletin of Kerala Mathematical Association</h1>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Divider -->
+          <tr>
+            <td style="padding: 0 40px;">
+              <hr style="border: 0; border-top: 1px solid #e4e4e7; margin: 0;" />
+            </td>
+          </tr>
+
+          <!-- Welcome Body -->
+          <tr>
+            <td style="padding: 30px 40px 20px 40px;">
+              <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #000000; letter-spacing: -0.01em;">Welcome to the BKMA Community!</h2>
+              <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #3f3f46;">
+                Dear ${name},<br /><br />
+                Congratulations! Your reviewer account has been successfully created for the Bulletin of Kerala Mathematical Association. We are delighted to welcome you as a valued member of our reviewer panel. Your expertise and contribution will play a vital role in maintaining the quality and integrity of scholarly publications.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Login Credentials Card -->
+          <tr>
+            <td style="padding: 0 40px 0 40px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #ffffff; border: 1px solid #d4d4d8; border-radius: 12px; padding: 24px;">
+                <tr>
+                  <td>
+                    <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #000000;">Your Login Credentials</h3>
+                    
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; margin-bottom: 24px;">
+                      <!-- Email Row -->
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e4e4e7; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">EMAIL</td>
+                        <td align="right" style="padding: 10px 0; border-bottom: 1px solid #e4e4e7; font-size: 14px; font-weight: 600; color: #000000;"><span style="color: #000000; text-decoration: none;">${email}</span></td>
+                      </tr>
+                      <!-- Password Row -->
+                      <tr>
+                        <td style="padding: 10px 0; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">TEMP PASSWORD</td>
+                        <td align="right" style="padding: 10px 0; font-size: 14px; font-weight: 600; color: #000000;"><span style="color: #000000;">${tempPassword}</span></td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Login Button -->
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
+                      <tr>
+                        <td align="center">
+                          <a href="${loginUrl}" style="display: block; background-color: #000000; color: #ffffff; text-align: center; font-size: 14px; font-weight: 700; text-decoration: none; padding: 14px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Login</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Spacer -->
+          <tr>
+            <td height="24" style="font-size: 0; line-height: 0;">&nbsp;</td>
+          </tr>
+
+          <!-- Security Notice -->
+          <tr>
+            <td style="padding: 0 40px 30px 40px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #fafafa; border-left: 4px solid #000000; border-top: 1px solid #e4e4e7; border-right: 1px solid #e4e4e7; border-bottom: 1px solid #e4e4e7; border-radius: 0 8px 8px 0; padding: 20px;">
+                <tr>
+                  <td>
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
+                      <tr>
+                        <td width="20" valign="top" style="font-size: 15px; line-height: 1; padding-top: 2px;">ℹ️</td>
+                        <td width="12" style="font-size: 0; line-height: 0;">&nbsp;</td>
+                        <td valign="top" style="font-size: 13px; line-height: 1.5; color: #52525b;">
+                          <strong style="color: #000000; display: block; margin-bottom: 4px; font-size: 14px; font-weight: 700;">Security Notice</strong>
+                          For your security, you will be required to change your password immediately after your first successful login. Please keep your login credentials confidential.
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- What You Can Do (Bento Grid in Tables) -->
+          <tr>
+            <td style="padding: 0 40px 30px 40px;">
+              <h3 style="margin: 0 0 16px 0; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; text-align: center; letter-spacing: 0.15em;">What You Can Do</h3>
+              
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
+                <tr>
+                  <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
+                    <span style="font-size: 18px; display: block; margin-bottom: 8px;">📄</span>
+                    <span style="font-size: 13px; font-weight: 600; color: #000000; line-height: 1.3; display: block;">Review assigned manuscripts</span>
+                  </td>
+                  <td width="4%"></td>
+                  <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
+                    <span style="font-size: 18px; display: block; margin-bottom: 8px;">📖</span>
+                    <span style="font-size: 13px; font-weight: 600; color: #000000; line-height: 1.3; display: block;">Contribute to BKMA process</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Support Section -->
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #ffffff; border: 1px dashed #e4e4e7; border-radius: 16px; padding: 24px; text-align: center;">
+                <tr>
+                  <td>
+                    <h3 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 700; color: #000000;">Need Help?</h3>
+                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #71717a; line-height: 1.5;">If you experience any difficulty accessing your account, please contact the BKMA Editorial Office.</p>
+                    
+                    <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
+                      <tr>
+                        <td style="font-size: 13px; font-weight: 600;">
+                          <a href="mailto:keralamathsasso@gmail.com" style="color: #000000; text-decoration: none; margin-right: 20px;">✉ keralamathsasso@gmail.com</a>
+                          <a href="https://www.bkma.in" style="color: #000000; text-decoration: none;">🌐 www.bkma.in</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #000000; padding: 40px; text-align: center; color: #a1a1aa;">
+              <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.1em;">Bulletin of Kerala Mathematical Association</h4>
+              <p style="margin: 0 0 4px 0; font-size: 13px; color: #a1a1aa; line-height: 1.4;">Advancing Mathematical Research Through Quality Publications</p>
+              <p style="margin: 0 0 24px 0; font-size: 13px; color: #a1a1aa;">Kerala, India</p>
+              
+              <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto 24px auto;">
+                <tr>
+                  <td style="font-size: 12px;">
+                    <a href="${privacyPolicyUrl}" style="color: #a1a1aa; text-decoration: underline; margin-right: 16px;">Privacy Policy</a>
+                    <a href="${reviewerGuidelinesUrl}" style="color: #a1a1aa; text-decoration: underline; margin-right: 16px;">Reviewer Guidelines</a>
+                    <a href="${supportUrl}" style="color: #a1a1aa; text-decoration: underline;">Support</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 0; font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">
+                © ${currentYear} Bulletin of Kerala Mathematical Association. All Rights Reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
   `.trim();
 
   try {
