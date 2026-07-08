@@ -17,218 +17,216 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
   const subject = 'Welcome to Kerala Mathematical Association Reviewer Portal';
   
   const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>BKMA Reviewer Portal Welcome</title>
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-  <script id="tailwind-config">
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          "colors": {
-            "surface-container-highest": "#d3e4fe",
-            "primary": "#000000",
-            "tertiary-fixed-dim": "#c4c7c9",
-            "surface": "#f8f9ff",
-            "surface-container-high": "#dce9ff",
-            "on-primary": "#ffffff",
-            "on-surface": "#0b1c30",
-            "on-secondary-fixed-variant": "#003ea8",
-            "error": "#ba1a1a",
-            "inverse-surface": "#213145",
-            "surface-variant": "#d3e4fe",
-            "error-container": "#ffdad6",
-            "on-background": "#0b1c30",
-            "background": "#f8f9ff",
-            "on-primary-fixed-variant": "#3f465c",
-            "on-error": "#ffffff",
-            "on-secondary-container": "#fefcff",
-            "on-primary-container": "#7c839b",
-            "tertiary-fixed": "#e0e3e5",
-            "surface-container-low": "#eff4ff",
-            "on-error-container": "#93000a",
-            "primary-container": "#131b2e",
-            "on-secondary": "#ffffff",
-            "on-primary-fixed": "#131b2e",
-            "outline": "#76777d",
-            "tertiary": "#000000",
-            "surface-container": "#e5eeff",
-            "surface-bright": "#f8f9ff",
-            "secondary-fixed": "#dbe1ff",
-            "inverse-on-surface": "#eaf1ff",
-            "surface-tint": "#565e74",
-            "outline-variant": "#c6c6cd",
-            "surface-container-lowest": "#ffffff",
-            "on-tertiary-container": "#818486",
-            "inverse-primary": "#bec6e0",
-            "on-tertiary": "#ffffff",
-            "surface-dim": "#cbdbf5",
-            "on-tertiary-fixed": "#191c1e",
-            "tertiary-container": "#191c1e",
-            "on-tertiary-fixed-variant": "#444749",
-            "primary-fixed-dim": "#bec6e0",
-            "on-surface-variant": "#45464d",
-            "primary-fixed": "#dae2fd",
-            "secondary-fixed-dim": "#b4c5ff",
-            "on-secondary-fixed": "#00174b",
-            "secondary-container": "#316bf3",
-            "secondary": "#0051d5"
-          },
-          "borderRadius": {
-            "DEFAULT": "0.25rem",
-            "lg": "0.5rem",
-            "xl": "0.75rem",
-            "full": "9999px"
-          },
-          "spacing": {
-            "component-padding": "20px",
-            "edge-margin": "32px",
-            "inline-gap": "12px",
-            "container-width": "600px",
-            "stack-gap": "24px"
-          },
-          "fontFamily": {
-            "h1": ["Inter"], "h1-mobile": ["Inter"], "label-caps": ["Inter"], "h3": ["Inter"], "body-lg": ["Inter"], "body-md": ["Inter"], "h2": ["Inter"]
-          },
-          "fontSize": {
-            "h1": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
-            "h1-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
-            "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
-            "h3": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
-            "body-lg": ["16px", {"lineHeight": "26px", "fontWeight": "400"}],
-            "body-md": ["14px", {"lineHeight": "22px", "fontWeight": "400"}],
-            "h2": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
-          }
-        },
-      },
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Welcome to KMA Reviewer Portal</title>
+  <style type="text/css">
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100% !important;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+      background-color: #fafafa;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-  </script>
-  <style>
-    .material-symbols-outlined {
-      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-      vertical-align: middle;
+    img {
+      border: 0;
+      outline: none;
+      text-decoration: none;
+      display: block;
     }
-    body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; background-color: #f8f9ff; }
-    .email-container { max-width: 600px; margin: 0 auto; }
-    @media screen and (max-width: 600px) {
-      .email-container { width: 100% !important; }
-      .grid-col-2 { grid-template-columns: 1fr 1fr !important; }
-      .mobile-padding { padding: 16px !important; }
+    table {
+      border-collapse: collapse;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    td {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
   </style>
 </head>
-<body class="bg-surface">
-  <div class="email-container bg-surface font-body-md text-on-surface">
-    <!-- Header Section -->
-    <header class="flex flex-col items-center justify-center w-full px-edge-margin pt-edge-margin pb-stack-gap bg-surface">
-      <div class="mb-4">
-        <img alt="BKMA Logo" class="mx-auto" height="80" src="${logoUrl}" width="80"/>
-      </div>
-      <h1 class="font-h1 text-h1 text-primary text-center">Bulletin of Kerala Mathematical Association</h1>
-      <p class="font-h2 text-h2 text-on-primary-container text-center mt-1">Reviewer Portal</p>
-      <div class="mt-stack-gap">
-        <img alt="Welcome Icon" class="mx-auto" height="64" src="https://lh3.googleusercontent.com/aida/AP1WRLv0p14rMHw0mDmB4wQPIUTPeRxJx-CJD60PRtAVL8LCUZ4d7jNDWPdYoOS-0wk14A8VxyPAS55TXuYe-wXSuuf5Dmrw7DsUbwUvuNpsMZH6u4unGaGQgi_zZnS6WodYOlX2JclG5SUdViLGG2YxaBI0jYiFujugx9zOCywtforY2DkVsi5anPbHeShUra6Xb-xo0EEfS79UH_7xSK9i_0Rg3_zqUKFN-cFM9CX355zsav9rvZedEzaALA" width="64"/>
-      </div>
-    </header>
+<body style="margin: 0; padding: 0; background-color: #fafafa;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafafa; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <!-- Main Email Container -->
+        <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border: 1px solid #e4e4e7; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px 40px; text-align: center;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 20px;">
+                    <img src="${logoUrl}" alt="BKMA Logo" width="80" height="80" style="width: 80px; height: 80px; display: block;" />
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #000000; letter-spacing: -0.02em; line-height: 1.2;">Bulletin of Kerala Mathematical Association</h1>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.1em;">Reviewer Portal</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Divider -->
+          <tr>
+            <td style="padding: 0 40px;">
+              <hr style="border: 0; border-top: 1px solid #e4e4e7; margin: 0;" />
+            </td>
+          </tr>
 
-    <!-- Welcome Body -->
-    <main class="px-edge-margin mobile-padding">
-      <section class="mb-stack-gap">
-        <h2 class="font-h1 text-h1 text-on-surface mb-4">Welcome to the BKMA Reviewer Community!</h2>
-        <p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
-          Dear ${name},<br/><br/>
-          Congratulations! Your reviewer account has been successfully created for the Bulletin of Kerala Mathematical Association. We are delighted to welcome you as a valued member of our reviewer panel. Your expertise and contribution will play a vital role in maintaining the quality and integrity of scholarly publications.
-        </p>
-      </section>
+          <!-- Welcome Body -->
+          <tr>
+            <td style="padding: 30px 40px 20px 40px;">
+              <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #000000; letter-spacing: -0.01em;">Welcome to the BKMA Reviewer Community!</h2>
+              <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #3f3f46;">
+                Dear ${name},<br /><br />
+                Congratulations! Your reviewer account has been successfully created for the Bulletin of Kerala Mathematical Association. We are delighted to welcome you as a valued member of our reviewer panel. Your expertise and contribution will play a vital role in maintaining the quality and integrity of scholarly publications.
+              </p>
+            </td>
+          </tr>
 
-      <!-- Login Credentials Card -->
-      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-component-padding mb-stack-gap shadow-sm">
-        <h3 class="font-h2 text-h2 text-primary mb-inline-gap">Your Login Credentials</h3>
-        <div class="space-y-2 mb-stack-gap">
-          <div class="flex justify-between items-center border-b border-surface-container pb-2">
-            <span class="font-label-caps text-on-primary-container">EMAIL</span>
-            <span class="font-h3 text-h3 text-on-surface">${email}</span>
-          </div>
-          <div class="flex justify-between items-center pb-2">
-            <span class="font-label-caps text-on-primary-container">TEMP PASSWORD</span>
-            <span class="font-h3 text-h3 text-on-surface">${tempPassword}</span>
-          </div>
-        </div>
-        <a class="block w-full bg-secondary text-on-secondary text-center font-h3 text-h3 py-4 rounded-lg shadow-md hover:opacity-90 transition-opacity active:scale-[0.98]" href="${loginUrl}">
-          Login
-        </a>
-      </div>
+          <!-- Login Credentials Card -->
+          <tr>
+            <td style="padding: 0 40px 20px 40px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; padding: 24px;">
+                <tr>
+                  <td>
+                    <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #000000;">Your Login Credentials</h3>
+                    
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                      <!-- Email Row -->
+                      <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">EMAIL</td>
+                        <td align="right" style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; font-size: 14px; font-weight: 600; color: #000000;">${email}</td>
+                      </tr>
+                      <!-- Password Row -->
+                      <tr>
+                        <td style="padding: 8px 0; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">TEMP PASSWORD</td>
+                        <td align="right" style="padding: 8px 0; font-size: 14px; font-weight: 600; color: #000000;">${tempPassword}</td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Login Button -->
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td align="center">
+                          <a href="${loginUrl}" style="display: block; background-color: #000000; color: #ffffff; text-align: center; font-size: 14px; font-weight: 700; text-decoration: none; padding: 14px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Login</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      <!-- Security Notice -->
-      <div class="border-l-4 border-secondary bg-surface-container-low p-component-padding mb-stack-gap rounded-r-lg flex items-start gap-4">
-        <span class="material-symbols-outlined text-secondary" style="font-size: 24px;">info</span>
-        <div>
-          <h4 class="font-h3 text-h3 text-on-surface">Security Notice</h4>
-          <p class="font-body-md text-on-surface-variant mt-1">For your security, you will be required to change your password immediately after your first successful login. Please keep your login credentials confidential.</p>
-        </div>
-      </div>
+          <!-- Security Notice -->
+          <tr>
+            <td style="padding: 0 40px 30px 40px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f5; border-left: 4px solid #000000; border-radius: 0 8px 8px 0; padding: 16px;">
+                <tr>
+                  <td style="font-size: 13px; line-height: 1.5; color: #3f3f46;">
+                    <strong style="color: #000000; display: block; margin-bottom: 4px;">Security Notice</strong>
+                    For your security, you will be required to change your password immediately after your first successful login. Please keep your login credentials confidential.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      <!-- What You Can Do (Bento-ish Grid) -->
-      <section class="mb-stack-gap">
-        <h3 class="font-label-caps text-on-primary-container mb-4 text-center font-bold">WHAT YOU CAN DO</h3>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-surface-container p-4 rounded-xl border border-surface-container-high">
-            <span class="material-symbols-outlined text-primary mb-2" style="font-size: 20px;">description</span>
-            <p class="font-h3 text-h3 text-on-surface leading-tight">Review assigned manuscripts</p>
-          </div>
-          <div class="bg-surface-container p-4 rounded-xl border border-surface-container-high">
-            <span class="material-symbols-outlined text-primary mb-2" style="font-size: 20px;">star</span>
-            <p class="font-h3 text-h3 text-on-surface leading-tight">Submit review recommendations</p>
-          </div>
-          <div class="bg-surface-container p-4 rounded-xl border border-surface-container-high">
-            <span class="material-symbols-outlined text-primary mb-2" style="font-size: 20px;">notifications_active</span>
-            <p class="font-h3 text-h3 text-on-surface leading-tight">Receive review notifications</p>
-          </div>
-          <div class="bg-surface-container p-4 rounded-xl border border-surface-container-high">
-            <span class="material-symbols-outlined text-primary mb-2" style="font-size: 20px;">menu_book</span>
-            <p class="font-h3 text-h3 text-on-surface leading-tight">Contribute to BKMA process</p>
-          </div>
-        </div>
-      </section>
+          <!-- What You Can Do (Bento Grid in Tables) -->
+          <tr>
+            <td style="padding: 0 40px 30px 40px;">
+              <h3 style="margin: 0 0 16px 0; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; text-align: center; letter-spacing: 0.15em;">What You Can Do</h3>
+              
+              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
+                    <span style="font-size: 18px; display: block; margin-bottom: 8px;">📄</span>
+                    <span style="font-size: 13px; font-weight: 600; color: #000000; line-height: 1.3; display: block;">Review assigned manuscripts</span>
+                  </td>
+                  <td width="4%"></td>
+                  <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
+                    <span style="font-size: 18px; display: block; margin-bottom: 8px;">⭐</span>
+                    <span style="font-size: 13px; font-weight: 600; color: #000000; line-height: 1.3; display: block;">Submit review recommendations</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td height="16"></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
+                    <span style="font-size: 18px; display: block; margin-bottom: 8px;">🔔</span>
+                    <span style="font-size: 13px; font-weight: 600; color: #000000; line-height: 1.3; display: block;">Receive review notifications</span>
+                  </td>
+                  <td width="4%"></td>
+                  <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
+                    <span style="font-size: 18px; display: block; margin-bottom: 8px;">📖</span>
+                    <span style="font-size: 13px; font-weight: 600; color: #000000; line-height: 1.3; display: block;">Contribute to BKMA process</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      <!-- Support Section -->
-      <section class="text-center py-stack-gap bg-surface-container-lowest rounded-xl px-4 border border-outline-variant mb-stack-gap">
-        <h3 class="font-h3 text-h3 text-on-surface mb-2">Need Help?</h3>
-        <p class="font-body-md text-on-surface-variant mb-4">If you experience any difficulty accessing your account, please contact the BKMA Editorial Office.</p>
-        <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-          <a class="flex items-center gap-2 text-secondary font-h3" href="mailto:keralamathsasso@gmail.com">
-            <span class="material-symbols-outlined" style="font-size: 18px;">mail</span>
-            keralamathsasso@gmail.com
-          </a>
-          <a class="flex items-center gap-2 text-secondary font-h3" href="https://www.bkma.in">
-            <span class="material-symbols-outlined" style="font-size: 18px;">language</span>
-            www.bkma.in
-          </a>
-        </div>
-      </section>
-    </main>
+          <!-- Support Section -->
+          <tr>
+            <td style="padding: 0 40px 40px 40px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border: 1px dashed #e4e4e7; border-radius: 16px; padding: 24px; text-align: center;">
+                <tr>
+                  <td>
+                    <h3 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 700; color: #000000;">Need Help?</h3>
+                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #71717a; line-height: 1.5;">If you experience any difficulty accessing your account, please contact the BKMA Editorial Office.</p>
+                    
+                    <table border="0" cellpadding="0" cellspacing="0" align="center">
+                      <tr>
+                        <td style="font-size: 13px; font-weight: 600;">
+                          <a href="mailto:keralamathsasso@gmail.com" style="color: #000000; text-decoration: none; margin-right: 20px;">✉ keralamathsasso@gmail.com</a>
+                          <a href="https://www.bkma.in" style="color: #000000; text-decoration: none;">🌐 www.bkma.in</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-    <!-- Footer -->
-    <footer class="bg-primary-container text-on-secondary-container p-edge-margin text-center flex flex-col items-center">
-      <h4 class="font-label-caps text-label-caps mb-2 text-on-secondary-container">Bulletin of Kerala Mathematical Association</h4>
-      <p class="font-body-md text-body-md opacity-80 mb-2">Advancing Mathematical Research Through Quality Publications</p>
-      <p class="font-body-md text-body-md opacity-80 mb-6">Kerala, India</p>
-      <div class="flex gap-4 mb-6">
-        <a class="text-on-secondary-container underline font-body-md opacity-80 hover:opacity-100 transition-opacity" href="#">Privacy Policy</a>
-        <a class="text-on-secondary-container underline font-body-md opacity-80 hover:opacity-100 transition-opacity" href="#">Reviewer Guidelines</a>
-        <a class="text-on-secondary-container underline font-body-md opacity-80 hover:opacity-100 transition-opacity" href="#">Support</a>
-      </div>
-      <p class="font-label-caps text-label-caps opacity-60">
-        © ${currentYear} Bulletin of Kerala Mathematical Association. All Rights Reserved.
-      </p>
-    </footer>
-  </div>
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #000000; padding: 40px; text-align: center; color: #a1a1aa;">
+              <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.1em;">Bulletin of Kerala Mathematical Association</h4>
+              <p style="margin: 0 0 4px 0; font-size: 13px; color: #a1a1aa; line-height: 1.4;">Advancing Mathematical Research Through Quality Publications</p>
+              <p style="margin: 0 0 24px 0; font-size: 13px; color: #a1a1aa;">Kerala, India</p>
+              
+              <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="font-size: 12px;">
+                    <a href="#" style="color: #a1a1aa; text-decoration: underline; margin-right: 16px;">Privacy Policy</a>
+                    <a href="#" style="color: #a1a1aa; text-decoration: underline; margin-right: 16px;">Reviewer Guidelines</a>
+                    <a href="#" style="color: #a1a1aa; text-decoration: underline;">Support</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 0; font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">
+                © ${currentYear} Bulletin of Kerala Mathematical Association. All Rights Reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
   `.trim();
