@@ -231,6 +231,7 @@ const AddReviewerModal: React.FC<AddReviewerModalProps> = ({ isOpen, onClose, on
                           if (response.success) {
                             showToast('Credentials have been sent successfully.', 'success');
                             setEmailSent(true);
+                            onSuccess({ id: createdReviewerId, credentialsShared: true });
                           }
                         } catch (err: any) {
                           console.error(err);

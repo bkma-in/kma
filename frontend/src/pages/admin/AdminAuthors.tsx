@@ -46,6 +46,7 @@ interface Reviewer {
   rejectionReason?: string;
   profileImage?: string | null;
   mustChangePassword?: boolean;
+  credentialsShared?: boolean;
 }
 
 const AdminAuthors = () => {
@@ -215,6 +216,7 @@ const AdminAuthors = () => {
           const response = await resendReviewerCredentials(reviewer.id);
           if (response.success) {
             showToast('Credentials have been sent successfully.', 'success');
+            setReviewers(prev => prev.map(r => r.id === reviewer.id ? { ...r, credentialsShared: true } : r));
           }
         } catch (error: any) {
           console.error('Failed to resend credentials:', error);
@@ -396,7 +398,7 @@ const AdminAuthors = () => {
                         </>
                       ) : reviewer.status === 'Approved' ? (
                         <div className="flex items-center gap-2">
-                          {reviewer.mustChangePassword && (
+                          {reviewer.mustChangePassword && !reviewer.credentialsShared && (
                             <button 
                               onClick={() => handleResendCredentials(reviewer)}
                               className="px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-[10px] font-black tracking-widest text-zinc-700 rounded-lg transition-all border border-zinc-200 shadow-sm uppercase cursor-pointer"
@@ -706,7 +708,13 @@ const AdminAuthors = () => {
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
         onSuccess={(newReviewer) => {
-          setReviewers(prev => [newReviewer, ...prev]);
+          setReviewers(prev => {
+            const exists = prev.some(r => r.id === newReviewer.id);
+            if (exists) {
+              return prev.map(r => r.id === newReviewer.id ? { ...r, ...newReviewer } : r);
+            }
+            return [newReviewer, ...prev];
+          });
         }}
       />
 

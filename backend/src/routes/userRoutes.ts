@@ -517,7 +517,8 @@ router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRe
         status: data.status || 'Pending',
         rejectionReason: data.rejectionReason || '',
         profileImage: data.profileImage || null,
-        mustChangePassword: data.mustChangePassword === true
+        mustChangePassword: data.mustChangePassword === true,
+        credentialsShared: data.credentialsShared === true
       };
     });
 
@@ -699,6 +700,7 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
 
     if (emailSent) {
       await logAuditEvent('Credentials Email Sent', userRecord.uid, adminId);
+      await db.collection('users').doc(userRecord.uid).update({ credentialsShared: true });
     } else {
       await logAuditEvent('Credentials Email Failed', userRecord.uid, adminId);
     }
@@ -714,7 +716,8 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
         experience,
         regDate: userData.createdAt.toISOString(),
         status: 'Approved',
-        mustChangePassword: true
+        mustChangePassword: true,
+        credentialsShared: emailSent
       }
     });
   } catch (error: any) {
@@ -748,6 +751,7 @@ router.post('/reviewers/:id/resend-credentials', requireAuth, requireRole(['admi
     // 2. Reset mustChangePassword flag in Firestore document to true
     await userRef.update({
       mustChangePassword: true,
+      credentialsShared: false,
       updatedAt: new Date()
     });
 
@@ -757,6 +761,12 @@ router.post('/reviewers/:id/resend-credentials', requireAuth, requireRole(['admi
     if (!emailSent) {
       return res.status(500).json({ error: 'Failed to deliver credentials email. Please try again.' });
     }
+
+    // Update credentialsShared to true on successful email delivery
+    await userRef.update({
+      credentialsShared: true,
+      updatedAt: new Date()
+    });
 
     // 4. Record Credentials Resent in audit log
     await logAuditEvent('Credentials Resent', id, adminId);
