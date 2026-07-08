@@ -14,7 +14,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import api from '../services/api';
 
 const AdminLayout = () => {
-  const { confirm, showToast } = useNotification();
+  const { confirm, showToast, unreadCount, clearUnread } = useNotification();
   const { profile } = useProfile();
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
@@ -22,7 +22,6 @@ const AdminLayout = () => {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const location = useLocation();
   const [counts, setCounts] = useState({
-    notifications: 0,
     reviewers: 0
   });
 
@@ -43,42 +42,14 @@ const AdminLayout = () => {
   // Immediate UI clearing when navigating to notifications
   useEffect(() => {
     if (location.pathname === '/admin/notifications') {
-      localStorage.setItem('notifications_cleared_at', Date.now().toString());
-      setCounts(prev => ({ ...prev, notifications: 0 }));
-      api.post('/notifications/read-all').catch(console.error);
+      clearUnread();
     }
-  }, [location.pathname]);
+  }, [location.pathname, clearUnread]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
 
-    // 1. Unread notifications query
-    const qNotif = query(
-      collection(db, 'notifications'),
-      where('userId', '==', currentUser.uid),
-      where('read', '==', false)
-    );
-
-    const unsubscribeNotif = onSnapshot(qNotif, (snapshot) => {
-      const clearedAt = parseInt(localStorage.getItem('notifications_cleared_at') || '0');
-      
-      // If we are currently on the notifications page, any existing items are considered seen
-      const isCurrentlyOnNotifications = window.location.pathname === '/admin/notifications';
-      const referenceTime = isCurrentlyOnNotifications ? Date.now() : clearedAt;
-      if (isCurrentlyOnNotifications && referenceTime > clearedAt) {
-        localStorage.setItem('notifications_cleared_at', referenceTime.toString());
-      }
-
-      const unreadCount = snapshot.docs.filter(doc => {
-        const data = doc.data();
-        const time = getTimestamp(data.createdAt);
-        return time > referenceTime;
-      }).length;
-
-      setCounts(prev => ({ ...prev, notifications: unreadCount }));
-    });
-
-    // 2. Pending reviewer applications query
+    // Pending reviewer applications query
     const qReviewers = query(
       collection(db, 'users'),
       where('role', '==', 'reviewer'),
@@ -90,7 +61,6 @@ const AdminLayout = () => {
     });
 
     return () => {
-      unsubscribeNotif();
       unsubscribeReviewers();
     };
   }, [currentUser?.uid]);
@@ -126,7 +96,7 @@ const AdminLayout = () => {
     { name: 'Authors', path: '/admin/authors-list', icon: Users },
     { name: 'Articles', path: '/admin/articles', icon: FileText },
     { name: 'Ready to Publish', path: '/admin/ready-to-publish', icon: UploadCloud },
-    { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: formatBadgeCount(counts.notifications) },
+    { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: formatBadgeCount(unreadCount) },
   ];
 
   return (

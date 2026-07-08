@@ -26,7 +26,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import api from '../services/api';
 
 const ReaderLayout = () => {
-  const { confirm, showToast } = useNotification();
+  const { confirm, showToast, unreadCount, clearUnread } = useNotification();
   const { profile } = useProfile();
   const { isSubscribed, unsubscribe } = useSubscription();
   const { logout, currentUser } = useAuth();
@@ -34,9 +34,6 @@ const ReaderLayout = () => {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const [counts, setCounts] = useState({
-    notifications: 0
-  });
 
   const getTimestamp = (val: any) => {
     if (!val) return 0;
@@ -55,44 +52,9 @@ const ReaderLayout = () => {
   // Immediate UI clearing when navigating to notifications
   useEffect(() => {
     if (location.pathname === '/reader/notifications') {
-      localStorage.setItem('notifications_cleared_at', Date.now().toString());
-      setCounts(prev => ({ ...prev, notifications: 0 }));
-      api.post('/notifications/read-all').catch(console.error);
+      clearUnread();
     }
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (!currentUser?.uid) return;
-
-    const qNotif = query(
-      collection(db, 'notifications'),
-      where('userId', '==', currentUser.uid),
-      where('read', '==', false)
-    );
-
-    const unsubscribeNotif = onSnapshot(qNotif, (snapshot) => {
-      const clearedAt = parseInt(localStorage.getItem('notifications_cleared_at') || '0');
-      
-      // If we are currently on the notifications page, any existing items are considered seen
-      const isCurrentlyOnNotifications = window.location.pathname === '/reader/notifications';
-      const referenceTime = isCurrentlyOnNotifications ? Date.now() : clearedAt;
-      if (isCurrentlyOnNotifications && referenceTime > clearedAt) {
-        localStorage.setItem('notifications_cleared_at', referenceTime.toString());
-      }
-
-      const unreadCount = snapshot.docs.filter(doc => {
-        const data = doc.data();
-        const time = getTimestamp(data.createdAt);
-        return time > referenceTime;
-      }).length;
-
-      setCounts(prev => ({ ...prev, notifications: unreadCount }));
-    });
-
-    return () => {
-      unsubscribeNotif();
-    };
-  }, [currentUser?.uid]);
+  }, [location.pathname, clearUnread]);
 
   const handleLogout = () => {
     confirm({
@@ -115,7 +77,7 @@ const ReaderLayout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/reader/dashboard', end: true, icon: LayoutDashboard, locked: false },
     { name: 'Payments', path: '/reader/payments', icon: CreditCard, locked: !isSubscribed },
-    { name: 'Notifications', path: '/reader/notifications', icon: Bell, locked: !isSubscribed, badge: formatBadgeCount(counts.notifications) },
+    { name: 'Notifications', path: '/reader/notifications', icon: Bell, locked: !isSubscribed, badge: formatBadgeCount(unreadCount) },
     { name: 'Saved Articles', path: '/reader/saved', icon: Bookmark, locked: !isSubscribed },
     { name: 'Profile', path: '/reader/profile', icon: User, locked: false },
   ];
