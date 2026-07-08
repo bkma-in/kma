@@ -65,7 +65,6 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
                 <tr>
                   <td align="center">
                     <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #000000; letter-spacing: -0.02em; line-height: 1.2;">Bulletin of Kerala Mathematical Association</h1>
-                    <p style="margin: 5px 0 0 0; font-size: 14px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.1em;">Reviewer Portal</p>
                   </td>
                 </tr>
               </table>
