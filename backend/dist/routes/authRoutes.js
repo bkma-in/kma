@@ -3,21 +3,38 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const firebase_1 = require("../config/firebase");
 const authMiddleware_1 = require("../middleware/authMiddleware");
+const auditService_1 = require("../services/auditService");
 const router = (0, express_1.Router)();
 // Endpoint for frontend to send token and get their role/profile back
 router.post('/verify', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const { uid, email, role, name } = req.user;
+        let mustChangePassword = false;
         // Check approval status for reviewers
         if (role === 'reviewer') {
             const userDoc = await firebase_1.db.collection('users').doc(uid).get();
             const userData = userDoc.exists ? userDoc.data() : null;
             const status = userData?.status || 'Pending';
+            if (status === 'Deactivated') {
+                return res.status(403).json({ error: 'Your reviewer account has been deactivated. Please contact administration.' });
+            }
             if (status !== 'Approved') {
                 return res.status(403).json({ error: `Your reviewer application is ${status}. You can log in after approval.` });
             }
+            mustChangePassword = userData?.mustChangePassword === true;
+            // Log reviewer first login exactly once
+            if (mustChangePassword && !userData?.firstLoginLogged) {
+                await firebase_1.db.collection('users').doc(uid).update({ firstLoginLogged: true });
+                await (0, auditService_1.logAuditEvent)('Reviewer First Login', uid);
+            }
         }
-        res.json({ success: true, user: { uid, email, role, name } });
+        else {
+            // Check other users
+            const userDoc = await firebase_1.db.collection('users').doc(uid).get();
+            const userData = userDoc.exists ? userDoc.data() : null;
+            mustChangePassword = userData?.mustChangePassword === true;
+        }
+        res.json({ success: true, user: { uid, email, role, name, mustChangePassword } });
     }
     catch (error) {
         res.status(500).json({ error: 'Server error' });
@@ -76,6 +93,30 @@ router.post('/register', authMiddleware_1.requireAuth, async (req, res) => {
     catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ error: 'Failed to register user' });
+    }
+});
+// Endpoint to change password securely and clear mustChangePassword status
+router.post('/change-password', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const { uid } = req.user;
+        const { newPassword } = req.body;
+        if (!newPassword || newPassword.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+        }
+        // 1. Update password securely in Firebase Authentication
+        await firebase_1.auth.updateUser(uid, { password: newPassword });
+        // 2. Update Firestore user document
+        await firebase_1.db.collection('users').doc(uid).update({
+            mustChangePassword: false,
+            updatedAt: new Date()
+        });
+        // 3. Record Password Changed event in audit log
+        await (0, auditService_1.logAuditEvent)('Password Changed', uid);
+        res.json({ success: true, message: 'Password changed successfully.' });
+    }
+    catch (error) {
+        console.error('Change password error:', error);
+        res.status(500).json({ error: error.message || 'Failed to change password.' });
     }
 });
 exports.default = router;

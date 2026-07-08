@@ -82,3 +82,13 @@ export const register = async (userData: any) => {
     throw new Error(getFriendlyErrorMessage(error));
   }
 };
+
+export const changePassword = async (newPassword: string) => {
+  try {
+    const response = await api.post('/auth/change-password', { newPassword });
+    return response.data;
+  } catch (error: any) {
+    console.error('[Auth Service] Change password error:', error);
+    throw new Error(error.response?.data?.error || 'Failed to change password.');
+  }
+};
