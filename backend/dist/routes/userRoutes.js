@@ -55,11 +55,11 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
     <tr>
       <td align="center">
         <!-- Main Email Container -->
-        <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border: 1px solid #e4e4e7; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+        <table border="0" cellpadding="0" cellspacing="0" width="600" style="width: 100% !important; max-width: 600px; background-color: #ffffff; border: 1px solid #e4e4e7; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
           <!-- Header -->
           <tr>
             <td style="padding: 40px 40px 20px 40px; text-align: center;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                 <tr>
                   <td align="center" style="padding-bottom: 20px;">
                     <img src="${logoUrl}" alt="BKMA Logo" width="80" height="80" style="width: 80px; height: 80px; display: block;" />
@@ -95,12 +95,12 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
           <!-- Login Credentials Card -->
           <tr>
             <td style="padding: 0 40px 0 40px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border: 1px solid #d4d4d8; border-radius: 12px; padding: 24px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #ffffff; border: 1px solid #d4d4d8; border-radius: 12px; padding: 24px;">
                 <tr>
                   <td>
                     <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #000000;">Your Login Credentials</h3>
                     
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; margin-bottom: 24px;">
                       <!-- Email Row -->
                       <tr>
                         <td style="padding: 10px 0; border-bottom: 1px solid #e4e4e7; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">EMAIL</td>
@@ -114,7 +114,7 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
                     </table>
                     
                     <!-- Login Button -->
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                       <tr>
                         <td align="center">
                           <a href="${loginUrl}" style="display: block; background-color: #000000; color: #ffffff; text-align: center; font-size: 14px; font-weight: 700; text-decoration: none; padding: 14px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Login</a>
@@ -135,10 +135,10 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
           <!-- Security Notice -->
           <tr>
             <td style="padding: 0 40px 30px 40px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafafa; border-left: 4px solid #000000; border-top: 1px solid #e4e4e7; border-right: 1px solid #e4e4e7; border-bottom: 1px solid #e4e4e7; border-radius: 0 8px 8px 0; padding: 20px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #fafafa; border-left: 4px solid #000000; border-top: 1px solid #e4e4e7; border-right: 1px solid #e4e4e7; border-bottom: 1px solid #e4e4e7; border-radius: 0 8px 8px 0; padding: 20px;">
                 <tr>
                   <td>
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                       <tr>
                         <td width="20" valign="top" style="font-size: 15px; line-height: 1; padding-top: 2px;">ℹ️</td>
                         <td width="12" style="font-size: 0; line-height: 0;">&nbsp;</td>
@@ -159,7 +159,7 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
             <td style="padding: 0 40px 30px 40px;">
               <h3 style="margin: 0 0 16px 0; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; text-align: center; letter-spacing: 0.15em;">What You Can Do</h3>
               
-              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                 <tr>
                   <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
                     <span style="font-size: 18px; display: block; margin-bottom: 8px;">📄</span>
@@ -178,13 +178,13 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
           <!-- Support Section -->
           <tr>
             <td style="padding: 0 40px 40px 40px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border: 1px dashed #e4e4e7; border-radius: 16px; padding: 24px; text-align: center;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #ffffff; border: 1px dashed #e4e4e7; border-radius: 16px; padding: 24px; text-align: center;">
                 <tr>
                   <td>
                     <h3 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 700; color: #000000;">Need Help?</h3>
                     <p style="margin: 0 0 16px 0; font-size: 13px; color: #71717a; line-height: 1.5;">If you experience any difficulty accessing your account, please contact the BKMA Editorial Office.</p>
                     
-                    <table border="0" cellpadding="0" cellspacing="0" align="center">
+                    <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
                       <tr>
                         <td style="font-size: 13px; font-weight: 600;">
                           <a href="mailto:keralamathsasso@gmail.com" style="color: #000000; text-decoration: none; margin-right: 20px;">✉ keralamathsasso@gmail.com</a>
@@ -205,7 +205,7 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
               <p style="margin: 0 0 4px 0; font-size: 13px; color: #a1a1aa; line-height: 1.4;">Advancing Mathematical Research Through Quality Publications</p>
               <p style="margin: 0 0 24px 0; font-size: 13px; color: #a1a1aa;">Kerala, India</p>
               
-              <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin-bottom: 24px;">
+              <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto 24px auto;">
                 <tr>
                   <td style="font-size: 12px;">
                     <a href="${privacyPolicyUrl}" style="color: #a1a1aa; text-decoration: underline; margin-right: 16px;">Privacy Policy</a>
