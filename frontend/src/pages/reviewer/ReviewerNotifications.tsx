@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Bell, 
   BookOpen, 
@@ -9,11 +9,15 @@ import {
   Trash2, 
   Inbox,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../../utils/NotificationContext';
+import api from '../../services/api';
+import { db, auth } from '../../config/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 interface Notification {
   id: string;
@@ -28,54 +32,109 @@ interface Notification {
 const ReviewerNotifications = () => {
   const { confirm, showToast } = useNotification();
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<Notification[]>([
-    { 
-      id: '1', 
-      type: 'assignment', 
-      title: 'New Article Assigned', 
-      articleTitle: 'Topological Data Analysis in Stochastic Systems',
-      message: 'A new manuscript has been assigned for your assessment. Deadline for review: April 30, 2024.', 
-      timestamp: '2 hours ago', 
-      read: false 
-    },
-    { 
-      id: '2', 
-      type: 'reminder', 
-      title: 'Pending Review Reminder', 
-      articleTitle: 'Advanced Cryptography Protocols v2',
-      message: 'Your review for this manuscript is due in 24 hours. Please ensure your assessment is submitted on time.', 
-      timestamp: '5 hours ago', 
-      read: false 
-    },
-    { 
-      id: '3', 
-      type: 'submitted', 
-      title: 'Review Successfully Logged', 
-      articleTitle: 'Non-linear Dynamics in Quantum Geometry',
-      message: 'Your expert review has been received by the editorial board. Thank you for your contribution.', 
-      timestamp: 'Yesterday', 
-      read: true 
-    },
-    { 
-      id: '4', 
-      type: 'alert', 
-      title: 'Submission Window Closing', 
-      articleTitle: 'BKMA Volume 15 Issue 1',
-      message: 'The current submission window for the Global Archive will close in 48 hours.', 
-      timestamp: '2 days ago', 
-      read: true 
-    }
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let notifs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title || 'Notification',
+          message: data.message || '',
+          timestamp: formatTime(data.createdAt),
+          read: data.read || false,
+          type: getNotificationDisplayType(data.type),
+          articleTitle: data.metadata?.articleTitle || ''
+        };
+      }) as Notification[];
+      
+      // Sort in memory to avoid needing a composite index in Firestore
+      notifs.sort((a, b) => {
+        const docA = snapshot.docs.find(d => d.id === a.id);
+        const docB = snapshot.docs.find(d => d.id === b.id);
+        const timeA = docA?.data().createdAt?._seconds || 0;
+        const timeB = docB?.data().createdAt?._seconds || 0;
+        return timeB - timeA;
+      });
+
+      setNotifications(notifs);
+      setLoading(false);
+
+      // Auto mark as read when on this page
+      const unreadIds = notifs.filter(n => !n.read).map(n => n.id);
+      if (unreadIds.length > 0) {
+        unreadIds.forEach(id => {
+          api.patch(`/notifications/${id}/read`).catch(console.error);
+        });
+      }
+    }, (error) => {
+      console.error('Real-time reviewer notifications error:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const formatTime = (createdAt: any) => {
+    if (!createdAt) return 'RECENTLY';
+    const seconds = createdAt._seconds || (typeof createdAt === 'number' ? createdAt / 1000 : null);
+    if (!seconds) return 'RECENTLY';
+    
+    const date = new Date(seconds * 1000);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'JUST NOW';
+    if (diffInHours < 24) return `${diffInHours}H AGO`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-    showToast('All notifications marked as read', 'success');
+  const getNotificationDisplayType = (backendType: string): Notification['type'] => {
+    switch (backendType) {
+      case 'INVITATION_SENT':
+      case 'INVITATION_ACCEPTED':
+      case 'INVITATION_REJECTED':
+      case 'ARTICLE_ASSIGNED':
+      case 'WELCOME_REVIEWER':
+        return 'assignment';
+      case 'REVIEW_REMINDER':
+        return 'reminder';
+      case 'REVIEW_SUBMITTED':
+        return 'submitted';
+      default:
+        return 'alert';
+    }
+  };
+
+  const markAsRead = async (id: string) => {
+    try {
+      await api.patch(`/notifications/${id}/read`);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const unread = notifications.filter(n => !n.read);
+      if (unread.length === 0) return;
+      await Promise.all(unread.map(n => api.patch(`/notifications/${n.id}/read`)));
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      showToast('All notifications marked as read', 'success');
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
   };
 
   const clearAll = () => {
@@ -83,9 +142,15 @@ const ReviewerNotifications = () => {
       title: 'Clear Notifications',
       message: 'Are you sure you want to permanently clear your alert archive?',
       confirmText: 'Clear Archive',
-      onConfirm: () => {
-        setNotifications([]);
-        showToast('Notification archive cleared', 'info');
+      onConfirm: async () => {
+        try {
+          await api.delete('/notifications');
+          setNotifications([]);
+          showToast('Notification archive cleared', 'info');
+        } catch (error) {
+          console.error('Failed to clear notifications:', error);
+          showToast('Failed to clear notifications.', 'error');
+        }
       }
     });
   };
@@ -162,7 +227,12 @@ const ReviewerNotifications = () => {
         </div>
       </div>
 
-      {notifications.length > 0 ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <Loader2 size={36} className="animate-spin text-zinc-300" />
+          <p className="text-sm font-semibold text-zinc-400">Loading alerts...</p>
+        </div>
+      ) : notifications.length > 0 ? (
         <div className="space-y-4">
           {notifications.map((notification) => (
             <div 
@@ -197,18 +267,20 @@ const ReviewerNotifications = () => {
                 </p>
 
                 {/* Clickable Article Link */}
-                <button 
-                  onClick={() => navigate('/reviewer/articles')}
-                  className={cn(
-                    "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-sm",
-                    !notification.read 
-                      ? "bg-zinc-900 text-white hover:bg-zinc-800" 
-                      : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
-                  )}
-                >
-                  <ExternalLink size={12} />
-                  {notification.articleTitle}
-                </button>
+                {notification.articleTitle && (
+                  <button 
+                    onClick={() => navigate('/reviewer/articles')}
+                    className={cn(
+                      "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-sm",
+                      !notification.read 
+                        ? "bg-zinc-900 text-white hover:bg-zinc-800" 
+                        : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                    )}
+                  >
+                    <ExternalLink size={12} />
+                    {notification.articleTitle}
+                  </button>
+                )}
               </div>
 
               {/* Unread Indicator & Actions */}
