@@ -24,6 +24,9 @@ exports.config = {
         senderEmail: process.env.BREVO_SENDER_EMAIL || 'keralamathsasso@gmail.com',
         logoUrl: process.env.BREVO_LOGO_URL || 'https://res.cloudinary.com/dalv5zyx3/image/upload/v1783493145/kma/assets/j647dvggnyhjhm57r6w4.jpg',
         loginUrl: process.env.PORTAL_LOGIN_URL || process.env.LOGIN_URL || 'http://localhost:5173/auth',
+        privacyPolicyUrl: process.env.PRIVACY_POLICY_URL || 'http://localhost:5173/privacy-policy',
+        reviewerGuidelinesUrl: process.env.REVIEWER_GUIDELINES_URL || 'http://localhost:5173/reviewer-guidelines',
+        supportUrl: process.env.SUPPORT_URL || 'http://localhost:5173/support',
     },
     payments: {
         razorpay: {

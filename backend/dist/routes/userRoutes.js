@@ -12,6 +12,9 @@ const env_1 = require("../config/env");
 const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
     const logoUrl = env_1.config.brevo.logoUrl;
     const loginUrl = env_1.config.brevo.loginUrl;
+    const privacyPolicyUrl = env_1.config.brevo.privacyPolicyUrl;
+    const reviewerGuidelinesUrl = env_1.config.brevo.reviewerGuidelinesUrl;
+    const supportUrl = env_1.config.brevo.supportUrl;
     const currentYear = new Date().getFullYear();
     const subject = 'Welcome to Kerala Mathematical Association Reviewer Portal';
     const htmlContent = `
@@ -192,9 +195,9 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
               <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin-bottom: 24px;">
                 <tr>
                   <td style="font-size: 12px;">
-                    <a href="#" style="color: #a1a1aa; text-decoration: underline; margin-right: 16px;">Privacy Policy</a>
-                    <a href="#" style="color: #a1a1aa; text-decoration: underline; margin-right: 16px;">Reviewer Guidelines</a>
-                    <a href="#" style="color: #a1a1aa; text-decoration: underline;">Support</a>
+                    <a href="${privacyPolicyUrl}" style="color: #a1a1aa; text-decoration: underline; margin-right: 16px;">Privacy Policy</a>
+                    <a href="${reviewerGuidelinesUrl}" style="color: #a1a1aa; text-decoration: underline; margin-right: 16px;">Reviewer Guidelines</a>
+                    <a href="${supportUrl}" style="color: #a1a1aa; text-decoration: underline;">Support</a>
                   </td>
                 </tr>
               </table>
