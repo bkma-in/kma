@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Bell, 
   BookOpen, 
@@ -15,15 +15,15 @@ import {
 import { cn } from '../../utils/cn';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../../utils/NotificationContext';
-import api from '../../services/api';
 import { db, auth } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import api from '../../services/api';
 
 interface Notification {
   id: string;
   type: 'assignment' | 'reminder' | 'submitted' | 'alert';
   title: string;
-  articleTitle: string;
+  articleTitle?: string;
   message: string;
   timestamp: string;
   read: boolean;
@@ -35,55 +35,12 @@ const ReviewerNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', user.uid)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      let notifs = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          title: data.title || 'Notification',
-          message: data.message || '',
-          timestamp: formatTime(data.createdAt),
-          read: data.read || false,
-          type: getNotificationDisplayType(data.type),
-          articleTitle: data.metadata?.articleTitle || ''
-        };
-      }) as Notification[];
-      
-      // Sort in memory to avoid needing a composite index in Firestore
-      notifs.sort((a, b) => {
-        const docA = snapshot.docs.find(d => d.id === a.id);
-        const docB = snapshot.docs.find(d => d.id === b.id);
-        const timeA = docA?.data().createdAt?._seconds || 0;
-        const timeB = docB?.data().createdAt?._seconds || 0;
-        return timeB - timeA;
-      });
-
-      setNotifications(notifs);
-      setLoading(false);
-
-      // Auto mark as read when on this page
-      const unreadIds = notifs.filter(n => !n.read).map(n => n.id);
-      if (unreadIds.length > 0) {
-        unreadIds.forEach(id => {
-          api.patch(`/notifications/${id}/read`).catch(console.error);
-        });
-      }
-    }, (error) => {
-      console.error('Real-time reviewer notifications error:', error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const getTimestamp = (val: any) => {
+    if (!val) return 0;
+    if (val._seconds) return val._seconds * 1000;
+    if (typeof val.toMillis === 'function') return val.toMillis();
+    return new Date(val).getTime() || 0;
+  };
 
   const formatTime = (createdAt: any) => {
     if (!createdAt) return 'RECENTLY';
@@ -116,20 +73,61 @@ const ReviewerNotifications = () => {
     }
   };
 
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let notifs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title || 'Notification',
+          message: data.message || '',
+          timestamp: formatTime(data.createdAt),
+          read: !!data.read,
+          type: getNotificationDisplayType(data.type),
+          articleTitle: data.metadata?.articleTitle || data.articleTitle || '',
+          createdAt: data.createdAt // Kept for sorting
+        };
+      }) as any[];
+      
+      // Sort in memory by newest first (createdAt desc)
+      notifs.sort((a, b) => getTimestamp(b.createdAt) - getTimestamp(a.createdAt));
+
+      setNotifications(notifs);
+      setLoading(false);
+
+      // Auto mark as read on opening page using read-all batch API
+      const unreadCount = notifs.filter(n => !n.read).length;
+      if (unreadCount > 0) {
+        api.post('/notifications/read-all').catch(console.error);
+      }
+    }, (error) => {
+      console.error('Real-time reviewer notifications error:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const markAsRead = async (id: string) => {
     try {
       await api.patch(`/notifications/${id}/read`);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      console.error('Failed to mark as read:', error);
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      const unread = notifications.filter(n => !n.read);
-      if (unread.length === 0) return;
-      await Promise.all(unread.map(n => api.patch(`/notifications/${n.id}/read`)));
+      await api.post('/notifications/read-all');
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       showToast('All notifications marked as read', 'success');
     } catch (error) {
@@ -228,9 +226,8 @@ const ReviewerNotifications = () => {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <Loader2 size={36} className="animate-spin text-zinc-300" />
-          <p className="text-sm font-semibold text-zinc-400">Loading alerts...</p>
+        <div className="flex h-[40vh] items-center justify-center">
+          <Loader2 className="animate-spin text-zinc-500" size={32} />
         </div>
       ) : notifications.length > 0 ? (
         <div className="space-y-4">

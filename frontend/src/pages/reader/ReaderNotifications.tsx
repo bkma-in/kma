@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Bell, 
   CheckCheck, 
@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
-import api from '../../services/api';
 import { db, auth } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import api from '../../services/api';
 
 interface Notification {
   id: string;
@@ -26,58 +26,16 @@ interface Notification {
 }
 
 const ReaderNotifications = () => {
-  const { showToast } = useNotification();
+  const { confirm, showToast } = useNotification();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', user.uid)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      let notifs = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          title: data.title || 'Notification',
-          message: data.message || '',
-          time: formatTime(data.createdAt),
-          type: getNotificationType(data.type),
-          read: data.read || false
-        };
-      }) as Notification[];
-      
-      // Sort in memory to avoid needing a composite index in Firestore
-      notifs.sort((a, b) => {
-        const docA = snapshot.docs.find(d => d.id === a.id);
-        const docB = snapshot.docs.find(d => d.id === b.id);
-        const timeA = docA?.data().createdAt?._seconds || 0;
-        const timeB = docB?.data().createdAt?._seconds || 0;
-        return timeB - timeA;
-      });
-
-      setNotifications(notifs);
-      setLoading(false);
-
-      // Auto mark as read when on this page
-      const unreadIds = notifs.filter(n => !n.read).map(n => n.id);
-      if (unreadIds.length > 0) {
-        unreadIds.forEach(id => {
-          api.patch(`/notifications/${id}/read`).catch(console.error);
-        });
-      }
-    }, (error) => {
-      console.error('Real-time reader notifications error:', error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const getTimestamp = (val: any) => {
+    if (!val) return 0;
+    if (val._seconds) return val._seconds * 1000;
+    if (typeof val.toMillis === 'function') return val.toMillis();
+    return new Date(val).getTime() || 0;
+  };
 
   const formatTime = (createdAt: any) => {
     if (!createdAt) return 'RECENTLY';
@@ -107,21 +65,61 @@ const ReaderNotifications = () => {
     }
   };
 
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let notifs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title || 'Notification',
+          message: data.message || '',
+          time: formatTime(data.createdAt),
+          type: getNotificationType(data.type),
+          read: !!data.read,
+          createdAt: data.createdAt // Kept for sorting
+        };
+      }) as any[];
+      
+      // Sort in memory by newest first (createdAt desc)
+      notifs.sort((a, b) => getTimestamp(b.createdAt) - getTimestamp(a.createdAt));
+
+      setNotifications(notifs);
+      setLoading(false);
+
+      // Auto mark as read on opening page using read-all batch API
+      const unreadCount = notifs.filter(n => !n.read).length;
+      if (unreadCount > 0) {
+        api.post('/notifications/read-all').catch(console.error);
+      }
+    }, (error) => {
+      console.error('Real-time reader notifications error:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const markAsRead = async (id: string) => {
     try {
       await api.patch(`/notifications/${id}/read`);
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
       showToast('Notification marked as read', 'info');
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      console.error('Failed to mark as read:', error);
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      const unread = notifications.filter(n => !n.read);
-      if (unread.length === 0) return;
-      await Promise.all(unread.map(n => api.patch(`/notifications/${n.id}/read`)));
+      await api.post('/notifications/read-all');
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       showToast('All notifications marked as read', 'success');
     } catch (error) {
@@ -129,14 +127,21 @@ const ReaderNotifications = () => {
     }
   };
 
-  const deleteNotification = async (id: string) => {
-    try {
-      await api.delete(`/notifications/${id}`);
-      setNotifications(prev => prev.filter(n => n.id !== id));
-      showToast('Notification deleted', 'info');
-    } catch (error) {
-      console.error('Failed to delete notification:', error);
-    }
+  const deleteNotification = (id: string) => {
+    confirm({
+      title: 'Clear Notification',
+      message: 'Are you sure you want to permanently delete this alert?',
+      confirmText: 'Delete Alert',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/notifications/${id}`);
+          setNotifications(prev => prev.filter(n => n.id !== id));
+          showToast('Notification deleted', 'info');
+        } catch (error) {
+          console.error('Failed to delete notification:', error);
+        }
+      }
+    });
   };
 
   const getIcon = (type: string) => {
@@ -166,12 +171,12 @@ const ReaderNotifications = () => {
         )}
       </div>
 
+      {/* Notifications List */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <Loader2 size={36} className="animate-spin text-zinc-300" />
-          <p className="text-sm font-semibold text-zinc-400">Loading alerts...</p>
+        <div className="flex h-[40vh] items-center justify-center">
+          <Loader2 className="animate-spin text-zinc-500" size={32} />
         </div>
-      ) : (
+      ) : notifications.length > 0 ? (
         <div className="space-y-4">
           {notifications.map((notif) => (
             <div key={notif.id} className={cn(
@@ -199,7 +204,8 @@ const ReaderNotifications = () => {
                 <p className="text-xs text-zinc-500 leading-relaxed max-w-2xl">{notif.message}</p>
                 <div className="flex items-center gap-4 mt-4">
                   <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
-                    <Clock size={12} /> {notif.time}
+                    <Clock size={12} />
+                    {notif.time}
                   </div>
                   {!notif.read && (
                     <button 
@@ -222,15 +228,13 @@ const ReaderNotifications = () => {
               </div>
             </div>
           ))}
-
-          {notifications.length === 0 && (
-            <div className="py-20 text-center bg-white rounded-3xl border border-zinc-200 border-dashed">
-              <div className="flex flex-col items-center gap-4 opacity-10">
-                <Bell size={48} className="text-black" />
-                <p className="text-xs font-bold uppercase tracking-widest text-black">No notifications to show</p>
-              </div>
-            </div>
-          )}
+        </div>
+      ) : (
+        <div className="py-20 text-center bg-white rounded-3xl border border-zinc-200 border-dashed">
+          <div className="flex flex-col items-center gap-4 opacity-10">
+            <Bell size={48} className="text-black" />
+            <p className="text-xs font-bold uppercase tracking-widest text-black">No notifications to show</p>
+          </div>
         </div>
       )}
     </div>

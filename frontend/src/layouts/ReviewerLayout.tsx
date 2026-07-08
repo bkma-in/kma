@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FileText, Bell, LogOut, X, Search, HelpCircle } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
@@ -10,6 +10,9 @@ import ChangePasswordModal from '../components/reviewer/ChangePasswordModal';
 import { useNotification } from '../utils/NotificationContext';
 import { useProfile } from '../hooks/useProfile';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../config/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import api from '../services/api';
 
 const ReviewerLayout = () => {
   const { confirm, showToast } = useNotification();
@@ -22,6 +25,66 @@ const ReviewerLayout = () => {
   const [mustChangePassword, setMustChangePassword] = useState(
     currentUser?.mustChangePassword === true || localStorage.getItem('is_temp_password') === 'true'
   );
+  const location = useLocation();
+  const [counts, setCounts] = useState({
+    notifications: 0
+  });
+
+  const getTimestamp = (val: any) => {
+    if (!val) return 0;
+    if (typeof val.toMillis === 'function') return val.toMillis();
+    if (val.seconds) return val.seconds * 1000;
+    if (val._seconds) return val._seconds * 1000;
+    return new Date(val).getTime() || 0;
+  };
+
+  const formatBadgeCount = (count: number) => {
+    if (count <= 0) return null;
+    if (count > 99) return '99+';
+    return count.toString();
+  };
+
+  // Immediate UI clearing when navigating to notifications
+  useEffect(() => {
+    if (location.pathname === '/reviewer/notifications') {
+      localStorage.setItem('notifications_cleared_at', Date.now().toString());
+      setCounts(prev => ({ ...prev, notifications: 0 }));
+      api.post('/notifications/read-all').catch(console.error);
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    const qNotif = query(
+      collection(db, 'notifications'),
+      where('userId', '==', currentUser.uid),
+      where('read', '==', false)
+    );
+
+    const unsubscribeNotif = onSnapshot(qNotif, (snapshot) => {
+      const clearedAt = parseInt(localStorage.getItem('notifications_cleared_at') || '0');
+      
+      // If we are currently on the notifications page, any existing items are considered seen
+      const isCurrentlyOnNotifications = window.location.pathname === '/reviewer/notifications';
+      const referenceTime = isCurrentlyOnNotifications ? Date.now() : clearedAt;
+      if (isCurrentlyOnNotifications && referenceTime > clearedAt) {
+        localStorage.setItem('notifications_cleared_at', referenceTime.toString());
+      }
+
+      const unreadCount = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        const time = getTimestamp(data.createdAt);
+        return time > referenceTime;
+      }).length;
+
+      setCounts(prev => ({ ...prev, notifications: unreadCount }));
+    });
+
+    return () => {
+      unsubscribeNotif();
+    };
+  }, [currentUser?.uid]);
 
   // Route protection & Dynamic User Data
   // App.tsx handles the primary Firebase auth check — no localStorage redirect here
@@ -51,7 +114,7 @@ const ReviewerLayout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/reviewer/dashboard', end: true, icon: LayoutDashboard },
     { name: 'Assigned Articles', path: '/reviewer/articles', icon: FileText },
-    { name: 'Notifications', path: '/reviewer/notifications', icon: Bell, badge: 2 },
+    { name: 'Notifications', path: '/reviewer/notifications', icon: Bell, badge: formatBadgeCount(counts.notifications) },
   ];
 
   return (

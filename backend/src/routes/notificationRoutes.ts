@@ -83,6 +83,34 @@ router.patch('/:id/read', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// Mark All Notifications as Read for Current User (Firestore Batch Update)
+router.post('/read-all', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { uid } = req.user!;
+
+    // Query all unread notifications for this user
+    const snapshot = await db.collection('notifications')
+      .where('userId', '==', uid)
+      .where('read', '==', false)
+      .get();
+
+    if (snapshot.empty) {
+      return res.json({ success: true, count: 0 });
+    }
+
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => {
+      batch.update(doc.ref, { read: true, updatedAt: new Date() });
+    });
+    await batch.commit();
+
+    res.json({ success: true, count: snapshot.docs.length });
+  } catch (error: any) {
+    console.error('Mark all notifications read error:', error);
+    res.status(500).json({ error: error.message || 'Failed to mark all notifications as read' });
+  }
+});
+
 // Delete a specific notification
 router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
   try {
