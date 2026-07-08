@@ -17,7 +17,6 @@ async function deleteQueryBatch(query: any, resolve: any) {
 
   const batchSize = snapshot.size;
   if (batchSize === 0) {
-    // When there are no documents left, we are done
     resolve();
     return;
   }
@@ -33,8 +32,6 @@ async function deleteQueryBatch(query: any, resolve: any) {
   }
   await batch.commit();
 
-  // Recurse on the next process tick, to avoid
-  // exploding the stack.
   process.nextTick(() => {
     deleteQueryBatch(query, resolve);
   });
@@ -49,11 +46,41 @@ async function clearCollection(collectionPath: string) {
   });
 }
 
+async function clearReviewers() {
+  console.log('Fetching reviewers from database...');
+  const reviewersSnapshot = await db.collection('users').where('role', '==', 'reviewer').get();
+  console.log(`Found ${reviewersSnapshot.size} reviewers to delete.`);
+  
+  for (const doc of reviewersSnapshot.docs) {
+    const uid = doc.id;
+    const userData = doc.data();
+    try {
+      await admin.auth().deleteUser(uid);
+      console.log(`Deleted Firebase Auth account for: ${userData.email || uid}`);
+    } catch (err: any) {
+      if (err.code === 'auth/user-not-found') {
+        console.log(`Firebase Auth account not found or already deleted: ${uid}`);
+      } else {
+        console.error(`Failed to delete Firebase Auth user ${uid}:`, err.message);
+      }
+    }
+    await doc.ref.delete();
+    console.log(`Deleted Firestore user document for: ${userData.email || uid}`);
+  }
+}
+
 async function run() {
+  console.log('Starting database cleanup...');
+  
+  console.log('Clearing reviewers...');
+  await clearReviewers();
+  
   console.log('Clearing articles...');
   await clearCollection('articles');
+  
   console.log('Clearing notifications...');
   await clearCollection('notifications');
+  
   console.log('Database cleared successfully!');
   process.exit(0);
 }
