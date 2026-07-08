@@ -94,8 +94,8 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
 
           <!-- Login Credentials Card -->
           <tr>
-            <td style="padding: 0 40px 20px 40px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; padding: 24px;">
+            <td style="padding: 0 40px 0 40px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border: 1px solid #d4d4d8; border-radius: 12px; padding: 24px;">
                 <tr>
                   <td>
                     <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #000000;">Your Login Credentials</h3>
@@ -103,13 +103,13 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                       <!-- Email Row -->
                       <tr>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">EMAIL</td>
-                        <td align="right" style="padding: 8px 0; border-bottom: 1px solid #e4e4e7; font-size: 14px; font-weight: 600; color: #000000;">${email}</td>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #e4e4e7; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">EMAIL</td>
+                        <td align="right" style="padding: 10px 0; border-bottom: 1px solid #e4e4e7; font-size: 14px; font-weight: 600; color: #000000;"><span style="color: #000000; text-decoration: none;">${email}</span></td>
                       </tr>
                       <!-- Password Row -->
                       <tr>
-                        <td style="padding: 8px 0; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">TEMP PASSWORD</td>
-                        <td align="right" style="padding: 8px 0; font-size: 14px; font-weight: 600; color: #000000;">${tempPassword}</td>
+                        <td style="padding: 10px 0; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">TEMP PASSWORD</td>
+                        <td align="right" style="padding: 10px 0; font-size: 14px; font-weight: 600; color: #000000;"><span style="color: #000000;">${tempPassword}</span></td>
                       </tr>
                     </table>
                     
@@ -127,14 +127,27 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
             </td>
           </tr>
 
+          <!-- Spacer -->
+          <tr>
+            <td height="24" style="font-size: 0; line-height: 0;">&nbsp;</td>
+          </tr>
+
           <!-- Security Notice -->
           <tr>
             <td style="padding: 0 40px 30px 40px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f5; border-left: 4px solid #dc2626; border-radius: 0 8px 8px 0; padding: 16px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafafa; border-left: 4px solid #000000; border-top: 1px solid #e4e4e7; border-right: 1px solid #e4e4e7; border-bottom: 1px solid #e4e4e7; border-radius: 0 8px 8px 0; padding: 20px;">
                 <tr>
-                  <td style="font-size: 13px; line-height: 1.5; color: #3f3f46;">
-                    <strong style="color: #000000; display: block; margin-bottom: 4px;">Security Notice</strong>
-                    For your security, you will be required to change your password immediately after your first successful login. Please keep your login credentials confidential.
+                  <td>
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="20" valign="top" style="font-size: 15px; line-height: 1; padding-top: 2px;">ℹ️</td>
+                        <td width="12" style="font-size: 0; line-height: 0;">&nbsp;</td>
+                        <td valign="top" style="font-size: 13px; line-height: 1.5; color: #52525b;">
+                          <strong style="color: #000000; display: block; margin-bottom: 4px; font-size: 14px; font-weight: 700;">Security Notice</strong>
+                          For your security, you will be required to change your password immediately after your first successful login. Please keep your login credentials confidential.
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
