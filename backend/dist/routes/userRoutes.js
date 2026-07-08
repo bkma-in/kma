@@ -5,6 +5,32 @@ const firebase_1 = require("../config/firebase");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const uploadMiddleware_1 = require("../middleware/uploadMiddleware");
 const cloudinaryService_1 = require("../services/cloudinaryService");
+const emailService_1 = require("../services/emailService");
+const auditService_1 = require("../services/auditService");
+// Helper to send reviewer onboarding credentials via email
+const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
+    const origin = req.get('origin') || 'https://kma.example.com';
+    const reviewerLoginUrl = `${origin}/auth`;
+    const subject = 'Welcome to Kerala Mathematical Association Reviewer Portal';
+    const htmlContent = `
+    <p>Hello ${name},</p>
+    <p>Your reviewer account has been successfully created.</p>
+    <h3 style="margin-top: 20px;">Login Credentials</h3>
+    <p><strong>Email:</strong><br/>${email}</p>
+    <p><strong>Temporary Password:</strong><br/>${tempPassword}</p>
+    <p><strong>Reviewer Login Portal:</strong><br/><a href="${reviewerLoginUrl}">${reviewerLoginUrl}</a></p>
+    <p style="margin-top: 20px; font-style: italic;">For security reasons, you will be required to change your password after your first login.</p>
+    <p>Regards,<br/>Kerala Mathematical Association</p>
+  `.trim();
+    try {
+        await (0, emailService_1.sendTransactionalEmail)(email, name, subject, htmlContent);
+        return true;
+    }
+    catch (error) {
+        console.error('Failed to send reviewer credentials email:', error);
+        return false;
+    }
+};
 const router = (0, express_1.Router)();
 // Get Current User Profile
 router.get('/profile', authMiddleware_1.requireAuth, async (req, res) => {
@@ -307,12 +333,13 @@ router.get('/authors', authMiddleware_1.requireAuth, (0, authMiddleware_1.requir
         res.status(500).json({ error: 'Failed to fetch authors' });
     }
 });
-// Admin: Update reviewer status (Approve/Reject)
+// Admin: Update reviewer status (Approve/Reject/Deactivate/Reactivate)
 router.patch('/reviewers/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
+    const adminId = req.user.uid;
     try {
         const id = req.params.id;
         const { status, rejectionReason } = req.body;
-        const validStatuses = ['Approved', 'Rejected', 'Pending'];
+        const validStatuses = ['Approved', 'Rejected', 'Pending', 'Deactivated'];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ error: 'Invalid status' });
         }
@@ -321,6 +348,8 @@ router.patch('/reviewers/:id/status', authMiddleware_1.requireAuth, (0, authMidd
         if (!userDoc.exists) {
             return res.status(404).json({ error: 'Reviewer not found' });
         }
+        const userData = userDoc.data();
+        const previousStatus = userData.status;
         const updateData = {
             status,
             updatedAt: new Date()
@@ -331,16 +360,27 @@ router.patch('/reviewers/:id/status', authMiddleware_1.requireAuth, (0, authMidd
         else {
             updateData.rejectionReason = '';
         }
+        // Handle account activation/deactivation in Firebase Auth and log audit events
+        if (status === 'Deactivated') {
+            await firebase_1.auth.updateUser(id, { disabled: true });
+            await firebase_1.auth.revokeRefreshTokens(id);
+            await (0, auditService_1.logAuditEvent)('Reviewer Deactivated', id, adminId);
+        }
+        else if (status === 'Approved' && previousStatus === 'Deactivated') {
+            await firebase_1.auth.updateUser(id, { disabled: false });
+            await (0, auditService_1.logAuditEvent)('Reviewer Reactivated', id, adminId);
+        }
         await userRef.update(updateData);
         res.json({ success: true, reviewer: { ...userDoc.data(), ...updateData, id } });
     }
     catch (error) {
         console.error('Update reviewer status error:', error);
-        res.status(500).json({ error: 'Failed to update reviewer status' });
+        res.status(500).json({ error: error.message || 'Failed to update reviewer status' });
     }
 });
-// Admin: Create pre-approved reviewer user
+// Admin: Create pre-approved reviewer user (delivered via secure email onboarding)
 router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
+    const adminId = req.user.uid;
     try {
         const { name, email, qualification, experience } = req.body;
         if (!name || !email || !qualification || !experience) {
@@ -353,7 +393,7 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
             password: tempPassword,
             displayName: name
         });
-        // 2. Create user document in Firestore
+        // 2. Create user document in Firestore (password is NOT stored in Firestore)
         const userData = {
             uid: userRecord.uid,
             name,
@@ -364,6 +404,7 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
             status: 'Approved',
             qualification,
             experience,
+            mustChangePassword: true,
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -378,8 +419,19 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
             await firebase_1.auth.deleteUser(userRecord.uid).catch(authErr => console.error('Failed to delete Auth user on rollback:', authErr));
             throw err;
         }
+        // Record Reviewer Created in audit log
+        await (0, auditService_1.logAuditEvent)('Reviewer Created', userRecord.uid, adminId);
+        // Send credentials via email asynchronously
+        const emailSent = await sendReviewerCredentialsEmail(name, email, tempPassword, req);
+        if (emailSent) {
+            await (0, auditService_1.logAuditEvent)('Credentials Email Sent', userRecord.uid, adminId);
+        }
+        else {
+            await (0, auditService_1.logAuditEvent)('Credentials Email Failed', userRecord.uid, adminId);
+        }
         res.json({
             success: true,
+            emailSent,
             reviewer: {
                 id: userRecord.uid,
                 name,
@@ -388,13 +440,48 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
                 experience,
                 regDate: userData.createdAt.toISOString(),
                 status: 'Approved'
-            },
-            tempPassword
+            }
         });
     }
     catch (error) {
         console.error('Create reviewer error:', error);
         res.status(500).json({ error: error.message || 'Failed to create reviewer user' });
+    }
+});
+// Admin: Resend reviewer credentials (regenerates password, updates Auth, emails Reviewer, logs audit)
+router.post('/reviewers/:id/resend-credentials', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
+    const adminId = req.user.uid;
+    try {
+        const id = req.params.id;
+        const userRef = firebase_1.db.collection('users').doc(id);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: 'Reviewer not found' });
+        }
+        const userData = userDoc.data();
+        if (userData.role !== 'reviewer') {
+            return res.status(400).json({ error: 'User is not a reviewer' });
+        }
+        const tempPassword = generateTempPassword();
+        // 1. Update password securely in Firebase Authentication (invalidates old temp password)
+        await firebase_1.auth.updateUser(id, { password: tempPassword });
+        // 2. Reset mustChangePassword flag in Firestore document to true
+        await userRef.update({
+            mustChangePassword: true,
+            updatedAt: new Date()
+        });
+        // 3. Send email with new temporary credentials
+        const emailSent = await sendReviewerCredentialsEmail(userData.name, userData.email, tempPassword, req);
+        if (!emailSent) {
+            return res.status(500).json({ error: 'Failed to deliver credentials email. Please try again.' });
+        }
+        // 4. Record Credentials Resent in audit log
+        await (0, auditService_1.logAuditEvent)('Credentials Resent', id, adminId);
+        res.json({ success: true, message: 'Credentials have been sent successfully.' });
+    }
+    catch (error) {
+        console.error('Resend credentials error:', error);
+        res.status(500).json({ error: error.message || 'Failed to resend credentials' });
     }
 });
 exports.default = router;

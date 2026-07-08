@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldAlert, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { changePassword } from '../../services/auth.service';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -19,7 +20,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onSuc
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -35,30 +36,22 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onSuc
 
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await changePassword(passwords.new);
       setIsLoading(false);
       setIsSuccess(true);
       
-      // Update local state (mocking DB)
+      // Update local state
       localStorage.setItem('is_temp_password', 'false');
-      
-      // Simulate backend update
-      const userEmail = localStorage.getItem('userEmail');
-      if (userEmail) {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const userIndex = users.findIndex((u: any) => u.email === userEmail);
-        if (userIndex > -1) {
-          users[userIndex].password = passwords.new; // In real app, this would be hashed
-          users[userIndex].is_temp_password = false;
-          localStorage.setItem('users', JSON.stringify(users));
-        }
-      }
 
       setTimeout(() => {
         onSuccess();
       }, 2000);
-    }, 1500);
+    } catch (err: any) {
+      console.error('Change password failed:', err);
+      setError(err.message || 'Failed to update password.');
+      setIsLoading(false);
+    }
   };
 
   return (

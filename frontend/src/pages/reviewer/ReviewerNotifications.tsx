@@ -56,6 +56,23 @@ const ReviewerNotifications = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
   };
 
+  const getNotificationDisplayType = (backendType: string): Notification['type'] => {
+    switch (backendType) {
+      case 'INVITATION_SENT':
+      case 'INVITATION_ACCEPTED':
+      case 'INVITATION_REJECTED':
+      case 'ARTICLE_ASSIGNED':
+      case 'WELCOME_REVIEWER':
+        return 'assignment';
+      case 'REVIEW_REMINDER':
+        return 'reminder';
+      case 'REVIEW_SUBMITTED':
+        return 'submitted';
+      default:
+        return 'alert';
+    }
+  };
+
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -68,21 +85,14 @@ const ReviewerNotifications = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let notifs = snapshot.docs.map(doc => {
         const data = doc.data();
-        
-        // Map backend notification titles to reviewer icons/types
-        let notifType: 'assignment' | 'reminder' | 'submitted' | 'alert' = 'alert';
-        const titleLower = (data.title || '').toLowerCase();
-        if (titleLower.includes('assign')) notifType = 'assignment';
-        else if (titleLower.includes('reminder') || titleLower.includes('due')) notifType = 'reminder';
-        else if (titleLower.includes('submit') || titleLower.includes('logged') || titleLower.includes('received')) notifType = 'submitted';
-
         return {
           id: doc.id,
-          type: notifType,
-          title: data.title || 'System Notification',
+          title: data.title || 'Notification',
           message: data.message || '',
           timestamp: formatTime(data.createdAt),
           read: !!data.read,
+          type: getNotificationDisplayType(data.type),
+          articleTitle: data.metadata?.articleTitle || data.articleTitle || '',
           createdAt: data.createdAt // Kept for sorting
         };
       }) as any[];
@@ -93,7 +103,7 @@ const ReviewerNotifications = () => {
       setNotifications(notifs);
       setLoading(false);
 
-      // Auto mark as read on opening page
+      // Auto mark as read on opening page using read-all batch API
       const unreadCount = notifs.filter(n => !n.read).length;
       if (unreadCount > 0) {
         api.post('/notifications/read-all').catch(console.error);
@@ -131,14 +141,13 @@ const ReviewerNotifications = () => {
       message: 'Are you sure you want to permanently clear your alert archive?',
       confirmText: 'Clear Archive',
       onConfirm: async () => {
-        // Just mock clear local view or batch delete in database
         try {
-          // If we want to delete them from UI, we can filter locally or call delete API if exists.
-          // Since there is no bulk delete API, we just filter local state to look clear.
+          await api.delete('/notifications');
           setNotifications([]);
           showToast('Notification archive cleared', 'info');
         } catch (error) {
-          console.error(error);
+          console.error('Failed to clear notifications:', error);
+          showToast('Failed to clear notifications.', 'error');
         }
       }
     });
@@ -255,18 +264,20 @@ const ReviewerNotifications = () => {
                 </p>
 
                 {/* Clickable Article Link */}
-                <button 
-                  onClick={() => navigate('/reviewer/articles')}
-                  className={cn(
-                    "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-sm",
-                    !notification.read 
-                      ? "bg-zinc-900 text-white hover:bg-zinc-800" 
-                      : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
-                  )}
-                >
-                  <ExternalLink size={12} />
-                  {notification.articleTitle}
-                </button>
+                {notification.articleTitle && (
+                  <button 
+                    onClick={() => navigate('/reviewer/articles')}
+                    className={cn(
+                      "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-sm",
+                      !notification.read 
+                        ? "bg-zinc-900 text-white hover:bg-zinc-800" 
+                        : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                    )}
+                  >
+                    <ExternalLink size={12} />
+                    {notification.articleTitle}
+                  </button>
+                )}
               </div>
 
               {/* Unread Indicator & Actions */}

@@ -51,6 +51,20 @@ const ReaderNotifications = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
   };
 
+  const getNotificationType = (backendType: string): Notification['type'] => {
+    switch (backendType) {
+      case 'PAYMENT_SUCCESS':
+      case 'SUBSCRIPTION_ACTIVE':
+        return 'success';
+      case 'PAYMENT_FAILED':
+        return 'error';
+      case 'SUBSCRIPTION_EXPIRING':
+        return 'warning';
+      default:
+        return 'info';
+    }
+  };
+
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -63,20 +77,12 @@ const ReaderNotifications = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let notifs = snapshot.docs.map(doc => {
         const data = doc.data();
-        
-        // Map backend notification titles to reader icons/types
-        let notifType: 'success' | 'warning' | 'info' | 'error' = 'info';
-        const titleLower = (data.title || '').toLowerCase();
-        if (titleLower.includes('success') || titleLower.includes('paid') || titleLower.includes('granted')) notifType = 'success';
-        else if (titleLower.includes('warning') || titleLower.includes('renew') || titleLower.includes('expire')) notifType = 'warning';
-        else if (titleLower.includes('fail') || titleLower.includes('error')) notifType = 'error';
-
         return {
           id: doc.id,
-          type: notifType,
-          title: data.title || 'System Notification',
+          title: data.title || 'Notification',
           message: data.message || '',
           time: formatTime(data.createdAt),
+          type: getNotificationType(data.type),
           read: !!data.read,
           createdAt: data.createdAt // Kept for sorting
         };
@@ -88,7 +94,7 @@ const ReaderNotifications = () => {
       setNotifications(notifs);
       setLoading(false);
 
-      // Auto mark as read on opening page
+      // Auto mark as read on opening page using read-all batch API
       const unreadCount = notifs.filter(n => !n.read).length;
       if (unreadCount > 0) {
         api.post('/notifications/read-all').catch(console.error);
@@ -124,11 +130,16 @@ const ReaderNotifications = () => {
   const deleteNotification = (id: string) => {
     confirm({
       title: 'Clear Notification',
-      message: 'Are you sure you want to permanently clear this alert?',
-      confirmText: 'Clear Notification',
-      onConfirm: () => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-        showToast('Notification cleared', 'info');
+      message: 'Are you sure you want to permanently delete this alert?',
+      confirmText: 'Delete Alert',
+      onConfirm: async () => {
+        try {
+          await api.delete(`/notifications/${id}`);
+          setNotifications(prev => prev.filter(n => n.id !== id));
+          showToast('Notification deleted', 'info');
+        } catch (error) {
+          console.error('Failed to delete notification:', error);
+        }
       }
     });
   };
@@ -150,12 +161,14 @@ const ReaderNotifications = () => {
           <h1 className="text-3xl font-bold text-black tracking-tight font-['Outfit']">Notifications</h1>
           <p className="text-zinc-500 mt-1">Stay updated with your account activity and new publications.</p>
         </div>
-        <button 
-          onClick={markAllAsRead}
-          className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-black text-zinc-400 hover:text-white rounded-xl text-xs font-bold transition-all border border-zinc-200 shadow-sm"
-        >
-          <CheckCheck size={16} /> Mark all as read
-        </button>
+        {notifications.length > 0 && (
+          <button 
+            onClick={markAllAsRead}
+            className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-black text-zinc-400 hover:text-white rounded-xl text-xs font-bold transition-all border border-zinc-200 shadow-sm"
+          >
+            <CheckCheck size={16} /> Mark all as read
+          </button>
+        )}
       </div>
 
       {/* Notifications List */}
