@@ -66,10 +66,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   const clearUnread = useCallback(() => {
-    localStorage.setItem('notifications_cleared_at', Date.now().toString());
+    if (!currentUser?.uid) return;
+    localStorage.setItem(`notifications_cleared_at_${currentUser.uid}`, Date.now().toString());
     setUnreadCount(0);
     api.post('/notifications/read-all').catch(console.error);
-  }, []);
+  }, [currentUser?.uid]);
 
   useEffect(() => {
     // Clean up any existing listeners and timers on user change
@@ -102,7 +103,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     const processSnapshot = (snapshot: any) => {
-      const clearedAt = parseInt(localStorage.getItem('notifications_cleared_at') || '0');
+      const clearedAt = parseInt(localStorage.getItem(`notifications_cleared_at_${currentUser.uid}`) || '0');
       const count = snapshot.docs.filter((doc: any) => {
         const data = doc.data();
         const time = getTimestamp(data.createdAt);
