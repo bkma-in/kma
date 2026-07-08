@@ -341,7 +341,7 @@ const AdminAuthors = () => {
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-black font-['Outfit']">{reviewer.name}</h3>
-                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{reviewer.email}</p>
+                        <p className="text-[10px] text-zinc-400 font-bold lowercase tracking-wider">{reviewer.email}</p>
                       </div>
                     </div>
                   </td>
@@ -528,7 +528,7 @@ const AdminAuthors = () => {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Email Address</label>
-                      <p className="text-sm font-bold text-white">{selectedReviewer.email}</p>
+                      <p className="text-sm font-bold text-white lowercase">{selectedReviewer.email}</p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Phone Number</label>

@@ -227,7 +227,7 @@ const AdminAuthorsList = () => {
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-black font-['Outfit']">{author.name}</h3>
-                        <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{author.email}</p>
+                        <p className="text-[10px] text-zinc-400 font-bold lowercase tracking-wider">{author.email}</p>
                       </div>
                     </div>
                   </td>
@@ -355,7 +355,7 @@ const AdminAuthorsList = () => {
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Email Address</label>
-                      <p className="text-sm font-bold text-white">{selectedAuthor.email}</p>
+                      <p className="text-sm font-bold text-white lowercase">{selectedAuthor.email}</p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Phone Number</label>
