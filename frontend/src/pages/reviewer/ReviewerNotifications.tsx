@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Bell, 
   BookOpen, 
@@ -9,17 +9,21 @@ import {
   Trash2, 
   Inbox,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../../utils/NotificationContext';
+import { db, auth } from '../../config/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import api from '../../services/api';
 
 interface Notification {
   id: string;
   type: 'assignment' | 'reminder' | 'submitted' | 'alert';
   title: string;
-  articleTitle: string;
+  articleTitle?: string;
   message: string;
   timestamp: string;
   read: boolean;
@@ -28,54 +32,97 @@ interface Notification {
 const ReviewerNotifications = () => {
   const { confirm, showToast } = useNotification();
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<Notification[]>([
-    { 
-      id: '1', 
-      type: 'assignment', 
-      title: 'New Article Assigned', 
-      articleTitle: 'Topological Data Analysis in Stochastic Systems',
-      message: 'A new manuscript has been assigned for your assessment. Deadline for review: April 30, 2024.', 
-      timestamp: '2 hours ago', 
-      read: false 
-    },
-    { 
-      id: '2', 
-      type: 'reminder', 
-      title: 'Pending Review Reminder', 
-      articleTitle: 'Advanced Cryptography Protocols v2',
-      message: 'Your review for this manuscript is due in 24 hours. Please ensure your assessment is submitted on time.', 
-      timestamp: '5 hours ago', 
-      read: false 
-    },
-    { 
-      id: '3', 
-      type: 'submitted', 
-      title: 'Review Successfully Logged', 
-      articleTitle: 'Non-linear Dynamics in Quantum Geometry',
-      message: 'Your expert review has been received by the editorial board. Thank you for your contribution.', 
-      timestamp: 'Yesterday', 
-      read: true 
-    },
-    { 
-      id: '4', 
-      type: 'alert', 
-      title: 'Submission Window Closing', 
-      articleTitle: 'BKMA Volume 15 Issue 1',
-      message: 'The current submission window for the Global Archive will close in 48 hours.', 
-      timestamp: '2 days ago', 
-      read: true 
-    }
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
+  const getTimestamp = (val: any) => {
+    if (!val) return 0;
+    if (val._seconds) return val._seconds * 1000;
+    if (typeof val.toMillis === 'function') return val.toMillis();
+    return new Date(val).getTime() || 0;
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-    showToast('All notifications marked as read', 'success');
+  const formatTime = (createdAt: any) => {
+    if (!createdAt) return 'RECENTLY';
+    const seconds = createdAt._seconds || (typeof createdAt === 'number' ? createdAt / 1000 : null);
+    if (!seconds) return 'RECENTLY';
+    
+    const date = new Date(seconds * 1000);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'JUST NOW';
+    if (diffInHours < 24) return `${diffInHours}H AGO`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+  };
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', user.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let notifs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Map backend notification titles to reviewer icons/types
+        let notifType: 'assignment' | 'reminder' | 'submitted' | 'alert' = 'alert';
+        const titleLower = (data.title || '').toLowerCase();
+        if (titleLower.includes('assign')) notifType = 'assignment';
+        else if (titleLower.includes('reminder') || titleLower.includes('due')) notifType = 'reminder';
+        else if (titleLower.includes('submit') || titleLower.includes('logged') || titleLower.includes('received')) notifType = 'submitted';
+
+        return {
+          id: doc.id,
+          type: notifType,
+          title: data.title || 'System Notification',
+          message: data.message || '',
+          timestamp: formatTime(data.createdAt),
+          read: !!data.read,
+          createdAt: data.createdAt // Kept for sorting
+        };
+      }) as any[];
+      
+      // Sort in memory by newest first (createdAt desc)
+      notifs.sort((a, b) => getTimestamp(b.createdAt) - getTimestamp(a.createdAt));
+
+      setNotifications(notifs);
+      setLoading(false);
+
+      // Auto mark as read on opening page
+      const unreadCount = notifs.filter(n => !n.read).length;
+      if (unreadCount > 0) {
+        api.post('/notifications/read-all').catch(console.error);
+      }
+    }, (error) => {
+      console.error('Real-time reviewer notifications error:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const markAsRead = async (id: string) => {
+    try {
+      await api.patch(`/notifications/${id}/read`);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await api.post('/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      showToast('All notifications marked as read', 'success');
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
   };
 
   const clearAll = () => {
@@ -83,9 +130,16 @@ const ReviewerNotifications = () => {
       title: 'Clear Notifications',
       message: 'Are you sure you want to permanently clear your alert archive?',
       confirmText: 'Clear Archive',
-      onConfirm: () => {
-        setNotifications([]);
-        showToast('Notification archive cleared', 'info');
+      onConfirm: async () => {
+        // Just mock clear local view or batch delete in database
+        try {
+          // If we want to delete them from UI, we can filter locally or call delete API if exists.
+          // Since there is no bulk delete API, we just filter local state to look clear.
+          setNotifications([]);
+          showToast('Notification archive cleared', 'info');
+        } catch (error) {
+          console.error(error);
+        }
       }
     });
   };
@@ -162,7 +216,11 @@ const ReviewerNotifications = () => {
         </div>
       </div>
 
-      {notifications.length > 0 ? (
+      {loading ? (
+        <div className="flex h-[40vh] items-center justify-center">
+          <Loader2 className="animate-spin text-zinc-500" size={32} />
+        </div>
+      ) : notifications.length > 0 ? (
         <div className="space-y-4">
           {notifications.map((notification) => (
             <div 

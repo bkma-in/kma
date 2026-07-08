@@ -59,11 +59,9 @@ const Notifications = () => {
       setLoading(false);
 
       // Auto mark as read when on this page
-      const unreadIds = notifs.filter(n => !n.read).map(n => n.notificationId);
-      if (unreadIds.length > 0) {
-        unreadIds.forEach(id => {
-          api.patch(`/notifications/${id}/read`).catch(console.error);
-        });
+      const unreadCount = notifs.filter(n => !n.read).length;
+      if (unreadCount > 0) {
+        api.post('/notifications/read-all').catch(console.error);
       }
     }, (error) => {
       console.error('Real-time notifications error:', error);

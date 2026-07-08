@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../hooks/useProfile';
 import { db } from '../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import api from '../services/api';
 
 const AdminLayout = () => {
   const { confirm, showToast } = useNotification();
@@ -19,10 +20,34 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const location = useLocation();
   const [counts, setCounts] = useState({
     notifications: 0,
     reviewers: 0
   });
+
+  const getTimestamp = (val: any) => {
+    if (!val) return 0;
+    if (typeof val.toMillis === 'function') return val.toMillis();
+    if (val.seconds) return val.seconds * 1000;
+    if (val._seconds) return val._seconds * 1000;
+    return new Date(val).getTime() || 0;
+  };
+
+  const formatBadgeCount = (count: number) => {
+    if (count <= 0) return null;
+    if (count > 99) return '99+';
+    return count.toString();
+  };
+
+  // Immediate UI clearing when navigating to notifications
+  useEffect(() => {
+    if (location.pathname === '/admin/notifications') {
+      localStorage.setItem('notifications_cleared_at', Date.now().toString());
+      setCounts(prev => ({ ...prev, notifications: 0 }));
+      api.post('/notifications/read-all').catch(console.error);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -35,7 +60,22 @@ const AdminLayout = () => {
     );
 
     const unsubscribeNotif = onSnapshot(qNotif, (snapshot) => {
-      setCounts(prev => ({ ...prev, notifications: snapshot.size }));
+      const clearedAt = parseInt(localStorage.getItem('notifications_cleared_at') || '0');
+      
+      // If we are currently on the notifications page, any existing items are considered seen
+      const isCurrentlyOnNotifications = window.location.pathname === '/admin/notifications';
+      const referenceTime = isCurrentlyOnNotifications ? Date.now() : clearedAt;
+      if (isCurrentlyOnNotifications && referenceTime > clearedAt) {
+        localStorage.setItem('notifications_cleared_at', referenceTime.toString());
+      }
+
+      const unreadCount = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        const time = getTimestamp(data.createdAt);
+        return time > referenceTime;
+      }).length;
+
+      setCounts(prev => ({ ...prev, notifications: unreadCount }));
     });
 
     // 2. Pending reviewer applications query
@@ -82,11 +122,11 @@ const AdminLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', end: true, icon: LayoutDashboard },
-    { name: 'Reviewers', path: '/admin/reviewers', icon: Users, badge: counts.reviewers > 0 ? counts.reviewers : null },
+    { name: 'Reviewers', path: '/admin/reviewers', icon: Users, badge: formatBadgeCount(counts.reviewers) },
     { name: 'Authors', path: '/admin/authors-list', icon: Users },
     { name: 'Articles', path: '/admin/articles', icon: FileText },
     { name: 'Ready to Publish', path: '/admin/ready-to-publish', icon: UploadCloud },
-    { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: counts.notifications > 0 ? counts.notifications : null },
+    { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: formatBadgeCount(counts.notifications) },
   ];
 
   return (

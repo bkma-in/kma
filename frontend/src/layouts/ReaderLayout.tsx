@@ -1,6 +1,5 @@
-import React from 'react';
-import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   CreditCard, 
@@ -22,15 +21,78 @@ import { useNotification } from '../utils/NotificationContext';
 import { useProfile } from '../hooks/useProfile';
 import { useSubscription } from '../utils/SubscriptionContext';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../config/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import api from '../services/api';
 
 const ReaderLayout = () => {
   const { confirm, showToast } = useNotification();
   const { profile } = useProfile();
   const { isSubscribed, unsubscribe } = useSubscription();
-  const { logout } = useAuth();
+  const { logout, currentUser } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [counts, setCounts] = useState({
+    notifications: 0
+  });
+
+  const getTimestamp = (val: any) => {
+    if (!val) return 0;
+    if (typeof val.toMillis === 'function') return val.toMillis();
+    if (val.seconds) return val.seconds * 1000;
+    if (val._seconds) return val._seconds * 1000;
+    return new Date(val).getTime() || 0;
+  };
+
+  const formatBadgeCount = (count: number) => {
+    if (count <= 0) return null;
+    if (count > 99) return '99+';
+    return count.toString();
+  };
+
+  // Immediate UI clearing when navigating to notifications
+  useEffect(() => {
+    if (location.pathname === '/reader/notifications') {
+      localStorage.setItem('notifications_cleared_at', Date.now().toString());
+      setCounts(prev => ({ ...prev, notifications: 0 }));
+      api.post('/notifications/read-all').catch(console.error);
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    const qNotif = query(
+      collection(db, 'notifications'),
+      where('userId', '==', currentUser.uid),
+      where('read', '==', false)
+    );
+
+    const unsubscribeNotif = onSnapshot(qNotif, (snapshot) => {
+      const clearedAt = parseInt(localStorage.getItem('notifications_cleared_at') || '0');
+      
+      // If we are currently on the notifications page, any existing items are considered seen
+      const isCurrentlyOnNotifications = window.location.pathname === '/reader/notifications';
+      const referenceTime = isCurrentlyOnNotifications ? Date.now() : clearedAt;
+      if (isCurrentlyOnNotifications && referenceTime > clearedAt) {
+        localStorage.setItem('notifications_cleared_at', referenceTime.toString());
+      }
+
+      const unreadCount = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        const time = getTimestamp(data.createdAt);
+        return time > referenceTime;
+      }).length;
+
+      setCounts(prev => ({ ...prev, notifications: unreadCount }));
+    });
+
+    return () => {
+      unsubscribeNotif();
+    };
+  }, [currentUser?.uid]);
 
   const handleLogout = () => {
     confirm({
@@ -53,7 +115,7 @@ const ReaderLayout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/reader/dashboard', end: true, icon: LayoutDashboard, locked: false },
     { name: 'Payments', path: '/reader/payments', icon: CreditCard, locked: !isSubscribed },
-    { name: 'Notifications', path: '/reader/notifications', icon: Bell, locked: !isSubscribed },
+    { name: 'Notifications', path: '/reader/notifications', icon: Bell, locked: !isSubscribed, badge: formatBadgeCount(counts.notifications) },
     { name: 'Saved Articles', path: '/reader/saved', icon: Bookmark, locked: !isSubscribed },
     { name: 'Profile', path: '/reader/profile', icon: User, locked: false },
   ];
@@ -129,8 +191,17 @@ const ReaderLayout = () => {
                   </div>
                   {item.locked ? (
                     <Lock size={14} className="text-zinc-600" />
-                  ) : isActive && (
-                    <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {item.badge && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                          {item.badge}
+                        </span>
+                      )}
+                      {isActive && (
+                        <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
+                      )}
+                    </div>
                   )}
                 </>
               )}
