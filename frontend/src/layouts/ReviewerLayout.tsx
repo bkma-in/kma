@@ -15,7 +15,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import api from '../services/api';
 
 const ReviewerLayout = () => {
-  const { confirm, showToast } = useNotification();
+  const { confirm, showToast, unreadCount, clearUnread } = useNotification();
   const { profile } = useProfile();
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -26,9 +26,6 @@ const ReviewerLayout = () => {
     currentUser?.mustChangePassword === true || localStorage.getItem('is_temp_password') === 'true'
   );
   const location = useLocation();
-  const [counts, setCounts] = useState({
-    notifications: 0
-  });
 
   const getTimestamp = (val: any) => {
     if (!val) return 0;
@@ -47,44 +44,9 @@ const ReviewerLayout = () => {
   // Immediate UI clearing when navigating to notifications
   useEffect(() => {
     if (location.pathname === '/reviewer/notifications') {
-      localStorage.setItem('notifications_cleared_at', Date.now().toString());
-      setCounts(prev => ({ ...prev, notifications: 0 }));
-      api.post('/notifications/read-all').catch(console.error);
+      clearUnread();
     }
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (!currentUser?.uid) return;
-
-    const qNotif = query(
-      collection(db, 'notifications'),
-      where('userId', '==', currentUser.uid),
-      where('read', '==', false)
-    );
-
-    const unsubscribeNotif = onSnapshot(qNotif, (snapshot) => {
-      const clearedAt = parseInt(localStorage.getItem('notifications_cleared_at') || '0');
-      
-      // If we are currently on the notifications page, any existing items are considered seen
-      const isCurrentlyOnNotifications = window.location.pathname === '/reviewer/notifications';
-      const referenceTime = isCurrentlyOnNotifications ? Date.now() : clearedAt;
-      if (isCurrentlyOnNotifications && referenceTime > clearedAt) {
-        localStorage.setItem('notifications_cleared_at', referenceTime.toString());
-      }
-
-      const unreadCount = snapshot.docs.filter(doc => {
-        const data = doc.data();
-        const time = getTimestamp(data.createdAt);
-        return time > referenceTime;
-      }).length;
-
-      setCounts(prev => ({ ...prev, notifications: unreadCount }));
-    });
-
-    return () => {
-      unsubscribeNotif();
-    };
-  }, [currentUser?.uid]);
+  }, [location.pathname, clearUnread]);
 
   // Route protection & Dynamic User Data
   // App.tsx handles the primary Firebase auth check — no localStorage redirect here
@@ -114,7 +76,7 @@ const ReviewerLayout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/reviewer/dashboard', end: true, icon: LayoutDashboard },
     { name: 'Assigned Articles', path: '/reviewer/articles', icon: FileText },
-    { name: 'Notifications', path: '/reviewer/notifications', icon: Bell, badge: formatBadgeCount(counts.notifications) },
+    { name: 'Notifications', path: '/reviewer/notifications', icon: Bell, badge: formatBadgeCount(unreadCount) },
   ];
 
   return (

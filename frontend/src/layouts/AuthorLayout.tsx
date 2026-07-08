@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 const AuthorLayout = () => {
-  const { confirm, showToast } = useNotification();
+  const { confirm, showToast, unreadCount, clearUnread } = useNotification();
   const { profile } = useProfile();
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
@@ -24,8 +24,7 @@ const AuthorLayout = () => {
   const [counts, setCounts] = useState({
     drafts: 0,
     articles: 0,
-    revisionRequired: 0,
-    notifications: 0
+    revisionRequired: 0
   });
 
   const formatBadgeCount = (count: number) => {
@@ -41,26 +40,17 @@ const AuthorLayout = () => {
     if (location.pathname === '/author/drafts') localStorage.setItem('lastViewed_drafts', now.toString());
     if (location.pathname === '/author/notifications') {
       localStorage.setItem('lastViewed_notifications', now.toString());
-      localStorage.setItem('notifications_cleared_at', now.toString());
-      setCounts(prev => ({ ...prev, notifications: 0 }));
-      api.post('/notifications/read-all').catch(console.error);
+      clearUnread();
     }
     
     // Auto-close sidebar on mobile after navigation
     setIsSidebarOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, clearUnread]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
     
     const uid = currentUser.uid;
-    
-    // 1. Real-time Notifications Listener (Unread only)
-    const qNotif = query(
-      collection(db, 'notifications'), 
-      where('userId', '==', uid),
-      where('read', '==', false)
-    );
     
     const getTimestamp = (val: any) => {
       if (!val) return 0;
@@ -69,25 +59,6 @@ const AuthorLayout = () => {
       if (val._seconds) return val._seconds * 1000;
       return new Date(val).getTime() || 0;
     };
-
-    const unsubscribeNotif = onSnapshot(qNotif, (snapshot) => {
-      const clearedAt = parseInt(localStorage.getItem('notifications_cleared_at') || '0');
-      
-      // If we are currently on the notifications page, any existing items are considered seen
-      const isCurrentlyOnNotifications = window.location.pathname === '/author/notifications';
-      const referenceTime = isCurrentlyOnNotifications ? Date.now() : clearedAt;
-      if (isCurrentlyOnNotifications && referenceTime > clearedAt) {
-        localStorage.setItem('notifications_cleared_at', referenceTime.toString());
-      }
-
-      const unreadCount = snapshot.docs.filter(doc => {
-        const data = doc.data();
-        const time = getTimestamp(data.createdAt);
-        return time > referenceTime;
-      }).length;
-
-      setCounts(prev => ({ ...prev, notifications: unreadCount }));
-    });
 
     // 2. Real-time Articles Listener (For Drafts and Articles badges)
     const qArticles = query(
@@ -133,7 +104,6 @@ const AuthorLayout = () => {
     });
 
     return () => {
-      unsubscribeNotif();
       unsubscribeArticles();
     };
   }, [currentUser?.uid, location.pathname]);
@@ -165,7 +135,7 @@ const AuthorLayout = () => {
     { name: 'My Articles', path: '/author/articles', icon: BookOpen, badge: counts.articles > 0 ? counts.articles : null },
     { name: 'Revision Required', path: '/author/revision-required', icon: AlertCircle, badge: counts.revisionRequired > 0 ? counts.revisionRequired : null },
     { name: 'Drafts', path: '/author/drafts', icon: Inbox, badge: counts.drafts > 0 ? counts.drafts : null },
-    { name: 'Notifications', path: '/author/notifications', icon: Bell, badge: formatBadgeCount(counts.notifications) },
+    { name: 'Notifications', path: '/author/notifications', icon: Bell, badge: formatBadgeCount(unreadCount) },
   ];
 
   return (
