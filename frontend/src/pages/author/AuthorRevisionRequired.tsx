@@ -72,7 +72,7 @@ const AuthorRevisionRequired = () => {
 
     const q = query(
       collection(db, 'articles'),
-      where('authorId', '==', currentUser.uid),
+      where('participantIds', 'array-contains', currentUser.uid),
       where('status', '==', 'revision_requested')
     );
 
