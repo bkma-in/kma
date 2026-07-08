@@ -22,6 +22,8 @@ exports.config = {
     brevo: {
         apiKey: process.env.BREVO_API_KEY || '',
         senderEmail: process.env.BREVO_SENDER_EMAIL || 'keralamathsasso@gmail.com',
+        logoUrl: process.env.BREVO_LOGO_URL || 'https://lh3.googleusercontent.com/aida/AP1WRLuohAN-o-4GGrtN-jXbH2E1fj-W6KhItttB6ISY86rVlu1wIVm9A4o5ovTIe5cNkCi7nSGUnq_txwB3ypWZ-GDiOnP9at4JwBHp_GgbKaUgn7MVeGPoG1sSku1henkE6xYRjH5KS9TPV0kl3-wqa_7KiUc_2XaXmwu1wWrhc5WVWDmgjisRqXgZjweajwugNdjWyV7D1dZ84yVnLhBugrAmIk6OeUuS-tTwv8UdcB_vG5QE_eqcYw4C',
+        loginUrl: process.env.PORTAL_LOGIN_URL || process.env.LOGIN_URL || 'http://localhost:5173/auth',
     },
     payments: {
         razorpay: {
