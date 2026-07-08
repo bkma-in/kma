@@ -81,7 +81,7 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
           <!-- Welcome Body -->
           <tr>
             <td style="padding: 30px 40px 20px 40px;">
-              <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #000000; letter-spacing: -0.01em;">Welcome to the BKMA Reviewer Community!</h2>
+              <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #000000; letter-spacing: -0.01em;">Welcome to the BKMA Community!</h2>
               <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #3f3f46;">
                 Dear ${name},<br /><br />
                 Congratulations! Your reviewer account has been successfully created for the Bulletin of Kerala Mathematical Association. We are delighted to welcome you as a valued member of our reviewer panel. Your expertise and contribution will play a vital role in maintaining the quality and integrity of scholarly publications.
@@ -127,7 +127,7 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
           <!-- Security Notice -->
           <tr>
             <td style="padding: 0 40px 30px 40px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f5; border-left: 4px solid #000000; border-radius: 0 8px 8px 0; padding: 16px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f5; border-left: 4px solid #dc2626; border-radius: 0 8px 8px 0; padding: 16px;">
                 <tr>
                   <td style="font-size: 13px; line-height: 1.5; color: #3f3f46;">
                     <strong style="color: #000000; display: block; margin-bottom: 4px;">Security Notice</strong>
