@@ -153,22 +153,6 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
                   </td>
                   <td width="4%"></td>
                   <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
-                    <span style="font-size: 18px; display: block; margin-bottom: 8px;">⭐</span>
-                    <span style="font-size: 13px; font-weight: 600; color: #000000; line-height: 1.3; display: block;">Submit review recommendations</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td height="16"></td>
-                  <td></td>
-                  <td></td>
-                </tr>
-                <tr>
-                  <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
-                    <span style="font-size: 18px; display: block; margin-bottom: 8px;">🔔</span>
-                    <span style="font-size: 13px; font-weight: 600; color: #000000; line-height: 1.3; display: block;">Receive review notifications</span>
-                  </td>
-                  <td width="4%"></td>
-                  <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
                     <span style="font-size: 18px; display: block; margin-bottom: 8px;">📖</span>
                     <span style="font-size: 13px; font-weight: 600; color: #000000; line-height: 1.3; display: block;">Contribute to BKMA process</span>
                   </td>
