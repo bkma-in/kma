@@ -215,15 +215,15 @@ const ReviewerArticles = () => {
       {/* Main Table Container */}
       <div className="bg-white/70 backdrop-blur-md rounded-[2.5rem] border border-white/20 shadow-xl overflow-hidden mx-4">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+          <table className="w-full text-left border-collapse min-w-[1000px] table-fixed">
             <thead>
               <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-1/4">Manuscript Details</th>
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Reference</th>
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Time Limit</th>
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Decision</th>
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Upload Result</th>
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%]">Manuscript Details</th>
+                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Reference</th>
+                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] whitespace-nowrap">Time Limit</th>
+                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%]">Decision</th>
+                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Upload Result</th>
+                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-50">
@@ -380,12 +380,12 @@ const ReviewerArticles = () => {
                     </td>
 
                     {/* Actions */}
-                    <td className="px-8 py-8 text-right">
+                    <td className="px-6 py-8 text-center">
                       {!isReviewed ? (
                         <button
                           onClick={() => handleSubmit(article.articleId)}
                           disabled={submittingId === article.articleId}
-                          className="px-6 py-3 bg-black text-white rounded-xl font-bold text-[10px] tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 active:scale-95 flex items-center justify-center gap-2 ml-auto disabled:bg-zinc-200 disabled:cursor-not-allowed"
+                          className="px-6 py-3 bg-black text-white rounded-xl font-bold text-[10px] tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 active:scale-95 inline-flex items-center justify-center gap-2 disabled:bg-zinc-200 disabled:cursor-not-allowed"
                         >
                           {submittingId === article.articleId ? (
                             <>
@@ -397,7 +397,7 @@ const ReviewerArticles = () => {
                           )}
                         </button>
                       ) : (
-                        <div className="flex items-center justify-end gap-2 text-zinc-300">
+                        <div className="flex items-center justify-center gap-2 text-zinc-300">
                           <span className="text-[10px] font-black uppercase tracking-widest">Completed</span>
                           <CheckCircle2 size={16} />
                         </div>
