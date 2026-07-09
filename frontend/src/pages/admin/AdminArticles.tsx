@@ -565,30 +565,37 @@ const AdminArticles = () => {
                       ) : (
                         // Stage 2: After Reviewer Assignment
                         <>
-                          <button
-                            onClick={() => {
-                              // Verify eligibility: Must have an Approved or Accepted recommendation in authoritative reviewerFeedback
-                              const hasApprovedReview = 
-                                !!(article.reviewerFeedback && (article.reviewerFeedback.recommendation === 'Approved' || article.reviewerFeedback.recommendation === 'Accepted'));
+                          <div className="flex flex-col items-center gap-1">
+                            <button
+                              onClick={() => {
+                                // Verify eligibility: Must have an Approved or Accepted recommendation in authoritative reviewerFeedback
+                                const hasApprovedReview = 
+                                  !!(article.reviewerFeedback && (article.reviewerFeedback.recommendation === 'Approved' || article.reviewerFeedback.recommendation === 'Accepted'));
 
-                              if (!hasApprovedReview) {
-                                showToast('This article is not eligible for publication. It must have an Approved or Accepted recommendation from a reviewer.', 'error');
-                                return;
-                              }
-
-                              confirm({
-                                title: 'Move to Publish List',
-                                message: 'Move this article to the Ready to Publish list?',
-                                confirmText: 'Move',
-                                onConfirm: () => {
-                                  updateStatus(article.id, 'Ready to Publish', null, 'Article successfully moved to Ready to Publish list.');
+                                if (!hasApprovedReview) {
+                                  showToast('This article is not eligible for publication. It must have an Approved or Accepted recommendation from a reviewer.', 'error');
+                                  return;
                                 }
-                              });
-                            }}
-                            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-emerald-700 transition-all uppercase cursor-pointer"
-                          >
-                            Move to Publish List
-                          </button>
+
+                                confirm({
+                                  title: 'Move to Publish List',
+                                  message: 'Move this article to the Ready to Publish list?',
+                                  confirmText: 'Move',
+                                  onConfirm: () => {
+                                    updateStatus(article.id, 'Ready to Publish', null, 'Article successfully moved to Ready to Publish list.');
+                                  }
+                                });
+                              }}
+                              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-emerald-700 transition-all uppercase cursor-pointer"
+                            >
+                              Move to Publish List
+                            </button>
+                            {article.status === 'Revision Requested' && (
+                              <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest leading-none mt-0.5">
+                                Under Author Update
+                              </span>
+                            )}
+                          </div>
                           
                           {article.status !== 'Revision Requested' && (
                             <button
