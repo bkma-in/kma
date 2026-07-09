@@ -289,12 +289,25 @@ const MyArticles = () => {
       : article.publishedAt;
     if (!rawDate) return '';
     
-    const seconds = rawDate._seconds || (typeof rawDate === 'number' ? rawDate / 1000 : null);
-    const date = seconds 
-      ? new Date(seconds * 1000) 
-      : (rawDate instanceof Date ? rawDate : new Date(rawDate));
+    let date: Date | null = null;
+    if (rawDate instanceof Date) {
+      date = rawDate;
+    } else if (typeof rawDate.toDate === 'function') {
+      date = rawDate.toDate();
+    } else if (typeof rawDate.toMillis === 'function') {
+      date = new Date(rawDate.toMillis());
+    } else if (rawDate.seconds !== undefined) {
+      date = new Date(rawDate.seconds * 1000);
+    } else if (rawDate._seconds !== undefined) {
+      date = new Date(rawDate._seconds * 1000);
+    } else {
+      const parsed = new Date(rawDate);
+      if (!isNaN(parsed.getTime())) {
+        date = parsed;
+      }
+    }
       
-    if (isNaN(date.getTime())) return '';
+    if (!date) return '';
     
     const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });

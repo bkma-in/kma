@@ -838,7 +838,7 @@ router.patch('/bulk-publish', authMiddleware_1.requireAuth, (0, authMiddleware_1
 router.patch('/:id/assign', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
     try {
         const id = req.params.id;
-        const { reviewerIds, reviewerNames } = req.body;
+        const { reviewerIds, reviewerNames, reviewDeadline, reviewerNote } = req.body;
         if (!reviewerIds || !Array.isArray(reviewerIds) || reviewerIds.length === 0) {
             return res.status(400).json({ error: 'At least one reviewer ID is required' });
         }
@@ -853,7 +853,13 @@ router.patch('/:id/assign', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
             // For backward compatibility:
             reviewerId: reviewerIds[0],
             status: 'under_review',
-            updatedAt: new Date()
+            updatedAt: new Date(),
+            // Store deadline and timeline details
+            reviewDeadline: reviewDeadline || null,
+            assignedAt: new Date(),
+            assignedBy: req.user?.name || req.user?.email || 'Admin',
+            reviewerNote: reviewerNote || null,
+            sentReminders: [] // reset reminders for new assignment
         });
         (0, notificationService_1.sendReviewerAssignedNotifications)(id, reviewerIds).catch(err => {
             console.error('Failed to trigger reviewer assigned notifications:', err);
