@@ -351,7 +351,6 @@ export const sendArticleSubmittedNotifications = async (articleId: string) => {
         const cardRows: EmailRow[] = [
           { label: 'Article Title', value: title },
           { label: 'Authors', value: authorNamesStr },
-          { label: 'Status', value: 'Submitted (Awaiting Desk Review)' },
         ];
         const emailHtml = buildHtmlEmail(
           author.name || 'Author',
@@ -359,14 +358,14 @@ export const sendArticleSubmittedNotifications = async (articleId: string) => {
           bodyText,
           'Submission details',
           cardRows,
-          config.brevo.loginUrl,
-          'Login',
+          '',
+          '',
           'Desk Review Process',
           'BKMA editors will conduct a desk review of the submission. If it meets BKMA guidelines, it will proceed to external peer review.',
-          '📄',
-          'Track review progress',
-          '⚙️',
-          'Update manuscript details'
+          '',
+          '',
+          '',
+          ''
         );
 
         // Send email (non-blocking call)

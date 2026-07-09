@@ -326,9 +326,8 @@ const sendArticleSubmittedNotifications = async (articleId) => {
                 const cardRows = [
                     { label: 'Article Title', value: title },
                     { label: 'Authors', value: authorNamesStr },
-                    { label: 'Status', value: 'Submitted (Awaiting Desk Review)' },
                 ];
-                const emailHtml = (0, exports.buildHtmlEmail)(author.name || 'Author', 'Manuscript Received Successfully', bodyText, 'Submission details', cardRows, env_1.config.brevo.loginUrl, 'Login', 'Desk Review Process', 'BKMA editors will conduct a desk review of the submission. If it meets BKMA guidelines, it will proceed to external peer review.', '📄', 'Track review progress', '⚙️', 'Update manuscript details');
+                const emailHtml = (0, exports.buildHtmlEmail)(author.name || 'Author', 'Manuscript Received Successfully', bodyText, 'Submission details', cardRows, '', '', 'Desk Review Process', 'BKMA editors will conduct a desk review of the submission. If it meets BKMA guidelines, it will proceed to external peer review.', '', '', '', '');
                 // Send email (non-blocking call)
                 (0, emailService_1.sendTransactionalEmail)(author.email, author.name || 'Author', `Submission Confirmation: ${title}`, emailHtml).catch(err => {
                     console.error(`[NOTIF-SERVICE] Failed to send submission email to author ${author.email}:`, err);
