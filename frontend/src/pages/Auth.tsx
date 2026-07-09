@@ -17,10 +17,10 @@ const Auth: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-accent px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen flex items-center justify-center bg-accent px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
       {/* Unified Card */}
-      <div className="w-full max-w-6xl bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden">
-        <div className="flex flex-col md:grid md:grid-cols-2 min-h-[600px] md:min-h-[700px]">
+      <div className="w-full max-w-4xl bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden">
+        <div className="flex flex-col md:grid md:grid-cols-2 min-h-[420px] md:min-h-[500px]">
 
           {/* Branding Panel (Top on mobile, Left on desktop) */}
           <div className="order-1 md:order-1 bg-gradient-to-br from-black to-zinc-900 text-white rounded-t-3xl md:rounded-bl-3xl md:rounded-br-none md:rounded-tl-3xl">

@@ -87,10 +87,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 lg:p-12 overflow-y-auto custom-scrollbar bg-white">
-      <div className="max-w-md mx-auto w-full py-4 sm:py-6 lg:py-8">
+    <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 overflow-y-auto custom-scrollbar bg-white">
+      <div className="max-w-md mx-auto w-full py-1 sm:py-2">
         {/* Header */}
-        <header className="mb-6 sm:mb-8">
+        <header className="mb-3 sm:mb-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-black mb-1.5 font-['Outfit']">Create Account</h2>
           <p className="text-zinc-500 text-sm">Join the Kerala Mathematical Association</p>
         </header>
@@ -111,7 +111,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
               </div>
             </motion.div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {errors.form && (
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
