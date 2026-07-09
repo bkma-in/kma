@@ -24,6 +24,7 @@ interface Notification {
   type: 'assignment' | 'reminder' | 'submitted' | 'alert';
   title: string;
   articleTitle?: string;
+  articleId?: string;
   message: string;
   timestamp: string;
   read: boolean;
@@ -235,8 +236,14 @@ const ReviewerNotifications = () => {
           {notifications.map((notification) => (
             <div 
               key={notification.id} 
+              onClick={() => {
+                if (notification.articleId) {
+                  navigate('/reviewer/articles', { state: { highlightId: notification.articleId } });
+                }
+              }}
               className={cn(
                 "group relative bg-white rounded-[2rem] border p-6 flex gap-6 transition-all duration-500",
+                notification.articleId ? "cursor-pointer hover:border-zinc-400 hover:shadow-xl hover:shadow-black/[0.02]" : "",
                 !notification.read 
                   ? "border-black/5 shadow-2xl shadow-black/[0.03] ring-1 ring-black/[0.02]" 
                   : "border-zinc-100 opacity-60 hover:opacity-100 hover:shadow-xl hover:shadow-black/[0.02]"
@@ -244,7 +251,7 @@ const ReviewerNotifications = () => {
             >
               {/* Context Icon */}
               {getIcon(notification.type, notification.read)}
-
+ 
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start mb-2">
@@ -263,26 +270,23 @@ const ReviewerNotifications = () => {
                 )}>
                   {notification.message}
                 </p>
-
+ 
                 {/* Clickable Article Link */}
-                {notification.articleTitle && (
+                {notification.articleId && (
                   <button 
-                    onClick={() => {
-                      if ((notification as any).articleId) {
-                        navigate('/reviewer/articles', { state: { highlightId: (notification as any).articleId } });
-                      } else {
-                        navigate('/reviewer/articles');
-                      }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/reviewer/articles', { state: { highlightId: notification.articleId } });
                     }}
                     className={cn(
-                      "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-sm",
+                      "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-sm cursor-pointer",
                       !notification.read 
                         ? "bg-zinc-900 text-white hover:bg-zinc-800" 
                         : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
                     )}
                   >
                     <ExternalLink size={12} />
-                    {notification.articleTitle}
+                    {notification.articleTitle || 'View Manuscript'}
                   </button>
                 )}
               </div>
