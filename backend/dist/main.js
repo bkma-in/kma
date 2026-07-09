@@ -7,8 +7,14 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const env_1 = require("./config/env");
 const migrationService_1 = require("./services/migrationService");
+const notificationService_1 = require("./services/notificationService");
 // Run migrations in background
 (0, migrationService_1.runMigrations)().catch(err => console.error('Startup migration error:', err));
+// Run reviewer reminders at startup and set 12-hour interval scheduler
+(0, notificationService_1.checkAndSendReviewReminders)().catch(err => console.error('Startup reminders check error:', err));
+setInterval(() => {
+    (0, notificationService_1.checkAndSendReviewReminders)().catch(err => console.error('Scheduled reminders check error:', err));
+}, 12 * 60 * 60 * 1000);
 // Import Routes
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const articleRoutes_1 = __importDefault(require("./routes/articleRoutes"));
