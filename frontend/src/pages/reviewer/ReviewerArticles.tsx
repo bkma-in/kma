@@ -127,8 +127,8 @@ const ReviewerArticles = () => {
       return;
     }
 
-    if (['Rejected', 'Needs Improvement'].includes(article.selectedStatus) && (!article.remarks || !article.remarks.trim())) {
-      showToast('Please provide reviewer comments explaining your decision for Rejection or Needs Revision.', 'error');
+    if (article.selectedStatus === 'Needs Improvement' && !article.uploadedFile) {
+      showToast('Please upload a document explaining the needed improvements to proceed.', 'error');
       return;
     }
 
@@ -138,7 +138,8 @@ const ReviewerArticles = () => {
       // Send the status update to the backend PATCH /:id/status route
       const response = await updateArticleStatus(id, 'under_review', {
         remarks: remarksText,
-        recommendation: article.selectedStatus
+        recommendation: article.selectedStatus,
+        reviewedFile: article.uploadedFile
       });
 
       if (response.success) {
@@ -383,15 +384,29 @@ const ReviewerArticles = () => {
                               "px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 border shadow-sm",
                               article.uploadedFile
                                 ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                                : "bg-white text-zinc-500 hover:border-black border-zinc-200"
+                                : article.selectedStatus === 'Needs Improvement'
+                                  ? "bg-rose-50 text-rose-600 border-rose-200 animate-pulse"
+                                  : "bg-white text-zinc-500 hover:border-black border-zinc-200"
                             )}
                           >
                             <Upload size={14} />
-                            {article.uploadedFile ? 'Change File' : 'Upload Review'}
+                            {article.uploadedFile 
+                              ? 'Change File' 
+                              : article.selectedStatus === 'Needs Improvement'
+                                ? 'Upload Document *'
+                                : 'Upload Review (Optional)'}
                           </button>
-                          {article.uploadedFile && (
-                            <span className="text-[8px] text-zinc-400 font-bold truncate max-w-[120px] uppercase tracking-tighter">
+                          {article.uploadedFile ? (
+                            <span className="text-[8px] text-emerald-600 font-bold truncate max-w-[120px] uppercase tracking-tighter">
                               {article.uploadedFile.name}
+                            </span>
+                          ) : article.selectedStatus === 'Needs Improvement' ? (
+                            <span className="text-[8px] text-rose-500 font-black uppercase tracking-widest animate-pulse">
+                              ⚠️ Document Required
+                            </span>
+                          ) : (
+                            <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest">
+                              Optional
                             </span>
                           )}
                           <input
