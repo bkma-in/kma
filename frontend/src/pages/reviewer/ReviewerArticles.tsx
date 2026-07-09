@@ -246,12 +246,6 @@ const ReviewerArticles = () => {
                 const isHighlighted = highlightId === article.articleId;
                 return (
 
-                  <tr key={article.articleId} className={cn(
-                    "group transition-all duration-300",
-                    isReviewed ? "opacity-60 bg-zinc-50/50" : "hover:bg-zinc-50/50"
-                  )}>
-                    {/* Manuscript Details */}
-
                   <tr
                     key={article.articleId}
                     id={`reviewer-article-${article.articleId}`}
