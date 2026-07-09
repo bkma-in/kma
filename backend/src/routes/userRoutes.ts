@@ -190,11 +190,27 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
                     
                     <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
                       <tr>
-                        <td style="font-size: 13px; font-weight: 600; padding: 0 12px 8px 12px;">
-                          <a href="mailto:keralamathsasso@gmail.com" style="color: #000000; text-decoration: none; white-space: nowrap;">✉&nbsp;keralamathsasso@gmail.com</a>
+                        <!-- Email Contact -->
+                        <td style="padding: 0 16px 8px 16px;">
+                          <table border="0" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td valign="middle" style="font-size: 16px; padding-right: 8px; line-height: 1; color: #000000;">✉</td>
+                              <td valign="middle" style="font-size: 13px; font-weight: 600;">
+                                <a href="mailto:keralamathsasso@gmail.com" style="color: #000000; text-decoration: none;">keralamathsasso@gmail.com</a>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
-                        <td style="font-size: 13px; font-weight: 600; padding: 0 12px 8px 12px;">
-                          <a href="https://www.bkma.in" style="color: #000000; text-decoration: none; white-space: nowrap;">🌐&nbsp;www.bkma.in</a>
+                        <!-- Website Contact -->
+                        <td style="padding: 0 16px 8px 16px;">
+                          <table border="0" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td valign="middle" style="font-size: 16px; padding-right: 8px; line-height: 1; color: #000000;">🌐</td>
+                              <td valign="middle" style="font-size: 13px; font-weight: 600;">
+                                <a href="https://www.bkma.in" style="color: #000000; text-decoration: none;">www.bkma.in</a>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
                       </tr>
                     </table>
