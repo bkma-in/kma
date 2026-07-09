@@ -56,15 +56,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
   }, [prefilledEmail]);
 
   return (
-    <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 lg:p-12 bg-white">
+    <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 bg-white">
       <div className="max-w-md mx-auto w-full">
         {/* Header */}
-        <header className="mb-8 sm:mb-10 text-center md:text-left">
+        <header className="mb-4 sm:mb-6 text-center md:text-left">
           <h2 className="text-2xl sm:text-3xl font-bold text-black mb-1.5 font-['Outfit']">Welcome Back</h2>
           <p className="text-zinc-500 text-sm">Log in to your BKMA account</p>
         </header>
 
-        <form className="space-y-6" onSubmit={handleLogin}>
+        <form className="space-y-4" onSubmit={handleLogin}>
           {/* Email Address */}
           <div className="space-y-1.5">
             <label className="form-label" htmlFor="login-email">Email</label>
@@ -84,12 +84,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
 
           {/* Password */}
           <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <label className="form-label mb-0" htmlFor="login-password">Password</label>
-              <button type="button" className="text-[10px] font-bold text-zinc-400 hover:text-black uppercase tracking-wider transition-colors">
-                Forgot?
-              </button>
-            </div>
+            <label className="form-label" htmlFor="login-password">Password</label>
             <div className="relative group">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-black transition-colors" size={18} />
               <input
@@ -133,6 +128,16 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
             )}
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
+
+          {/* Forgot Password Link */}
+          <div className="text-center pt-1">
+            <button 
+              type="button" 
+              className="text-[10px] font-bold text-zinc-400 hover:text-black uppercase tracking-wider transition-colors"
+            >
+              Forgot Password?
+            </button>
+          </div>
 
           {/* Register Link */}
           <p className="text-center text-zinc-500 text-sm pt-2">
