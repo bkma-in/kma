@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  FileText, 
-  Download, 
-  Upload, 
-  CheckCircle2, 
-  X, 
+import {
+  FileText,
+  Download,
+  Upload,
+  CheckCircle2,
+  X,
   Loader2,
   AlertCircle
 } from 'lucide-react';
@@ -29,10 +29,10 @@ const ReviewerArticles = () => {
     const deadlineDate = new Date(deadline);
     if (isNaN(deadlineDate.getTime())) return null;
     const deadlineStart = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
-    
+
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    
+
     const diffMs = deadlineStart.getTime() - todayStart.getTime();
     return Math.round(diffMs / (1000 * 60 * 60 * 24));
   };
@@ -98,7 +98,7 @@ const ReviewerArticles = () => {
     if (file) {
       const ext = file.name.split('.').pop()?.toLowerCase();
       if (['pdf', 'doc', 'docx'].includes(ext || '')) {
-        setArticles(prev => prev.map(art => 
+        setArticles(prev => prev.map(art =>
           art.articleId === id ? { ...art, uploadedFile: file } : art
         ));
         showToast(`Selected review file: ${file.name}`, 'info');
@@ -109,13 +109,13 @@ const ReviewerArticles = () => {
   };
 
   const handleStatusChange = (id: string, status: ReviewStatus) => {
-    setArticles(prev => prev.map(art => 
+    setArticles(prev => prev.map(art =>
       art.articleId === id ? { ...art, selectedStatus: status } : art
     ));
   };
 
   const handleRemarksChange = (id: string, remarks: string) => {
-    setArticles(prev => prev.map(art => 
+    setArticles(prev => prev.map(art =>
       art.articleId === id ? { ...art, remarks } : art
     ));
   };
@@ -142,13 +142,13 @@ const ReviewerArticles = () => {
       });
 
       if (response.success) {
-        setArticles(prev => prev.map(art => 
-          art.articleId === id ? { 
-            ...art, 
-            reviewerFeedback: { 
+        setArticles(prev => prev.map(art =>
+          art.articleId === id ? {
+            ...art,
+            reviewerFeedback: {
               recommendation: article.selectedStatus,
               remarks: remarksText
-            } 
+            }
           } : art
         ));
         setSuccessMessage('Review submitted successfully');
@@ -240,7 +240,7 @@ const ReviewerArticles = () => {
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%]">Manuscript Details</th>
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Reference</th>
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] whitespace-nowrap">Time and Date</th>
-                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%]">Decision</th>
+                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Decision</th>
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Upload Result</th>
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Actions</th>
               </tr>
@@ -341,9 +341,9 @@ const ReviewerArticles = () => {
                     </td>
 
                     {/* Decision */}
-                    <td className="px-8 py-8">
+                    <td className="px-8 py-8 text-center">
                       {!isReviewed ? (
-                        <div className="relative space-y-2">
+                        <div className="relative space-y-2 max-w-[180px] mx-auto text-left">
                           <select
                             value={article.selectedStatus}
                             onChange={(e) => handleStatusChange(article.articleId, e.target.value as ReviewStatus)}
@@ -352,7 +352,7 @@ const ReviewerArticles = () => {
                             <option value="" disabled>Status</option>
                             <option value="Accepted">Accepted</option>
                             <option value="Rejected">Rejected</option>
-                            <option value="Needs Improvement">Needs Revision</option>
+                            <option value="Needs Improvement">Need Revision</option>
                           </select>
                           <textarea
                             placeholder="Add remarks..."
@@ -365,8 +365,8 @@ const ReviewerArticles = () => {
                         <div className={cn(
                           "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
                           (article.selectedStatus === 'Accepted' || article.selectedStatus === 'Approved') ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                          article.selectedStatus === 'Rejected' ? "bg-rose-50 text-rose-700 border-rose-200" :
-                          "bg-amber-50 text-amber-700 border-amber-200"
+                            article.selectedStatus === 'Rejected' ? "bg-rose-50 text-rose-700 border-rose-200" :
+                              "bg-amber-50 text-amber-700 border-amber-200"
                         )}>
                           {article.selectedStatus}
                         </div>
