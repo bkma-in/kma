@@ -501,7 +501,7 @@ const AdminArticles = () => {
                         {article.status}
                       </span>
 
-                      {/* Assigned reviewers + deadline */
+                      {/* Assigned reviewers + deadline */}
                       {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
                         <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider space-y-1.5 pl-1">
                           <div>
