@@ -47,6 +47,8 @@ interface Article {
   pdfUrl?: string;
   pdfName?: string;
   revisionHistory?: any[];
+  reviews?: any;
+  reviewerFeedback?: any;
 }
 
 const AuthorRevisionRequired = () => {
@@ -66,6 +68,22 @@ const AuthorRevisionRequired = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getReviewerComments = (article: Article | any) => {
+    if (!article) return [];
+    const comments: string[] = [];
+    if (article.reviews) {
+      Object.values(article.reviews).forEach((r: any) => {
+        if (r && r.remarks && r.remarks.trim()) {
+          comments.push(r.remarks.trim());
+        }
+      });
+    }
+    if (comments.length === 0 && article.reviewerFeedback?.remarks) {
+      comments.push(article.reviewerFeedback.remarks.trim());
+    }
+    return comments;
+  };
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -101,7 +119,9 @@ const AuthorRevisionRequired = () => {
           rejectionReason: data.rejectionReason || '',
           pdfUrl: data.pdfUrl || '',
           pdfName: data.pdfName || '',
-          revisionHistory: data.revisionHistory || []
+          revisionHistory: data.revisionHistory || [],
+          reviews: data.reviews || null,
+          reviewerFeedback: data.reviewerFeedback || null
         } as Article;
       });
 
@@ -382,16 +402,38 @@ const AuthorRevisionRequired = () => {
                 </div>
               </div>
 
-              {/* highlighted read-only card with reason */}
-              <div className="space-y-2">
-                <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-1 font-['Outfit']">
-                  Rejection / Revision Reason
-                </h4>
-                <div className="p-5 bg-rose-50/50 border border-rose-100 rounded-2xl">
-                  <p className="text-xs text-zinc-700 leading-relaxed font-medium italic">
-                    "{selectedArticle.adminNote || selectedArticle.rejectionReason || 'No feedback left. Please edit to correct abstract/document structure.'}"
-                  </p>
-                </div>
+              {/* highlighted read-only cards with comments/reasons */}
+              <div className="space-y-4">
+                {getReviewerComments(selectedArticle).length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-[10px] font-black text-amber-600 uppercase tracking-widest px-1 font-['Outfit']">
+                      Reviewer Comments
+                    </h4>
+                    <div className="space-y-2">
+                      {getReviewerComments(selectedArticle).map((comment, index) => (
+                        <div key={index} className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl">
+                          <p className="text-[9px] font-black text-zinc-400 uppercase tracking-wider mb-1">Reviewer #{index + 1}</p>
+                          <p className="text-xs text-zinc-700 leading-relaxed font-medium italic">
+                            "{comment}"
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(selectedArticle.adminNote || (!selectedArticle.adminNote && getReviewerComments(selectedArticle).length === 0)) && (
+                  <div className="space-y-2">
+                    <h4 className="text-[10px] font-black text-amber-600 uppercase tracking-widest px-1 font-['Outfit']">
+                      Editor Note
+                    </h4>
+                    <div className="p-4 bg-amber-50/30 border border-amber-100/50 rounded-2xl">
+                      <p className="text-xs text-zinc-700 leading-relaxed font-medium italic">
+                        "{selectedArticle.adminNote || 'No feedback left. Please edit to resubmit revised abstract/document.'}"
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Actions Area */}
