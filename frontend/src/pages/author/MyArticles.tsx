@@ -33,7 +33,7 @@ import { auth, db } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 // Types
-type Status = 'Submitted' | 'Under Review' | 'Revision Required' | 'Approved' | 'Rejected';
+type Status = 'Submitted' | 'Under Review' | 'Revision Required' | 'Approved' | 'Rejected' | 'Published';
 
 interface Version {
   version: number;
@@ -58,6 +58,9 @@ interface Article {
   };
   adminNote?: string;
   rejectionReason?: string;
+  rejectedAt?: any;
+  publishedAt?: any;
+  updatedAt?: any;
   reviews?: Record<string, {
     remarks: string;
     recommendation: string;
@@ -155,6 +158,10 @@ const MyArticles = () => {
           reviewerFeedback: a.reviewerFeedback,
           reviews: a.reviews,
           adminNote: a.adminNote,
+          rejectionReason: a.rejectionReason,
+          rejectedAt: a.rejectedAt,
+          publishedAt: a.publishedAt,
+          updatedAt: a.updatedAt,
           versions: a.revisionHistory ? 
             a.revisionHistory.map((v: any, i: number) => ({
               version: i + 1,
@@ -245,6 +252,7 @@ const MyArticles = () => {
       case 'under_review': return 'Under Review';
       case 'revision_requested': return 'Revision Required';
       case 'accepted': return 'Approved';
+      case 'published': return 'Published';
       case 'rejected':
       case 'desk_rejected': return 'Rejected';
       default: return 'Submitted';
@@ -259,6 +267,7 @@ const MyArticles = () => {
       case 'Revision Required': return 'bg-rose-50 text-rose-600 border-rose-100';
       case 'Approved': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
       case 'Rejected': return 'bg-red-50 text-red-600 border-red-100';
+      case 'Published': return 'bg-purple-50 text-purple-600 border-purple-100';
     }
   };
 
@@ -270,7 +279,27 @@ const MyArticles = () => {
       case 'Revision Required': return <AlertCircle size={12} />;
       case 'Approved': return <CheckCircle2 size={12} />;
       case 'Rejected': return <Ban size={12} />;
+      case 'Published': return <Upload size={12} />;
     }
+  };
+
+  const formatStatusDate = (article: Article) => {
+    const rawDate = article.status === 'Rejected' 
+      ? (article.rejectedAt || article.updatedAt) 
+      : article.publishedAt;
+    if (!rawDate) return '';
+    
+    const seconds = rawDate._seconds || (typeof rawDate === 'number' ? rawDate / 1000 : null);
+    const date = seconds 
+      ? new Date(seconds * 1000) 
+      : (rawDate instanceof Date ? rawDate : new Date(rawDate));
+      
+    if (isNaN(date.getTime())) return '';
+    
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    
+    return `${dateStr} at ${timeStr}`;
   };
 
   const filteredArticles = articles.filter(article => {
@@ -579,7 +608,7 @@ const MyArticles = () => {
                     All Status
                   </button>
                   
-                  {(['Submitted', 'Under Review', 'Revision Required', 'Approved', 'Rejected'] as Status[]).map((status) => (
+                  {(['Submitted', 'Under Review', 'Revision Required', 'Approved', 'Rejected', 'Published'] as Status[]).map((status) => (
                     <button
                       key={status}
                       onClick={() => { setStatusFilter(status); setIsFilterOpen(false); }}
@@ -658,6 +687,15 @@ const MyArticles = () => {
                           {getStatusIcon(article.status)}
                           {article.status}
                         </div>
+                        {(article.status === 'Rejected' || article.status === 'Published') && formatStatusDate(article) && (
+                          <div className={cn(
+                            "flex items-center gap-1 text-[9px] font-semibold tracking-tight",
+                            article.status === 'Rejected' ? 'text-red-400' : 'text-purple-400'
+                          )}>
+                            <Clock size={8} />
+                            on {formatStatusDate(article)}
+                          </div>
+                        )}
                         {article.status === 'Draft' && article.authors.some((a: any) => !a.accepted) && (
                           <div className="flex items-center gap-1 text-[8px] font-black text-amber-500 uppercase tracking-tighter animate-pulse">
                             <Clock size={8} />
