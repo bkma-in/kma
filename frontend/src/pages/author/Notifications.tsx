@@ -33,6 +33,14 @@ const Notifications = () => {
 
   const rolePathPrefix = currentUser?.role === 'admin' ? '/admin' : '/author';
 
+  const getTimestamp = (val: any) => {
+    if (!val) return 0;
+    if (typeof val.seconds === 'number') return val.seconds * 1000;
+    if (val._seconds) return val._seconds * 1000;
+    if (typeof val.toMillis === 'function') return val.toMillis();
+    return new Date(val).getTime() || 0;
+  };
+
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -50,9 +58,7 @@ const Notifications = () => {
       
       // Sort in memory to avoid needing a composite index
       notifs.sort((a: any, b: any) => {
-        const timeA = a.createdAt?._seconds || (typeof a.createdAt === 'number' ? a.createdAt / 1000 : 0);
-        const timeB = b.createdAt?._seconds || (typeof b.createdAt === 'number' ? b.createdAt / 1000 : 0);
-        return timeB - timeA;
+        return getTimestamp(b.createdAt) - getTimestamp(a.createdAt);
       });
 
       setNotifications(notifs);
@@ -73,10 +79,10 @@ const Notifications = () => {
 
   const formatTime = (createdAt: any) => {
     if (!createdAt) return 'RECENTLY';
-    const seconds = createdAt._seconds || (typeof createdAt === 'number' ? createdAt / 1000 : null);
-    if (!seconds) return 'RECENTLY';
+    const ms = getTimestamp(createdAt);
+    if (!ms) return 'RECENTLY';
     
-    const date = new Date(seconds * 1000);
+    const date = new Date(ms);
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
     

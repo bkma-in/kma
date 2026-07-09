@@ -434,12 +434,38 @@ export const sendReviewerAssignedNotifications = async (articleId: string, revie
 
       // 2. Send Email Notification
       if (reviewer.email) {
-        const bodyText = `You have been assigned as a peer reviewer for a recently submitted article in the Bulletin of Kerala Mathematical Association. Your expertise is highly valuable to us in maintaining the scholarly quality of our publications.`;
+        const assignedAtDate = article.assignedAt ? (article.assignedAt.toDate ? article.assignedAt.toDate() : new Date(article.assignedAt)) : new Date();
+        const deadlineDate = article.reviewDeadline ? new Date(article.reviewDeadline) : null;
+        
+        let durationStr = 'N/A';
+        let formattedDeadline = 'N/A';
+        if (deadlineDate && !isNaN(deadlineDate.getTime())) {
+          const startOfAssign = new Date(assignedAtDate.getFullYear(), assignedAtDate.getMonth(), assignedAtDate.getDate());
+          const startOfDeadline = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
+          const diffMs = startOfDeadline.getTime() - startOfAssign.getTime();
+          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+          durationStr = `${diffDays} Days`;
+          formattedDeadline = deadlineDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+        }
+
+        let bodyText = `You have been assigned as a peer reviewer for a recently submitted article in the Bulletin of Kerala Mathematical Association. Your expertise is highly valuable to us in maintaining the scholarly quality of our publications.`;
+        
+        if (article.reviewDeadline) {
+          bodyText += `<br /><br /><div style="background-color: #fafafa; border-left: 4px solid #3b82f6; padding: 12px; margin: 16px 0; border-radius: 4px; font-size: 13px; color: #1e3a8a;"><strong>Workflow Notice:</strong> This deadline is intended for workflow management. You may still submit your review after the deadline if necessary.</div>`;
+          
+          if (article.reviewerNote) {
+            bodyText += `<br /><strong>Note from Editor:</strong><br />"${article.reviewerNote}"`;
+          }
+        }
+
         const cardRows: EmailRow[] = [
           { label: 'Manuscript Title', value: title },
-          { label: 'Assigned On', value: new Date().toLocaleDateString() },
-          { label: 'Status', value: 'Under Review' },
+          { label: 'Assigned By', value: article.assignedBy || 'Admin' },
+          { label: 'Assigned Date', value: assignedAtDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) },
+          { label: 'Review Deadline', value: formattedDeadline },
+          { label: 'Total Duration', value: durationStr },
         ];
+
         const emailHtml = buildHtmlEmail(
           reviewer.name || 'Reviewer',
           'New Review Assignment',
@@ -615,5 +641,142 @@ export const sendArticleRejectedNotifications = async (articleId: string, isDesk
     console.log(`[NOTIF-SERVICE] Sent rejection notifications for article "${title}"`);
   } catch (error) {
     console.error('[NOTIF-SERVICE] Error in sendArticleRejectedNotifications:', error);
+  }
+};
+
+/**
+ * Checks all active under-review articles, calculates the remaining days to the deadline,
+ * and sends reminder notifications/emails 3 days before, 1 day before, on the deadline day,
+ * and one "Review Deadline Passed" reminder.
+ */
+export const checkAndSendReviewReminders = async () => {
+  try {
+    const today = new Date();
+    // Normalize today to start of day in local/UTC timezone
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    const snapshot = await db.collection('articles')
+      .where('status', '==', 'under_review')
+      .get();
+
+    if (snapshot.empty) return;
+
+    for (const doc of snapshot.docs) {
+      const article = doc.data();
+      if (!article.reviewDeadline || !article.reviewerIds || !Array.isArray(article.reviewerIds)) continue;
+
+      const deadlineDate = new Date(article.reviewDeadline);
+      if (isNaN(deadlineDate.getTime())) continue;
+
+      const deadlineStart = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
+      
+      // Calculate remaining days (positive means deadline is in the future, negative means passed)
+      const diffMs = deadlineStart.getTime() - todayStart.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+      let reminderType = '';
+      let reminderSubject = '';
+      let reminderMessage = '';
+      let daysText = '';
+
+      if (diffDays === 3) {
+        reminderType = '3_days_before';
+        reminderSubject = 'Review Deadline Reminder: 3 Days Left';
+        reminderMessage = `Reminder: You have 3 days remaining to submit your review for "${article.title}".`;
+        daysText = '3 Days Left';
+      } else if (diffDays === 1) {
+        reminderType = '1_day_before';
+        reminderSubject = 'Urgent: Review Deadline Reminder: 1 Day Left';
+        reminderMessage = `Urgent: You have 1 day remaining to submit your review for "${article.title}".`;
+        daysText = '1 Day Left';
+      } else if (diffDays === 0) {
+        reminderType = 'deadline_day';
+        reminderSubject = 'Review Deadline: Today';
+        reminderMessage = `Reminder: Today is the review deadline for "${article.title}".`;
+        daysText = 'Today';
+      } else if (diffDays < 0) {
+        reminderType = 'deadline_passed';
+        reminderSubject = 'Review Deadline Passed';
+        reminderMessage = `The recommended review deadline for "${article.title}" has passed. However, you can still complete and submit your review.`;
+        daysText = `Overdue by ${Math.abs(diffDays)} Days`;
+      }
+
+      if (!reminderType) continue;
+
+      // Check if this reminder has already been sent
+      const sentReminders = article.sentReminders || [];
+      if (sentReminders.includes(reminderType)) continue;
+
+      // Send reminder to all assigned reviewers
+      const title = article.title || 'Untitled Manuscript';
+      const batch = db.batch();
+
+      for (const revId of article.reviewerIds) {
+        const revDoc = await db.collection('users').doc(revId).get();
+        if (!revDoc.exists) continue;
+        const reviewer = revDoc.data()!;
+
+        // 1. Create In-App Notification
+        const notifRef = db.collection('notifications').doc();
+        batch.set(notifRef, {
+          notificationId: notifRef.id,
+          userId: revId,
+          type: 'REVIEW_REMINDER',
+          title: reminderSubject,
+          message: reminderMessage,
+          metadata: { articleId: doc.id },
+          read: false,
+          createdAt: new Date(),
+        });
+
+        // 2. Send Email
+        if (reviewer.email) {
+          const bodyText = `This is a reminder regarding the manuscript review assigned to you.`;
+          const formattedDeadline = deadlineDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+          const cardRows: EmailRow[] = [
+            { label: 'Manuscript Title', value: title },
+            { label: 'Deadline Date', value: formattedDeadline },
+            { label: 'Status', value: daysText },
+          ];
+
+          let noticeText = reminderMessage;
+          if (diffDays < 0) {
+            noticeText += `<br /><br /><div style="background-color: #fafafa; border-left: 4px solid #ef4444; padding: 12px; margin: 16px 0; border-radius: 4px; font-size: 13px; color: #991b1b;"><strong>Status Update:</strong> The recommended review timeline has passed. You may still complete and submit your review.</div>`;
+          } else {
+            noticeText += `<br /><br /><div style="background-color: #fafafa; border-left: 4px solid #3b82f6; padding: 12px; margin: 16px 0; border-radius: 4px; font-size: 13px; color: #1e3a8a;"><strong>Workflow Notice:</strong> This deadline is intended for workflow management. You may still submit your review after the deadline if necessary.</div>`;
+          }
+
+          const emailHtml = buildHtmlEmail(
+            reviewer.name || 'Reviewer',
+            reminderSubject,
+            bodyText + `<br /><br />${noticeText}`,
+            'Reminder details',
+            cardRows,
+            config.brevo.loginUrl,
+            'Go to Dashboard',
+            'Submission Info',
+            'You can view, download the article, and submit your review recommendations directly from your dashboard.',
+            '📅',
+            'Check deadline status',
+            '📝',
+            'Submit review on time'
+          );
+
+          sendTransactionalEmail(reviewer.email, reviewer.name || 'Reviewer', `${reminderSubject}: ${title}`, emailHtml).catch(err => {
+            console.error(`[REMINDER] Failed to send email to ${reviewer.email}:`, err);
+          });
+        }
+      }
+
+      // Update sentReminders list on article
+      batch.update(doc.ref, {
+        sentReminders: [...sentReminders, reminderType]
+      });
+
+      await batch.commit();
+      console.log(`[REMINDER] Sent ${reminderType} reminders for article ${doc.id}`);
+    }
+  } catch (error) {
+    console.error('[REMINDER] Error in checkAndSendReviewReminders:', error);
   }
 };

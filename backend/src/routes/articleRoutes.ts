@@ -914,7 +914,7 @@ router.patch('/bulk-publish', requireAuth, requireRole(['admin']), async (req: A
 router.patch('/:id/assign', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
-    const { reviewerIds, reviewerNames } = req.body;
+    const { reviewerIds, reviewerNames, reviewDeadline, reviewerNote } = req.body;
 
     if (!reviewerIds || !Array.isArray(reviewerIds) || reviewerIds.length === 0) {
       return res.status(400).json({ error: 'At least one reviewer ID is required' });
@@ -933,7 +933,14 @@ router.patch('/:id/assign', requireAuth, requireRole(['admin']), async (req: Aut
       // For backward compatibility:
       reviewerId: reviewerIds[0],
       status: 'under_review',
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      
+      // Store deadline and timeline details
+      reviewDeadline: reviewDeadline || null,
+      assignedAt: new Date(),
+      assignedBy: req.user?.name || req.user?.email || 'Admin',
+      reviewerNote: reviewerNote || null,
+      sentReminders: [] // reset reminders for new assignment
     });
 
     sendReviewerAssignedNotifications(id, reviewerIds).catch(err => {
