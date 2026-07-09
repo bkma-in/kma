@@ -264,19 +264,24 @@ const AdminArticles = () => {
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case 'Approved': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-      case 'Ready to Publish': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-      case 'Needs Improvement': return 'bg-amber-50 text-amber-600 border-amber-100';
-      case 'Need Improvements': return 'bg-amber-50 text-amber-600 border-amber-100';
-      case 'Revision Requested': return 'bg-rose-50 text-rose-600 border-rose-100';
-      case 'Rejected': return 'bg-red-50 text-red-600 border-red-100';
-      case 'Desk Rejected': return 'bg-red-50 text-red-600 border-red-100';
-      case 'Published': return 'bg-purple-50 text-purple-600 border-purple-100';
-      case 'Submitted': return 'bg-blue-50 text-blue-600 border-blue-100';
-      case 'Sent to Reviewer': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
-      case 'Under Review': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
-      case 'Awaiting Decision': return 'bg-violet-50 text-violet-600 border-violet-100';
-      default: return 'bg-zinc-100 text-zinc-600 border-zinc-200';
+      // Green — accepted / ready
+      case 'Approved':        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Ready to Publish': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Published':       return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      // Yellow — revision
+      case 'Revision Requested': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'Needs Improvement':  return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'Need Improvements':  return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'Awaiting Decision':  return 'bg-amber-50 text-amber-700 border-amber-200';
+      // Red — rejection
+      case 'Rejected':      return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'Desk Rejected': return 'bg-rose-50 text-rose-700 border-rose-200';
+      // Blue — under review
+      case 'Under Review':      return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'Sent to Reviewer':  return 'bg-blue-50 text-blue-700 border-blue-200';
+      // Default — submitted / other
+      case 'Submitted': return 'bg-zinc-100 text-zinc-600 border-zinc-200';
+      default:          return 'bg-zinc-100 text-zinc-600 border-zinc-200';
     }
   };
 
@@ -496,51 +501,7 @@ const AdminArticles = () => {
                         {article.status}
                       </span>
 
-                      {/* Color-coded review outcome indicator */}
-                      {(() => {
-                        const rec = article.reviewerFeedback?.recommendation;
-                        const status = article.status?.toLowerCase();
-                        const isUnderReview = ['under review', 'under_review', 'sent to reviewer'].includes(status);
-                        const isAccepted = rec === 'Accepted' || rec === 'Approved';
-                        const isRejected = rec === 'Rejected' || status === 'rejected' || status === 'desk rejected' || status === 'desk_rejected';
-                        const isRevision = rec === 'Needs Improvement' || status === 'revision requested' || status === 'revision_requested';
-
-                        if (isAccepted) {
-                          return (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-[8px] font-black uppercase tracking-widest">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                              Accepted
-                            </span>
-                          );
-                        }
-                        if (isRejected) {
-                          return (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-full text-[8px] font-black uppercase tracking-widest">
-                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
-                              Rejected
-                            </span>
-                          );
-                        }
-                        if (isRevision) {
-                          return (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-full text-[8px] font-black uppercase tracking-widest">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
-                              Revision Requested
-                            </span>
-                          );
-                        }
-                        if (isUnderReview) {
-                          return (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-[8px] font-black uppercase tracking-widest">
-                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block animate-pulse" />
-                              Under Review
-                            </span>
-                          );
-                        }
-                        return null;
-                      })()}
-
-                      {/* Assigned reviewers + deadline */}
+                      {/* Assigned reviewers + deadline */
                       {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
                         <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider space-y-1.5 pl-1">
                           <div>
