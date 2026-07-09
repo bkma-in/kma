@@ -466,9 +466,25 @@ const sendRevisionRequestedNotifications = async (articleId, notes) => {
                 const cardRows = [
                     { label: 'Article Title', value: title },
                     { label: 'Current Status', value: 'Revision Requested' },
-                    { label: 'Comments / Notes', value: notes || 'Please refer to the author portal for specific reviewer/editor comments.' },
                 ];
-                const emailHtml = (0, exports.buildHtmlEmail)(author.name || 'Author', 'Revision Requested for Manuscript', bodyText, 'Revision details', cardRows, env_1.config.brevo.loginUrl, 'Login', 'Revision Instructions', 'Please ensure that your resubmission addresses the reviewer feedback point-by-point. You can explain changes in your resubmission cover notes.', '✏️', 'Edit manuscript text', '📤', 'Upload revised PDF');
+                const extraHtml = `
+          <!-- Comments / Notes Section -->
+          <tr>
+            <td style="padding: 0 40px 24px 40px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
+                <tr>
+                  <td>
+                    <span style="font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 8px;">Comments / Notes</span>
+                    <div style="font-size: 14px; color: #b45309; line-height: 1.6; font-weight: 600; padding: 16px; background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 12px;">
+                      ${notes || 'Please refer to the author portal for specific reviewer/editor comments.'}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
+                const emailHtml = (0, exports.buildHtmlEmail)(author.name || 'Author', 'Revision Requested for Manuscript', bodyText, 'Revision details', cardRows, '', '', 'Revision Instructions', 'Please ensure that your resubmission addresses the reviewer feedback point-by-point. You can explain changes in your resubmission cover notes.', '', '', '', '', extraHtml);
                 (0, emailService_1.sendTransactionalEmail)(author.email, author.name || 'Author', `Revision Requested: ${title}`, emailHtml).catch(err => {
                     console.error(`[NOTIF-SERVICE] Failed to send revision requested email to author ${author.email}:`, err);
                 });
