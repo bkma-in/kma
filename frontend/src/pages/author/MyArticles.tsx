@@ -216,8 +216,19 @@ const MyArticles = () => {
         return true;
       });
       
-      // Sort in memory
-      mappedArticles.sort((a, b) => new Date(b.dateSubmitted).getTime() - new Date(a.dateSubmitted).getTime());
+      mappedArticles.sort((a, b) => {
+        const dateA = a.updatedAt || a.dateSubmitted;
+        const dateB = b.updatedAt || b.dateSubmitted;
+        
+        const timeA = dateA && dateA._seconds 
+          ? dateA._seconds * 1000 
+          : (dateA ? new Date(dateA).getTime() : 0);
+        const timeB = dateB && dateB._seconds 
+          ? dateB._seconds * 1000 
+          : (dateB ? new Date(dateB).getTime() : 0);
+        
+        return timeB - timeA;
+      });
       
       setArticles(mappedArticles);
       setIsLoading(false);
