@@ -471,12 +471,18 @@ const sendRevisionRequestedNotifications = async (articleId, notes) => {
                 if (article.reviews) {
                     Object.values(article.reviews).forEach((r) => {
                         if (r && r.remarks && r.remarks.trim()) {
-                            reviewerComments.push(r.remarks.trim());
+                            const clean = r.remarks.trim();
+                            if (clean !== 'Reviewed via peer assessment portal.' && clean !== 'Reviewed via peer assessment portal') {
+                                reviewerComments.push(clean);
+                            }
                         }
                     });
                 }
                 if (reviewerComments.length === 0 && article.reviewerFeedback?.remarks) {
-                    reviewerComments.push(article.reviewerFeedback.remarks.trim());
+                    const clean = article.reviewerFeedback.remarks.trim();
+                    if (clean !== 'Reviewed via peer assessment portal.' && clean !== 'Reviewed via peer assessment portal') {
+                        reviewerComments.push(clean);
+                    }
                 }
                 let commentsHtml = '';
                 if (reviewerComments.length > 0) {

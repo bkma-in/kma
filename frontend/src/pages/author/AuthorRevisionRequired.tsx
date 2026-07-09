@@ -75,12 +75,18 @@ const AuthorRevisionRequired = () => {
     if (article.reviews) {
       Object.values(article.reviews).forEach((r: any) => {
         if (r && r.remarks && r.remarks.trim()) {
-          comments.push(r.remarks.trim());
+          const clean = r.remarks.trim();
+          if (clean !== 'Reviewed via peer assessment portal.' && clean !== 'Reviewed via peer assessment portal') {
+            comments.push(clean);
+          }
         }
       });
     }
     if (comments.length === 0 && article.reviewerFeedback?.remarks) {
-      comments.push(article.reviewerFeedback.remarks.trim());
+      const clean = article.reviewerFeedback.remarks.trim();
+      if (clean !== 'Reviewed via peer assessment portal.' && clean !== 'Reviewed via peer assessment portal') {
+        comments.push(clean);
+      }
     }
     return comments;
   };
