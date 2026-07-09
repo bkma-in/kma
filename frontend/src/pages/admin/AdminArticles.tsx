@@ -487,6 +487,7 @@ const AdminArticles = () => {
                   </td>
                   <td className="px-6 py-5">
                     <div className="space-y-2">
+                      {/* Workflow status chip */}
                       <span className={cn(
                         "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
                         getStatusStyles(article.status)
@@ -494,6 +495,52 @@ const AdminArticles = () => {
                         {getStatusIcon(article.status)}
                         {article.status}
                       </span>
+
+                      {/* Color-coded review outcome indicator */}
+                      {(() => {
+                        const rec = article.reviewerFeedback?.recommendation;
+                        const status = article.status?.toLowerCase();
+                        const isUnderReview = ['under review', 'under_review', 'sent to reviewer'].includes(status);
+                        const isAccepted = rec === 'Accepted' || rec === 'Approved';
+                        const isRejected = rec === 'Rejected' || status === 'rejected' || status === 'desk rejected' || status === 'desk_rejected';
+                        const isRevision = rec === 'Needs Improvement' || status === 'revision requested' || status === 'revision_requested';
+
+                        if (isAccepted) {
+                          return (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-[8px] font-black uppercase tracking-widest">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                              Accepted
+                            </span>
+                          );
+                        }
+                        if (isRejected) {
+                          return (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-full text-[8px] font-black uppercase tracking-widest">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
+                              Rejected
+                            </span>
+                          );
+                        }
+                        if (isRevision) {
+                          return (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-full text-[8px] font-black uppercase tracking-widest">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                              Revision Requested
+                            </span>
+                          );
+                        }
+                        if (isUnderReview) {
+                          return (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-[8px] font-black uppercase tracking-widest">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block animate-pulse" />
+                              Under Review
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      {/* Assigned reviewers + deadline */}
                       {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
                         <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider space-y-1.5 pl-1">
                           <div>
@@ -537,9 +584,13 @@ const AdminArticles = () => {
                     </div>
                   </td>
                   <td className="px-6 py-5">
-                    <p className="text-[10px] text-zinc-500 font-medium line-clamp-1 italic max-w-[200px]">
-                      {article.reviewerFeedback?.remarks || 'No feedback yet'}
-                    </p>
+                    {article.reviewerFeedback?.remarks ? (
+                      <p className="text-[10px] text-zinc-600 font-medium line-clamp-2 italic max-w-[200px] leading-relaxed">
+                        "{article.reviewerFeedback.remarks}"
+                      </p>
+                    ) : (
+                      <span className="text-[10px] text-zinc-300 font-bold">—</span>
+                    )}
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center justify-end gap-2">
