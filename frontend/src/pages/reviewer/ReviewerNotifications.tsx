@@ -93,6 +93,7 @@ const ReviewerNotifications = () => {
           read: !!data.read,
           type: getNotificationDisplayType(data.type),
           articleTitle: data.metadata?.articleTitle || data.articleTitle || '',
+          articleId: data.metadata?.articleId || data.articleId || '',
           createdAt: data.createdAt // Kept for sorting
         };
       }) as any[];
@@ -266,7 +267,13 @@ const ReviewerNotifications = () => {
                 {/* Clickable Article Link */}
                 {notification.articleTitle && (
                   <button 
-                    onClick={() => navigate('/reviewer/articles')}
+                    onClick={() => {
+                      if ((notification as any).articleId) {
+                        navigate('/reviewer/articles', { state: { highlightId: (notification as any).articleId } });
+                      } else {
+                        navigate('/reviewer/articles');
+                      }
+                    }}
                     className={cn(
                       "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all shadow-sm",
                       !notification.read 

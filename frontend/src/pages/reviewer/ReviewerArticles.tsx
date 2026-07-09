@@ -10,12 +10,15 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
+import { useLocation } from 'react-router-dom';
 import { getArticles, getPdfUrl, updateArticleStatus } from '../../services/article.service';
 
 type ReviewStatus = 'Accepted' | 'Rejected' | 'Needs Improvement' | '';
 
 const ReviewerArticles = () => {
   const { showToast } = useNotification();
+  const location = useLocation();
+  const highlightId: string | undefined = (location.state as any)?.highlightId;
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
@@ -45,6 +48,17 @@ const ReviewerArticles = () => {
     };
     fetchArticles();
   }, []);
+
+  // Scroll to and highlight the article from notification
+  useEffect(() => {
+    if (!highlightId || loading) return;
+    const el = document.getElementById(`reviewer-article-${highlightId}`);
+    if (el) {
+      setTimeout(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  }, [highlightId, loading]);
 
   const handleDownload = async (articleId: string, title: string) => {
     try {
@@ -210,11 +224,17 @@ const ReviewerArticles = () => {
             <tbody className="divide-y divide-zinc-50">
               {articles.map((article) => {
                 const isReviewed = !!article.reviewerFeedback;
+                const isHighlighted = highlightId === article.articleId;
                 return (
-                  <tr key={article.articleId} className={cn(
-                    "group transition-all duration-300",
-                    isReviewed ? "opacity-60 bg-zinc-50/50" : "hover:bg-zinc-50/50"
-                  )}>
+                  <tr
+                    key={article.articleId}
+                    id={`reviewer-article-${article.articleId}`}
+                    className={cn(
+                      "group transition-all duration-300",
+                      isReviewed ? "opacity-60 bg-zinc-50/50" : "hover:bg-zinc-50/50",
+                      isHighlighted && "bg-black/[0.03] border-l-4 border-black animate-pulse"
+                    )}
+                  >
                     <td className="px-8 py-8">
                       <div className="space-y-1">
                         <p className="text-[9px] font-black text-zinc-400 tracking-[0.2em] uppercase">{article.articleId}</p>
