@@ -217,20 +217,7 @@ const AdminArticles = () => {
             
             let status: ArticleStatus = mappedStatus;
             if (a.status === 'under_review' && hasReviews) {
-              const latestReview = a.reviewerFeedback;
-              if (latestReview) {
-                if (latestReview.recommendation === 'Approved' || latestReview.recommendation === 'Accepted') {
-                  status = 'Ready to Publish';
-                } else if (latestReview.recommendation === 'Needs Improvement' || latestReview.recommendation === 'Need Improvements') {
-                  status = 'Need Improvements';
-                } else if (latestReview.recommendation === 'Rejected') {
-                  status = 'Rejected';
-                } else {
-                  status = 'Awaiting Decision';
-                }
-              } else {
-                status = 'Awaiting Decision';
-              }
+              status = 'Awaiting Decision';
             } else if (a.status === 'accepted') {
               status = 'Ready to Publish';
             }
@@ -985,35 +972,7 @@ const AdminArticles = () => {
                   </div>
                 )}
 
-                {selectedArticle.status === 'Need Improvements' && (
-                  <button 
-                    onClick={() => setIsAdminNoteModalOpen(true)}
-                    className="w-full flex items-center justify-center gap-3 py-5 bg-amber-500 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-amber-600 transition-all shadow-xl shadow-amber-500/20 active:scale-95"
-                  >
-                    <RotateCcw size={18} />
-                    SEND BACK TO AUTHOR
-                  </button>
-                )}
 
-                {selectedArticle.reviewerFeedback?.recommendation === 'Rejected' && (
-                  <button 
-                    onClick={() => {
-                      confirm({
-                        title: 'Reject Article',
-                        message: 'Are you sure you want to REJECT this article? This action cannot be undone.',
-                        confirmText: 'Reject',
-                        onConfirm: () => {
-                          updateStatus(selectedArticle.id, 'Rejected');
-                          showToast('Article rejected successfully', 'error');
-                        }
-                      });
-                    }}
-                    className="w-full flex items-center justify-center gap-3 py-5 bg-rose-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/20 active:scale-95"
-                  >
-                    <XCircle size={18} />
-                    REJECT ARTICLE
-                  </button>
-                )}
 
                 {selectedArticle.status === 'Ready to Publish' && (
                   <button 
@@ -1096,12 +1055,72 @@ const AdminArticles = () => {
                   </div>
                 )}
 
-                {selectedArticle.status === 'Awaiting Decision' && (
-                  <div className="w-full py-5 bg-violet-50 text-violet-600 rounded-2xl text-xs font-black tracking-widest border border-violet-100 flex items-center justify-center gap-3">
-                    <AlertCircle size={18} />
-                    DECISION REQUIRED: REVIEW SUBMITTED
-                  </div>
-                )}
+                {selectedArticle.status === 'Awaiting Decision' && (() => {
+                  const reviewsList = selectedArticle.reviews ? Object.values(selectedArticle.reviews) : (selectedArticle.reviewerFeedback ? [selectedArticle.reviewerFeedback] : []);
+                  const hasPublishable = reviewsList.some((r: any) => ['Approved', 'Accepted'].includes(r.recommendation));
+                  const hasRevisionOrReject = reviewsList.some((r: any) => ['Rejected', 'Needs Improvement', 'Need Improvements'].includes(r.recommendation));
+                  const hasReject = reviewsList.some((r: any) => r.recommendation === 'Rejected');
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="w-full py-5 bg-violet-50 text-violet-600 rounded-2xl text-xs font-black tracking-widest border border-violet-100 flex items-center justify-center gap-3">
+                        <AlertCircle size={18} />
+                        DECISION REQUIRED: REVIEW SUBMITTED
+                      </div>
+                      
+                      {hasPublishable && (
+                        <button 
+                          onClick={() => {
+                            confirm({
+                              title: 'Move to Publish List',
+                              message: 'Move this article to the Ready to Publish list?',
+                              confirmText: 'Move',
+                              onConfirm: () => {
+                                updateStatus(selectedArticle.id, 'Ready to Publish', null, 'Article successfully moved to Ready to Publish list.');
+                                setIsDetailsOpen(false);
+                              }
+                            });
+                          }}
+                          className="w-full flex items-center justify-center gap-3 py-5 bg-emerald-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95 cursor-pointer font-sans"
+                        >
+                          <UploadCloud size={18} />
+                          MOVE TO PUBLISH LIST
+                        </button>
+                      )}
+
+                      {hasRevisionOrReject && (
+                        <button 
+                          onClick={() => setIsAdminNoteModalOpen(true)}
+                          className="w-full flex items-center justify-center gap-3 py-5 bg-amber-500 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-amber-600 transition-all shadow-xl shadow-amber-500/20 active:scale-95 cursor-pointer font-sans"
+                        >
+                          <RotateCcw size={18} />
+                          SEND BACK TO AUTHOR
+                        </button>
+                      )}
+
+                      {hasReject && (
+                        <button 
+                          onClick={() => {
+                            confirm({
+                              title: 'Reject Article',
+                              message: 'Are you sure you want to REJECT this article? This action cannot be undone.',
+                              confirmText: 'Reject',
+                              onConfirm: () => {
+                                updateStatus(selectedArticle.id, 'Rejected');
+                                showToast('Article rejected successfully', 'error');
+                                setIsDetailsOpen(false);
+                              }
+                            });
+                          }}
+                          className="w-full flex items-center justify-center gap-3 py-5 bg-rose-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/20 active:scale-95 cursor-pointer font-sans"
+                        >
+                          <XCircle size={18} />
+                          REJECT ARTICLE
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
