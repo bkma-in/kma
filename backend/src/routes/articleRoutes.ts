@@ -1016,6 +1016,10 @@ router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), upl
         updatedAt: new Date()
       };
 
+      if (status === 'rejected' || status === 'desk_rejected') {
+        updateData.rejectedAt = new Date();
+      }
+
       if (rejectionReason !== undefined) updateData.rejectionReason = rejectionReason;
       if (adminNote !== undefined) updateData.adminNote = adminNote;
 
