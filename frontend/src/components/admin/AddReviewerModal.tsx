@@ -189,8 +189,8 @@ const AddReviewerModal: React.FC<AddReviewerModalProps> = ({ isOpen, onClose, on
                   </div>
                   <div className="space-y-2">
                     <h4 className="text-xl font-bold text-black font-['Outfit']">Reviewer added successfully.</h4>
-                    <p className="text-sm text-zinc-500 font-medium">
-                      Login credentials have been sent to the reviewer's registered email address.
+                    <p className="text-sm text-zinc-500 font-medium leading-relaxed">
+                      Login credentials have been sent to the reviewer's registered email address. If they do not receive the initial credentials email, they can reset their password and log in using the <strong>"Forgot Password"</strong> link on the login page.
                     </p>
                   </div>
                   <button
