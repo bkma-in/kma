@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  FileText, 
-  Download, 
-  Upload, 
-  CheckCircle2, 
-  X, 
+import {
+  FileText,
+  Download,
+  Upload,
+  CheckCircle2,
+  X,
   Loader2,
   AlertCircle
 } from 'lucide-react';
@@ -29,10 +29,10 @@ const ReviewerArticles = () => {
     const deadlineDate = new Date(deadline);
     if (isNaN(deadlineDate.getTime())) return null;
     const deadlineStart = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
-    
+
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    
+
     const diffMs = deadlineStart.getTime() - todayStart.getTime();
     return Math.round(diffMs / (1000 * 60 * 60 * 24));
   };
@@ -44,29 +44,52 @@ const ReviewerArticles = () => {
     return new Date(ms).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  useEffect(() => {
-    const fetchArticles = async () => {
-      try {
-        const response = await getArticles();
-        if (response.success) {
-          // Initialize selectedStatus from existing feedback if reviewer already completed it
-          const mapped = response.articles.map((art: any) => ({
-            ...art,
-            selectedStatus: art.reviewerFeedback?.recommendation || ''
-          }));
-          setArticles(mapped);
-        } else {
-          showToast('Failed to fetch assigned articles.', 'error');
-        }
-      } catch (error: any) {
-        console.error('Failed to fetch articles:', error);
-        showToast('Error retrieving assignments: ' + (error.message || error), 'error');
-      } finally {
-        setLoading(false);
+  const fetchArticles = async () => {
+    try {
+      const response = await getArticles();
+      if (response.success) {
+        // Initialize selectedStatus from existing feedback if reviewer already completed it
+        const mapped = response.articles.map((art: any) => ({
+          ...art,
+          selectedStatus: art.reviewerFeedback?.recommendation || ''
+        }));
+        setArticles(mapped);
+      } else {
+        showToast('Failed to fetch assigned articles.', 'error');
       }
-    };
+    } catch (error: any) {
+      console.error('Failed to fetch articles:', error);
+      showToast('Error retrieving assignments: ' + (error.message || error), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchArticles();
   }, []);
+
+  const handleImmediateUpload = async (id: string, file: File) => {
+    const article = articles.find(a => a.articleId === id);
+    if (!article) return;
+
+    try {
+      showToast('Uploading review document...', 'info');
+      const response = await updateArticleStatus(id, 'under_review', {
+        remarks: article.reviewerFeedback?.remarks || article.remarks || 'Reviewed via peer assessment portal.',
+        recommendation: article.selectedStatus || article.reviewerFeedback?.recommendation || 'Needs Improvement',
+        reviewedFile: file
+      });
+      if (response.success) {
+        showToast('Review document uploaded successfully.', 'success');
+        fetchArticles();
+      } else {
+        showToast('Failed to upload document.', 'error');
+      }
+    } catch (error: any) {
+      showToast('Error uploading document: ' + (error.message || error), 'error');
+    }
+  };
 
   // Scroll to and highlight the article from notification
   useEffect(() => {
@@ -98,7 +121,7 @@ const ReviewerArticles = () => {
     if (file) {
       const ext = file.name.split('.').pop()?.toLowerCase();
       if (['pdf', 'doc', 'docx'].includes(ext || '')) {
-        setArticles(prev => prev.map(art => 
+        setArticles(prev => prev.map(art =>
           art.articleId === id ? { ...art, uploadedFile: file } : art
         ));
         showToast(`Selected review file: ${file.name}`, 'info');
@@ -109,13 +132,13 @@ const ReviewerArticles = () => {
   };
 
   const handleStatusChange = (id: string, status: ReviewStatus) => {
-    setArticles(prev => prev.map(art => 
+    setArticles(prev => prev.map(art =>
       art.articleId === id ? { ...art, selectedStatus: status } : art
     ));
   };
 
   const handleRemarksChange = (id: string, remarks: string) => {
-    setArticles(prev => prev.map(art => 
+    setArticles(prev => prev.map(art =>
       art.articleId === id ? { ...art, remarks } : art
     ));
   };
@@ -127,8 +150,8 @@ const ReviewerArticles = () => {
       return;
     }
 
-    if (['Rejected', 'Needs Improvement'].includes(article.selectedStatus) && (!article.remarks || !article.remarks.trim())) {
-      showToast('Please provide reviewer comments explaining your decision for Rejection or Needs Revision.', 'error');
+    if (article.selectedStatus === 'Needs Improvement' && !article.uploadedFile) {
+      showToast('Please upload a document explaining the needed improvements to proceed.', 'error');
       return;
     }
 
@@ -138,17 +161,18 @@ const ReviewerArticles = () => {
       // Send the status update to the backend PATCH /:id/status route
       const response = await updateArticleStatus(id, 'under_review', {
         remarks: remarksText,
-        recommendation: article.selectedStatus
+        recommendation: article.selectedStatus,
+        reviewedFile: article.uploadedFile
       });
 
       if (response.success) {
-        setArticles(prev => prev.map(art => 
-          art.articleId === id ? { 
-            ...art, 
-            reviewerFeedback: { 
+        setArticles(prev => prev.map(art =>
+          art.articleId === id ? {
+            ...art,
+            reviewerFeedback: {
               recommendation: article.selectedStatus,
               remarks: remarksText
-            } 
+            }
           } : art
         ));
         setSuccessMessage('Review submitted successfully');
@@ -239,8 +263,8 @@ const ReviewerArticles = () => {
               <tr className="bg-zinc-50/50 border-b border-zinc-100">
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%]">Manuscript Details</th>
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Reference</th>
-                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] whitespace-nowrap">Time Limit</th>
-                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%]">Decision</th>
+                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] whitespace-nowrap">Time and Date</th>
+                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Decision</th>
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Upload Result</th>
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Actions</th>
               </tr>
@@ -279,9 +303,16 @@ const ReviewerArticles = () => {
                       </button>
                     </td>
 
-                    {/* Time Limit – only rendered when admin set a review deadline */}
+                    {/* Time and Date column */}
                     <td className="px-8 py-8">
-                      {article.reviewDeadline ? (
+                      {isReviewed ? (
+                        <div className="space-y-1">
+                          <span className="font-black uppercase tracking-widest text-[8px] text-zinc-400 block mb-0.5">Reviewed On</span>
+                          <p className="text-xs font-bold text-emerald-600">
+                            {formatDateTimeline(article.reviewerFeedback?.updatedAt || article.updatedAt)}
+                          </p>
+                        </div>
+                      ) : article.reviewDeadline ? (
                         <div className="space-y-2 min-w-[160px]">
                           {/* Deadline date */}
                           <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
@@ -334,9 +365,9 @@ const ReviewerArticles = () => {
                     </td>
 
                     {/* Decision */}
-                    <td className="px-8 py-8">
+                    <td className="px-8 py-8 text-center">
                       {!isReviewed ? (
-                        <div className="relative space-y-2">
+                        <div className="relative space-y-2 max-w-[180px] mx-auto text-left">
                           <select
                             value={article.selectedStatus}
                             onChange={(e) => handleStatusChange(article.articleId, e.target.value as ReviewStatus)}
@@ -345,7 +376,7 @@ const ReviewerArticles = () => {
                             <option value="" disabled>Status</option>
                             <option value="Accepted">Accepted</option>
                             <option value="Rejected">Rejected</option>
-                            <option value="Needs Improvement">Needs Revision</option>
+                            <option value="Needs Improvement">Need Revision</option>
                           </select>
                           <textarea
                             placeholder="Add remarks..."
@@ -357,9 +388,9 @@ const ReviewerArticles = () => {
                       ) : (
                         <div className={cn(
                           "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
-                          article.selectedStatus === 'Accepted' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                          article.selectedStatus === 'Rejected' ? "bg-rose-50 text-rose-600 border-rose-100" :
-                          "bg-amber-50 text-amber-600 border-amber-100"
+                          (article.selectedStatus === 'Accepted' || article.selectedStatus === 'Approved') ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                            article.selectedStatus === 'Rejected' ? "bg-rose-50 text-rose-700 border-rose-200" :
+                              "bg-amber-50 text-amber-700 border-amber-200"
                         )}>
                           {article.selectedStatus}
                         </div>
@@ -367,7 +398,7 @@ const ReviewerArticles = () => {
                     </td>
 
                     {/* Upload Result */}
-                    <td className="px-8 py-8">
+                    <td className="px-8 py-8 text-center">
                       {!isReviewed ? (
                         <div className="flex flex-col items-center gap-2">
                           <button
@@ -376,15 +407,29 @@ const ReviewerArticles = () => {
                               "px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 border shadow-sm",
                               article.uploadedFile
                                 ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                                : "bg-white text-zinc-500 hover:border-black border-zinc-200"
+                                : article.selectedStatus === 'Needs Improvement'
+                                  ? "bg-rose-50 text-rose-600 border-rose-200 animate-pulse"
+                                  : "bg-white text-zinc-500 hover:border-black border-zinc-200"
                             )}
                           >
                             <Upload size={14} />
-                            {article.uploadedFile ? 'Change File' : 'Upload Review'}
+                            {article.uploadedFile 
+                              ? 'Change File' 
+                              : article.selectedStatus === 'Needs Improvement'
+                                ? 'Upload Document *'
+                                : 'Upload Review (Optional)'}
                           </button>
-                          {article.uploadedFile && (
-                            <span className="text-[8px] text-zinc-400 font-bold truncate max-w-[120px] uppercase tracking-tighter">
+                          {article.uploadedFile ? (
+                            <span className="text-[8px] text-emerald-600 font-bold truncate max-w-[120px] uppercase tracking-tighter">
                               {article.uploadedFile.name}
+                            </span>
+                          ) : article.selectedStatus === 'Needs Improvement' ? (
+                            <span className="text-[8px] text-rose-500 font-black uppercase tracking-widest animate-pulse">
+                              ⚠️ Document Required
+                            </span>
+                          ) : (
+                            <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest">
+                              Optional
                             </span>
                           )}
                           <input
@@ -396,12 +441,88 @@ const ReviewerArticles = () => {
                           />
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center gap-1 text-emerald-600">
-                          <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center">
-                            <CheckCircle2 size={16} />
-                          </div>
-                          <span className="text-[9px] font-black uppercase tracking-widest">Logged</span>
-                        </div>
+                        // Already reviewed
+                        article.reviewerFeedback?.recommendation === 'Needs Improvement' ? (
+                          // Needs Improvement case - show file or upload button if missing
+                          article.reviewerFeedback?.reviewedFile ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <span className="text-[8px] text-emerald-600 font-black uppercase tracking-widest">
+                                Document Logged
+                              </span>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleDownload(article.articleId, article.title)}
+                                  className="px-3 py-1.5 bg-zinc-900 text-white hover:bg-zinc-800 transition-colors rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1 cursor-pointer"
+                                  title="Download Submitted Review Document"
+                                >
+                                  <Download size={10} /> View
+                                </button>
+                                <button
+                                  onClick={() => fileInputRefs.current[article.articleId]?.click()}
+                                  className="px-3 py-1.5 bg-white text-zinc-500 hover:text-black border border-zinc-200 transition-all rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1 cursor-pointer"
+                                >
+                                  Change
+                                </button>
+                              </div>
+                              <input
+                                type="file"
+                                ref={el => { fileInputRefs.current[article.articleId] = el; }}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleImmediateUpload(article.articleId, file);
+                                }}
+                                accept=".pdf,.doc,.docx"
+                                className="hidden"
+                              />
+                            </div>
+                          ) : (
+                            // Legacy: needs improvement but no file uploaded - show upload button
+                            <div className="flex flex-col items-center gap-2">
+                              <button
+                                onClick={() => fileInputRefs.current[article.articleId]?.click()}
+                                className="px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 border shadow-sm bg-rose-50 text-rose-600 border-rose-200 animate-pulse"
+                              >
+                                <Upload size={14} />
+                                Upload Document *
+                              </button>
+                              <span className="text-[8px] text-rose-500 font-black uppercase tracking-widest animate-pulse">
+                                ⚠️ Document Required
+                              </span>
+                              <input
+                                type="file"
+                                ref={el => { fileInputRefs.current[article.articleId] = el; }}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleImmediateUpload(article.articleId, file);
+                                }}
+                                accept=".pdf,.doc,.docx"
+                                className="hidden"
+                              />
+                            </div>
+                          )
+                        ) : (
+                          // Approved / Rejected case
+                          article.reviewerFeedback?.reviewedFile ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <span className="text-[8px] text-emerald-600 font-black uppercase tracking-widest">
+                                Document Logged
+                              </span>
+                              <button
+                                onClick={() => handleDownload(article.articleId, article.title)}
+                                className="px-3 py-1.5 bg-zinc-900 text-white hover:bg-zinc-800 transition-colors rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1 cursor-pointer"
+                              >
+                                <Download size={10} /> View
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-1 text-emerald-600">
+                              <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center">
+                                <CheckCircle2 size={16} />
+                              </div>
+                              <span className="text-[9px] font-black uppercase tracking-widest">Logged</span>
+                            </div>
+                          )
+                        )
                       )}
                     </td>
 
@@ -423,10 +544,15 @@ const ReviewerArticles = () => {
                           )}
                         </button>
                       ) : (
-                        <div className="flex items-center justify-center gap-2 text-zinc-300">
-                          <span className="text-[10px] font-black uppercase tracking-widest">Completed</span>
-                          <CheckCircle2 size={16} />
-                        </div>
+                        // Follows reviewer workflow only: if revision decision, requires file upload to be Completed
+                        (article.reviewerFeedback?.recommendation === 'Needs Improvement' && !article.reviewerFeedback?.reviewedFile) ? (
+                          <span className="text-[10px] text-zinc-300 font-bold">—</span>
+                        ) : (
+                          <div className="flex items-center justify-center gap-2 text-zinc-500 font-bold">
+                            <span className="text-[10px] font-black uppercase tracking-widest">Completed</span>
+                            <CheckCircle2 size={16} className="text-emerald-600" />
+                          </div>
+                        )
                       )}
                     </td>
                   </tr>
