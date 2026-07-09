@@ -524,19 +524,19 @@ const AdminArticles = () => {
                               if (review && review.recommendation) {
                                 if (['Approved', 'Accepted'].includes(review.recommendation)) {
                                   recommendationBadge = (
-                                    <span className="mr-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-emerald-700 bg-emerald-50 border border-emerald-100 rounded">
+                                    <span className="ml-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-emerald-700 bg-emerald-50 border border-emerald-100 rounded">
                                       Approved
                                     </span>
                                   );
                                 } else if (['Rejected'].includes(review.recommendation)) {
                                   recommendationBadge = (
-                                    <span className="mr-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-rose-700 bg-rose-50 border border-rose-100 rounded">
+                                    <span className="ml-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-rose-700 bg-rose-50 border border-rose-100 rounded">
                                       Rejected
                                     </span>
                                   );
                                 } else if (['Needs Improvement', 'Need Improvements'].includes(review.recommendation)) {
                                   recommendationBadge = (
-                                    <span className="mr-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-amber-700 bg-amber-50 border border-amber-200 rounded">
+                                    <span className="ml-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-amber-700 bg-amber-50 border border-amber-200 rounded">
                                       Revision
                                     </span>
                                   );
@@ -545,8 +545,8 @@ const AdminArticles = () => {
 
                               return (
                                 <div key={r} className="h-5 flex items-center truncate max-w-[200px] font-sans">
-                                  {recommendationBadge}
                                   <span>{r}</span>
+                                  {recommendationBadge}
                                 </div>
                               );
                             })}
