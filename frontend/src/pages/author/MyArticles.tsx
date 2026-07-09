@@ -57,6 +57,7 @@ interface Article {
     recommendation: string;
   };
   adminNote?: string;
+  rejectionReason?: string;
   reviews?: Record<string, {
     remarks: string;
     recommendation: string;
@@ -244,7 +245,8 @@ const MyArticles = () => {
       case 'under_review': return 'Under Review';
       case 'revision_requested': return 'Revision Required';
       case 'accepted': return 'Approved';
-      case 'rejected': return 'Rejected';
+      case 'rejected':
+      case 'desk_rejected': return 'Rejected';
       default: return 'Submitted';
     }
   };
@@ -916,20 +918,22 @@ const MyArticles = () => {
                   </div>
                 </div>
 
-                {/* Reviewer Feedback / Revision Request Details (For Authors) */}
-                {selectedArticle.status === 'Revision Required' && (
+                {/* Reviewer Feedback / Revision Request / Rejection Details (For Authors) */}
+                {(selectedArticle.status === 'Revision Required' || selectedArticle.status === 'Rejected') && (
                   <div className="space-y-4 animate-in fade-in duration-300">
                     <div className="flex items-center gap-2 text-[10px] font-black text-rose-600 uppercase tracking-widest">
                       <AlertCircle size={14} />
-                      Revision Requirements
+                      {selectedArticle.status === 'Rejected' ? 'Rejection Details' : 'Revision Requirements'}
                     </div>
                     <div className="p-8 bg-rose-50/50 border border-rose-100 rounded-[2rem] space-y-6">
-                      {/* Admin Note */}
-                      {selectedArticle.adminNote && (
+                      {/* Admin / Rejection Note */}
+                      {(selectedArticle.rejectionReason || selectedArticle.adminNote) && (
                         <div>
-                          <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 font-['Outfit']">Rejected Reason / Reviewer Comments</h4>
+                          <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 font-['Outfit']">
+                            {selectedArticle.status === 'Rejected' ? 'Rejection Reason' : 'Rejected Reason / Reviewer Comments'}
+                          </h4>
                           <p className="text-xs text-zinc-700 leading-relaxed font-sans bg-white p-4 rounded-xl border border-rose-200/50">
-                            "{selectedArticle.adminNote}"
+                            "{selectedArticle.rejectionReason || selectedArticle.adminNote}"
                           </p>
                         </div>
                       )}

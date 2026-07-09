@@ -277,7 +277,7 @@ const AdminArticles = () => {
     // If statusFilter is 'All', exclude 'Ready to Publish', 'Published', and 'Revision Requested'
     // so they disappear from the active review queue immediately.
     const matchesStatus = statusFilter === 'All'
-      ? (art.status !== 'Ready to Publish' && art.status !== 'Published' && art.status !== 'Revision Requested' && art.status !== 'Rejected' && art.status !== 'Desk Rejected')
+      ? (art.status !== 'Ready to Publish' && art.status !== 'Published' && art.status !== 'Revision Requested')
       : art.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
