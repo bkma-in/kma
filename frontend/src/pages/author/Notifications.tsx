@@ -28,7 +28,7 @@ const Notifications = () => {
   const { currentUser } = useAuth();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('UNREAD');
+  const [activeTab, setActiveTab] = useState('ALL');
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   const rolePathPrefix = currentUser?.role === 'admin' ? '/admin' : '/author';
@@ -178,7 +178,7 @@ const Notifications = () => {
         </div>
 
         <div className="flex items-center bg-zinc-100 p-1.5 rounded-2xl border border-zinc-200 shadow-inner">
-          {['UNREAD', 'READ', 'ALL'].map((tab) => (
+          {['ALL', 'READ', 'UNREAD'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}

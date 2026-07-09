@@ -30,7 +30,7 @@ import { db } from '../../config/firebase';
 import { formatDate } from '../../utils/dateHelpers';
 import AddReviewerModal from '../../components/admin/AddReviewerModal';
 import { useNotification } from '../../utils/NotificationContext';
-import { getReviewers, updateReviewerStatus } from '../../services/user.service';
+import { getReviewers, updateReviewerStatus, resendReviewerCredentials } from '../../services/user.service';
 
 // Types
 type ReviewerStatus = 'Pending' | 'Approved' | 'Rejected' | 'Deactivated';

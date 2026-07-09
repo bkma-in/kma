@@ -171,9 +171,8 @@ const DeveloperNotifications = () => {
         </div>
       </div>
 
-      {/* Tab Filter */}
       <div className="flex items-center gap-1 bg-zinc-100 p-1.5 rounded-2xl border border-zinc-200 shadow-inner w-fit mb-8">
-        {(['ALL', 'UNREAD', 'READ'] as const).map((tab) => (
+        {(['ALL', 'READ', 'UNREAD'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
