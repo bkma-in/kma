@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendArticleRejectedNotifications = exports.sendRevisionRequestedNotifications = exports.sendReviewerAssignedNotifications = exports.sendArticleSubmittedNotifications = void 0;
+exports.sendArticleRejectedNotifications = exports.sendRevisionRequestedNotifications = exports.sendReviewerAssignedNotifications = exports.sendArticleSubmittedNotifications = exports.buildHtmlEmail = void 0;
 const firebase_1 = require("../config/firebase");
 const env_1 = require("../config/env");
 const emailService_1 = require("./emailService");
@@ -108,11 +108,12 @@ const buildHtmlEmail = (recipientName, bannerTitle, bodyText, cardTitle, rows, a
                   <td style="padding: 24px;">
                     <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #000000;">${cardTitle}</h3>
                     
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; margin-bottom: 24px;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; ${(actionText && actionUrl) ? 'margin-bottom: 24px;' : 'margin-bottom: 0;'}">
                       <!-- Dynamic rows of key-values -->
                       ${rowsHtml}
                     </table>
                     
+                    ${(actionText && actionUrl) ? `
                     <!-- Action Button -->
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                       <tr>
@@ -121,6 +122,7 @@ const buildHtmlEmail = (recipientName, bannerTitle, bodyText, cardTitle, rows, a
                         </td>
                       </tr>
                     </table>
+                    ` : ''}
                   </td>
                 </tr>
               </table>
@@ -159,8 +161,6 @@ const buildHtmlEmail = (recipientName, bannerTitle, bodyText, cardTitle, rows, a
           <!-- What You Can Do (Bento Grid in Tables) -->
           <tr>
             <td style="padding: 0 40px 30px 40px;">
-              <h3 style="margin: 0 0 16px 0; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; text-align: center; letter-spacing: 0.15em;">What You Can Do</h3>
-              
               <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                 <tr>
                   <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
@@ -248,6 +248,7 @@ const buildHtmlEmail = (recipientName, bannerTitle, bodyText, cardTitle, rows, a
 </html>
   `.trim();
 };
+exports.buildHtmlEmail = buildHtmlEmail;
 /**
  * Helper to fetch unique author details for the article.
  */
@@ -323,7 +324,7 @@ const sendArticleSubmittedNotifications = async (articleId) => {
                     { label: 'Authors', value: authorNamesStr },
                     { label: 'Status', value: 'Submitted (Awaiting Desk Review)' },
                 ];
-                const emailHtml = buildHtmlEmail(author.name || 'Author', 'Manuscript Received Successfully', bodyText, 'Submission details', cardRows, env_1.config.brevo.loginUrl, 'Login', 'Desk Review Process', 'BKMA editors will conduct a desk review of the submission. If it meets BKMA guidelines, it will proceed to external peer review.', '📄', 'Track review progress', '⚙️', 'Update manuscript details');
+                const emailHtml = (0, exports.buildHtmlEmail)(author.name || 'Author', 'Manuscript Received Successfully', bodyText, 'Submission details', cardRows, env_1.config.brevo.loginUrl, 'Login', 'Desk Review Process', 'BKMA editors will conduct a desk review of the submission. If it meets BKMA guidelines, it will proceed to external peer review.', '📄', 'Track review progress', '⚙️', 'Update manuscript details');
                 // Send email (non-blocking call)
                 (0, emailService_1.sendTransactionalEmail)(author.email, author.name || 'Author', `Submission Confirmation: ${title}`, emailHtml).catch(err => {
                     console.error(`[NOTIF-SERVICE] Failed to send submission email to author ${author.email}:`, err);
@@ -393,7 +394,7 @@ const sendReviewerAssignedNotifications = async (articleId, reviewerIds) => {
                     { label: 'Assigned On', value: new Date().toLocaleDateString() },
                     { label: 'Status', value: 'Under Review' },
                 ];
-                const emailHtml = buildHtmlEmail(reviewer.name || 'Reviewer', 'New Review Assignment', bodyText, 'Assignment details', cardRows, env_1.config.brevo.loginUrl, 'Login', 'Reviewer Guidelines', 'Please follow the reviewer guidelines and provide an objective critique. If you have a conflict of interest, please let the editors know.', '🔍', 'Evaluate methodology', '📝', 'Submit remarks & recommendation');
+                const emailHtml = (0, exports.buildHtmlEmail)(reviewer.name || 'Reviewer', 'New Review Assignment', bodyText, 'Assignment details', cardRows, env_1.config.brevo.loginUrl, 'Login', 'Reviewer Guidelines', 'Please follow the reviewer guidelines and provide an objective critique. If you have a conflict of interest, please let the editors know.', '🔍', 'Evaluate methodology', '📝', 'Submit remarks & recommendation');
                 (0, emailService_1.sendTransactionalEmail)(reviewer.email, reviewer.name || 'Reviewer', `Review Invitation: ${title}`, emailHtml).catch(err => {
                     console.error(`[NOTIF-SERVICE] Failed to send review assignment email to reviewer ${reviewer.email}:`, err);
                 });
@@ -442,7 +443,7 @@ const sendRevisionRequestedNotifications = async (articleId, notes) => {
                     { label: 'Current Status', value: 'Revision Requested' },
                     { label: 'Comments / Notes', value: notes || 'Please refer to the author portal for specific reviewer/editor comments.' },
                 ];
-                const emailHtml = buildHtmlEmail(author.name || 'Author', 'Revision Requested for Manuscript', bodyText, 'Revision details', cardRows, env_1.config.brevo.loginUrl, 'Login', 'Revision Instructions', 'Please ensure that your resubmission addresses the reviewer feedback point-by-point. You can explain changes in your resubmission cover notes.', '✏️', 'Edit manuscript text', '📤', 'Upload revised PDF');
+                const emailHtml = (0, exports.buildHtmlEmail)(author.name || 'Author', 'Revision Requested for Manuscript', bodyText, 'Revision details', cardRows, env_1.config.brevo.loginUrl, 'Login', 'Revision Instructions', 'Please ensure that your resubmission addresses the reviewer feedback point-by-point. You can explain changes in your resubmission cover notes.', '✏️', 'Edit manuscript text', '📤', 'Upload revised PDF');
                 (0, emailService_1.sendTransactionalEmail)(author.email, author.name || 'Author', `Revision Requested: ${title}`, emailHtml).catch(err => {
                     console.error(`[NOTIF-SERVICE] Failed to send revision requested email to author ${author.email}:`, err);
                 });
@@ -491,7 +492,7 @@ const sendArticleRejectedNotifications = async (articleId, isDeskReject, reason)
                     { label: 'Final Status', value: isDeskReject ? 'Desk Rejected' : 'Rejected' },
                     { label: 'Rejection Reason', value: reason || 'No specific reason provided' },
                 ];
-                const emailHtml = buildHtmlEmail(author.name || 'Author', isDeskReject ? 'Editorial Decision: Desk Rejected' : 'Editorial Decision: Rejected', bodyText, 'Decision details', cardRows, env_1.config.brevo.loginUrl, 'Login', 'Editorial Decision', 'Our decision is based on a high volume of submissions, suitability, and reviewers recommendation. We appreciate you choosing BKMA and wish you success with other publishing opportunities.', '📊', 'Review feedback details', '📧', 'Contact editorial office');
+                const emailHtml = (0, exports.buildHtmlEmail)(author.name || 'Author', isDeskReject ? 'Editorial Decision: Desk Rejected' : 'Editorial Decision: Rejected', bodyText, 'Decision details', cardRows, env_1.config.brevo.loginUrl, 'Login', 'Editorial Decision', 'Our decision is based on a high volume of submissions, suitability, and reviewers recommendation. We appreciate you choosing BKMA and wish you success with other publishing opportunities.', '📊', 'Review feedback details', '📧', 'Contact editorial office');
                 (0, emailService_1.sendTransactionalEmail)(author.email, author.name || 'Author', `Decision on Manuscript: ${title}`, emailHtml).catch(err => {
                     console.error(`[NOTIF-SERVICE] Failed to send rejection email to author ${author.email}:`, err);
                 });

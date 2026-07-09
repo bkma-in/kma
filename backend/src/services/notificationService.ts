@@ -10,7 +10,7 @@ interface EmailRow {
 /**
  * Builds HTML content based on the layout of the reviewer welcome template.
  */
-const buildHtmlEmail = (
+export const buildHtmlEmail = (
   recipientName: string,
   bannerTitle: string,
   bodyText: string,
@@ -127,11 +127,12 @@ const buildHtmlEmail = (
                   <td style="padding: 24px;">
                     <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #000000;">${cardTitle}</h3>
                     
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; margin-bottom: 24px;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; ${(actionText && actionUrl) ? 'margin-bottom: 24px;' : 'margin-bottom: 0;' }">
                       <!-- Dynamic rows of key-values -->
                       ${rowsHtml}
                     </table>
                     
+                    ${(actionText && actionUrl) ? `
                     <!-- Action Button -->
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                       <tr>
@@ -140,6 +141,7 @@ const buildHtmlEmail = (
                         </td>
                       </tr>
                     </table>
+                    ` : ''}
                   </td>
                 </tr>
               </table>
@@ -178,8 +180,6 @@ const buildHtmlEmail = (
           <!-- What You Can Do (Bento Grid in Tables) -->
           <tr>
             <td style="padding: 0 40px 30px 40px;">
-              <h3 style="margin: 0 0 16px 0; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; text-align: center; letter-spacing: 0.15em;">What You Can Do</h3>
-              
               <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                 <tr>
                   <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
