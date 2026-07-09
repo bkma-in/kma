@@ -79,7 +79,7 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
           <!-- Divider -->
           <tr>
             <td style="padding: 0 40px;">
-              <hr style="border: 0; border-top: 1px solid #e4e4e7; margin: 0;" />
+              <hr style="border: 0; border-top: 1px solid #a1a1aa; margin: 0;" />
             </td>
           </tr>
 
@@ -161,8 +161,6 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
           <!-- What You Can Do (Bento Grid in Tables) -->
           <tr>
             <td style="padding: 0 40px 30px 40px;">
-              <h3 style="margin: 0 0 16px 0; font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; text-align: center; letter-spacing: 0.15em;">What You Can Do</h3>
-              
               <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                 <tr>
                   <td width="48%" style="padding: 16px; background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; vertical-align: top;">
