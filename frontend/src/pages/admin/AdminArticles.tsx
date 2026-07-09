@@ -613,23 +613,35 @@ const AdminArticles = () => {
                         const diff = article.reviewDeadline ? getRemainingDays(article.reviewDeadline) : null;
                         const isOverdue = diff !== null && diff < 0;
 
-                        const hasPublishable = reviewsList.some((r: any) => ['Approved', 'Accepted'].includes(r.recommendation));
-                        const hasRevisionOrReject = reviewsList.some((r: any) => ['Rejected', 'Needs Improvement', 'Need Improvements'].includes(r.recommendation));
-                        
-                        const showPublish = hasPublishable || isOverdue;
-                        const showSendBack = (hasRevisionOrReject || isOverdue) && (article.status as string) !== 'Revision Requested';
+                        const totalAssigned = article.assignedReviewers ? article.assignedReviewers.length : 0;
+                        const approvedReviews = reviewsList.filter((r: any) => ['Approved', 'Accepted'].includes(r.recommendation));
+                        const rejectOrRevisionReviews = reviewsList.filter((r: any) => ['Rejected', 'Needs Improvement', 'Need Improvements'].includes(r.recommendation));
 
-                        if (reviewsList.length === 0 && !isOverdue) {
-                          return (
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Awaiting Reviews</span>
-                              {(article.status as string) === 'Revision Requested' && (
-                                <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest leading-none mt-0.5 animate-pulse">
-                                  Under Author Update
-                                </span>
-                              )}
-                            </div>
-                          );
+                        const allApproved = reviewsList.length === totalAssigned && approvedReviews.length === totalAssigned && totalAssigned > 0;
+                        const allRejectOrRevision = reviewsList.length === totalAssigned && rejectOrRevisionReviews.length === totalAssigned && totalAssigned > 0;
+
+                        let showPublish = false;
+                        let showSendBack = false;
+
+                        if (isOverdue) {
+                          showPublish = true;
+                          showSendBack = true;
+                        } else {
+                          if (allApproved) {
+                            showPublish = true;
+                            showSendBack = false;
+                          } else if (allRejectOrRevision) {
+                            showPublish = false;
+                            showSendBack = true;
+                          } else {
+                            showPublish = true;
+                            showSendBack = true;
+                          }
+                        }
+
+                        // Adjust send back status
+                        if ((article.status as string) === 'Revision Requested') {
+                          showSendBack = false;
                         }
                         
                         return (
@@ -1130,13 +1142,37 @@ const AdminArticles = () => {
                   const diff = selectedArticle.reviewDeadline ? getRemainingDays(selectedArticle.reviewDeadline) : null;
                   const isOverdue = diff !== null && diff < 0;
 
-                  const hasPublishable = reviewsList.some((r: any) => ['Approved', 'Accepted'].includes(r.recommendation));
-                  const hasRevisionOrReject = reviewsList.some((r: any) => ['Rejected', 'Needs Improvement', 'Need Improvements'].includes(r.recommendation));
+                  const totalAssigned = selectedArticle.assignedReviewers ? selectedArticle.assignedReviewers.length : 0;
+                  const approvedReviews = reviewsList.filter((r: any) => ['Approved', 'Accepted'].includes(r.recommendation));
+                  const rejectOrRevisionReviews = reviewsList.filter((r: any) => ['Rejected', 'Needs Improvement', 'Need Improvements'].includes(r.recommendation));
+
+                  const allApproved = reviewsList.length === totalAssigned && approvedReviews.length === totalAssigned && totalAssigned > 0;
+                  const allRejectOrRevision = reviewsList.length === totalAssigned && rejectOrRevisionReviews.length === totalAssigned && totalAssigned > 0;
                   const hasReject = reviewsList.some((r: any) => r.recommendation === 'Rejected');
 
-                  const showPublish = hasPublishable || isOverdue;
-                  const showSendBack = hasRevisionOrReject || isOverdue;
-                  const showReject = hasReject || isOverdue;
+                  let showPublish = false;
+                  let showSendBack = false;
+                  let showReject = false;
+
+                  if (isOverdue) {
+                    showPublish = true;
+                    showSendBack = true;
+                    showReject = true;
+                  } else {
+                    if (allApproved) {
+                      showPublish = true;
+                      showSendBack = false;
+                      showReject = false;
+                    } else if (allRejectOrRevision) {
+                      showPublish = false;
+                      showSendBack = true;
+                      showReject = hasReject;
+                    } else {
+                      showPublish = true;
+                      showSendBack = true;
+                      showReject = hasReject;
+                    }
+                  }
 
                   return (
                     <div className="space-y-4">
