@@ -467,6 +467,32 @@ const sendRevisionRequestedNotifications = async (articleId, notes) => {
                     { label: 'Article Title', value: title },
                     { label: 'Current Status', value: 'Revision Requested' },
                 ];
+                const reviewerComments = [];
+                if (article.reviews) {
+                    Object.values(article.reviews).forEach((r) => {
+                        if (r && r.remarks && r.remarks.trim()) {
+                            reviewerComments.push(r.remarks.trim());
+                        }
+                    });
+                }
+                if (reviewerComments.length === 0 && article.reviewerFeedback?.remarks) {
+                    reviewerComments.push(article.reviewerFeedback.remarks.trim());
+                }
+                let commentsHtml = '';
+                if (reviewerComments.length > 0) {
+                    commentsHtml += `<strong style="font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 8px;">Reviewer Comments</strong>`;
+                    reviewerComments.forEach((c, idx) => {
+                        commentsHtml += `<div style="font-size: 13px; color: #4b5563; line-height: 1.5; padding: 12px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px; font-style: italic;">"Reviewer #${idx + 1}: ${c}"</div>`;
+                    });
+                }
+                if (notes && notes.trim()) {
+                    commentsHtml += `<strong style="font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-top: 16px; margin-bottom: 8px;">Editor Note</strong>`;
+                    commentsHtml += `<div style="font-size: 13px; color: #b45309; line-height: 1.5; padding: 12px; background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; font-weight: 600;">${notes}</div>`;
+                }
+                else if (reviewerComments.length === 0) {
+                    commentsHtml += `<strong style="font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 8px;">Editor Note</strong>`;
+                    commentsHtml += `<div style="font-size: 13px; color: #b45309; line-height: 1.5; padding: 12px; background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; font-weight: 600;">Please check the author portal for comments and requested changes.</div>`;
+                }
                 const extraHtml = `
           <!-- Comments / Notes Section -->
           <tr>
@@ -474,10 +500,7 @@ const sendRevisionRequestedNotifications = async (articleId, notes) => {
               <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                 <tr>
                   <td>
-                    <span style="font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 8px;">Comments / Notes</span>
-                    <div style="font-size: 14px; color: #b45309; line-height: 1.6; font-weight: 600; padding: 16px; background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 12px;">
-                      ${notes || 'Please refer to the author portal for specific reviewer/editor comments.'}
-                    </div>
+                    ${commentsHtml}
                   </td>
                 </tr>
               </table>

@@ -977,6 +977,12 @@ router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), upl
       const title = articleData?.title || 'Untitled Article';
       const normalizedRecommendation = normalizeRecommendation(recommendation || '');
 
+      if (['Rejected', 'Needs Improvement'].includes(normalizedRecommendation)) {
+        if (!remarks || !remarks.trim()) {
+          return res.status(400).json({ error: 'Please provide reviewer comments explaining your decision for Rejection or Needs Revision.' });
+        }
+      }
+
       let reviewedFileKey = null;
       let reviewedFileName = null;
       if (req.file) {

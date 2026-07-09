@@ -145,6 +145,22 @@ const AdminArticles = () => {
   const [loading, setLoading] = useState(true);
   const [availableReviewers, setAvailableReviewers] = useState<Reviewer[]>([]);
 
+  const getReviewerComments = (art: Article | any) => {
+    if (!art) return [];
+    const comments: string[] = [];
+    if (art.reviews) {
+      Object.values(art.reviews).forEach((r: any) => {
+        if (r && r.remarks && r.remarks.trim()) {
+          comments.push(r.remarks.trim());
+        }
+      });
+    }
+    if (comments.length === 0 && art.reviewerFeedback?.remarks) {
+      comments.push(art.reviewerFeedback.remarks.trim());
+    }
+    return comments;
+  };
+
   const [isAdminNoteModalOpen, setIsAdminNoteModalOpen] = useState(false);
   const [adminNote, setAdminNote] = useState('');
 
@@ -1054,53 +1070,78 @@ const AdminArticles = () => {
       )}
 
       {/* Admin Note Modal */}
-      {isAdminNoteModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setIsAdminNoteModalOpen(false)} />
-          <div className="relative bg-white/80 backdrop-blur-2xl w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 border border-white/20">
-            <div className="px-8 py-6 border-b border-white/10 bg-white/40 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-bold text-black">Send Back to Author</h3>
-                <p className="text-xs text-zinc-500 font-medium">Add an optional note for the author.</p>
-              </div>
-              <button onClick={() => setIsAdminNoteModalOpen(false)} className="text-zinc-400 hover:text-black">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-8 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">Admin Note (Optional)</label>
-                <textarea 
-                  rows={4}
-                  placeholder="e.g. Please address the reviewer's comments about section 3.2..."
-                  value={adminNote}
-                  onChange={(e) => setAdminNote(e.target.value)}
-                  className="w-full bg-white/50 backdrop-blur-sm border border-white/20 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-black outline-none resize-none transition-all"
-                />
-              </div>
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setIsAdminNoteModalOpen(false)}
-                  className="flex-1 py-4 bg-zinc-100/50 backdrop-blur-sm text-zinc-600 rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-200 transition-all border border-white/10"
-                >
-                  CANCEL
+      {isAdminNoteModalOpen && selectedArticle && (() => {
+        const reviewerComments = getReviewerComments(selectedArticle);
+        const isCompulsory = reviewerComments.length === 0;
+        return (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setIsAdminNoteModalOpen(false)} />
+            <div className="relative bg-white/80 backdrop-blur-2xl w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in duration-300 border border-white/20">
+              <div className="px-8 py-6 border-b border-white/10 bg-white/40 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-black">Send Back to Author</h3>
+                  <p className="text-xs text-zinc-500 font-medium">
+                    {isCompulsory ? 'Admin note is compulsory since there are no reviewer comments.' : 'Add an optional note for the author.'}
+                  </p>
+                </div>
+                <button onClick={() => setIsAdminNoteModalOpen(false)} className="text-zinc-400 hover:text-black">
+                  <X size={20} />
                 </button>
-                <button 
-                  onClick={() => {
-                    updateStatus(selectedArticle!.id, 'Revision Requested', { adminNote }, 'Revision request sent to author.');
-                    setIsAdminNoteModalOpen(false);
-                    setIsDetailsOpen(false);
-                    setAdminNote('');
-                  }}
-                  className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
-                >
-                  CONFIRM
-                </button>
+              </div>
+              <div className="p-8 space-y-6">
+                {reviewerComments.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">Reviewer Comments</label>
+                    <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 text-xs space-y-3 text-zinc-600 max-h-40 overflow-y-auto font-sans">
+                      {reviewerComments.map((comment, index) => (
+                        <div key={index} className="border-b border-zinc-200/60 last:border-none pb-2 last:pb-0">
+                          <span className="font-bold text-zinc-800 text-[10px] uppercase tracking-wider block mb-1">Reviewer #{index + 1}</span>
+                          <p className="italic">"{comment}"</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1">
+                    Admin Note {isCompulsory ? '(Compulsory)' : '(Optional)'}
+                  </label>
+                  <textarea 
+                    rows={4}
+                    placeholder={isCompulsory ? "Explain the reason for sending back to the author..." : "e.g. Please address the reviewer's comments about section 3.2..."}
+                    value={adminNote}
+                    onChange={(e) => setAdminNote(e.target.value)}
+                    className="w-full bg-white/50 backdrop-blur-sm border border-white/20 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-black outline-none resize-none transition-all"
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsAdminNoteModalOpen(false)}
+                    className="flex-1 py-4 bg-zinc-100/50 backdrop-blur-sm text-zinc-600 rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-200 transition-all border border-white/10"
+                  >
+                    CANCEL
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (isCompulsory && !adminNote.trim()) {
+                        showToast('Admin Note is compulsory when there are no reviewer comments.', 'error');
+                        return;
+                      }
+                      updateStatus(selectedArticle!.id, 'Revision Requested', { adminNote }, 'Revision request sent to author.');
+                      setIsAdminNoteModalOpen(false);
+                      setIsDetailsOpen(false);
+                      setAdminNote('');
+                    }}
+                    className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
+                  >
+                    CONFIRM
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Manuscript Preview Modal */}
       {isPreviewOpen && previewArticle && (

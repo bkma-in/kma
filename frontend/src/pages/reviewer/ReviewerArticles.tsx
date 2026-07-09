@@ -127,6 +127,11 @@ const ReviewerArticles = () => {
       return;
     }
 
+    if (['Rejected', 'Needs Improvement'].includes(article.selectedStatus) && (!article.remarks || !article.remarks.trim())) {
+      showToast('Please provide reviewer comments explaining your decision for Rejection or Needs Revision.', 'error');
+      return;
+    }
+
     setSubmittingId(id);
     try {
       const remarksText = article.remarks || 'Reviewed via peer assessment portal.';
