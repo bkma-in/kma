@@ -895,6 +895,17 @@ const SubmitArticle = () => {
                       </div>
                     </label>
                   </div>
+                  
+                  {/* Submission deletion policy warning */}
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-amber-800 shadow-sm mt-6">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" size={18} />
+                    <div>
+                      <p className="text-xs font-bold text-amber-900">Submission Deletion Policy</p>
+                      <p className="text-[10px] text-amber-700 leading-relaxed mt-0.5">
+                        Once this manuscript is submitted for review, it cannot be deleted from the system logs. Please ensure all details are correct before final submission.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

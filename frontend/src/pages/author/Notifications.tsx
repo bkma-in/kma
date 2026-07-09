@@ -136,6 +136,7 @@ const Notifications = () => {
           onClick: () => navigate(`${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId } })
         };
       case 'REVISION_REQUIRED':
+      case 'REVISION_REQUESTED':
         return {
           title: 'Revision Requested',
           icon: FileEdit,
@@ -144,6 +145,24 @@ const Notifications = () => {
           action: 'EDIT MANUSCRIPT',
           onClick: () => navigate(rolePathPrefix === '/author' ? '/author/revision-required' : `${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId } })
         };
+      case 'ARTICLE_REJECTED':
+        return {
+          title: 'Article Rejected',
+          icon: AlertCircle,
+          iconBg: 'bg-rose-50',
+          iconColor: 'text-rose-600',
+          action: 'VIEW DETAILS',
+          onClick: () => navigate(`${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId } })
+        };
+      case 'ARTICLE_SUBMITTED_AUTHOR':
+        return {
+          title: 'Submission Confirmation',
+          icon: CheckCircle2,
+          iconBg: 'bg-emerald-50',
+          iconColor: 'text-emerald-600',
+          action: 'VIEW ARTICLE',
+          onClick: () => navigate(`${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId } })
+        };
       default:
         return {
           title: notif.title || 'Notification',
@@ -151,7 +170,11 @@ const Notifications = () => {
           iconBg: 'bg-zinc-100',
           iconColor: 'text-zinc-600',
           action: 'VIEW DETAILS',
-          onClick: () => {}
+          onClick: () => {
+            if (notif.metadata?.articleId) {
+              navigate(`${rolePathPrefix}/articles`, { state: { highlightId: notif.metadata.articleId } });
+            }
+          }
         };
     }
   };

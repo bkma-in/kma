@@ -716,18 +716,12 @@ const MyArticles = () => {
                         >
                           <Edit2 size={18} />
                         </button>
-                        {/* Only primary author can delete */}
-                        {article.authorId === currentUser?.uid && (
+                        {/* Only primary author can delete draft */}
+                        {article.authorId === currentUser?.uid && article.status === 'Draft' && (
                           <button 
                             onClick={() => handleDelete(article)}
-                            disabled={article.status !== 'Submitted' && article.status !== 'Draft'}
-                            className={cn(
-                              "p-2 rounded-lg transition-all",
-                              (article.status === 'Submitted' || article.status === 'Draft')
-                                ? "text-zinc-400 hover:text-rose-600 hover:bg-rose-50" 
-                                : "text-zinc-200 cursor-not-allowed"
-                            )}
-                            title={(article.status === 'Submitted' || article.status === 'Draft') ? 'Delete Manuscript' : 'Cannot delete after review begins'}
+                            className="p-2 rounded-lg transition-all text-zinc-400 hover:text-rose-600 hover:bg-rose-50"
+                            title="Delete Draft"
                           >
                             <Trash2 size={18} />
                           </button>
@@ -1028,19 +1022,15 @@ const MyArticles = () => {
                       <Edit2 size={16} />
                       {selectedArticle.status === 'Revision Required' ? 'Submit Revision' : 'Edit Locked'}
                     </button>
-                    <button 
-                      onClick={() => handleDelete(selectedArticle)}
-                      disabled={selectedArticle.status !== 'Submitted'}
-                      className={cn(
-                        "flex items-center gap-2 px-6 py-4 rounded-2xl font-bold text-[10px] tracking-[0.2em] transition-all uppercase shadow-xl shadow-black/5",
-                        selectedArticle.status === 'Submitted'
-                          ? "bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
-                          : "bg-zinc-50 text-zinc-300 cursor-not-allowed"
-                      )}
-                    >
-                      <Trash2 size={16} />
-                      Delete
-                    </button>
+                    {selectedArticle.status === 'Draft' && (
+                      <button 
+                        onClick={() => handleDelete(selectedArticle)}
+                        className="flex items-center gap-2 px-6 py-4 rounded-2xl font-bold text-[10px] tracking-[0.2em] transition-all uppercase shadow-xl shadow-black/5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
+                      >
+                        <Trash2 size={16} />
+                        Delete Draft
+                      </button>
+                    )}
                     <button 
                       onClick={async () => {
                         try {
