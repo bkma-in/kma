@@ -544,14 +544,14 @@ const ReviewerArticles = () => {
                           )}
                         </button>
                       ) : (
-                        // Show Completed only after final decision is reached by admin (status is not under_review or similar)
-                        !['under review', 'sent to reviewer', 'submitted', 'awaiting decision', 'under_review'].includes(article.status?.toLowerCase()) ? (
+                        // Follows reviewer workflow only: if revision decision, requires file upload to be Completed
+                        (article.reviewerFeedback?.recommendation === 'Needs Improvement' && !article.reviewerFeedback?.reviewedFile) ? (
+                          <span className="text-[10px] text-zinc-300 font-bold">—</span>
+                        ) : (
                           <div className="flex items-center justify-center gap-2 text-zinc-500 font-bold">
                             <span className="text-[10px] font-black uppercase tracking-widest">Completed</span>
                             <CheckCircle2 size={16} className="text-emerald-600" />
                           </div>
-                        ) : (
-                          <span className="text-[10px] text-zinc-300 font-bold">—</span>
                         )
                       )}
                     </td>
