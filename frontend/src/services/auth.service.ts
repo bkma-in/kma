@@ -92,3 +92,33 @@ export const changePassword = async (newPassword: string) => {
     throw new Error(error.response?.data?.error || 'Failed to change password.');
   }
 };
+
+export const sendOtp = async (email: string) => {
+  try {
+    const response = await api.post('/auth/forgot-password/send-otp', { email });
+    return response.data;
+  } catch (error: any) {
+    console.error('[Auth Service] Send OTP error:', error);
+    throw new Error(error.response?.data?.error || 'Failed to send verification OTP.');
+  }
+};
+
+export const verifyOtp = async (email: string, otp: string) => {
+  try {
+    const response = await api.post('/auth/forgot-password/verify-otp', { email, otp });
+    return response.data;
+  } catch (error: any) {
+    console.error('[Auth Service] Verify OTP error:', error);
+    throw new Error(error.response?.data?.error || 'Failed to verify verification code.');
+  }
+};
+
+export const resetPassword = async (email: string, resetToken: string, newPassword: string) => {
+  try {
+    const response = await api.post('/auth/forgot-password/reset', { email, resetToken, newPassword });
+    return response.data;
+  } catch (error: any) {
+    console.error('[Auth Service] Reset password error:', error);
+    throw new Error(error.response?.data?.error || 'Failed to reset password.');
+  }
+};

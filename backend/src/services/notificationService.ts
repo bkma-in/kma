@@ -10,7 +10,7 @@ interface EmailRow {
 /**
  * Builds HTML content based on the layout of the reviewer welcome template.
  */
-const buildHtmlEmail = (
+export const buildHtmlEmail = (
   recipientName: string,
   bannerTitle: string,
   bodyText: string,
