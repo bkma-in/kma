@@ -6,6 +6,12 @@ import { upload } from '../middleware/uploadMiddleware';
 import { uploadPdfToR2, getSignedPdfUrl, deletePdfFromR2 } from '../services/storageService';
 
 import { uploadImage, deleteImage } from '../services/cloudinaryService';
+import {
+  sendArticleSubmittedNotifications,
+  sendReviewerAssignedNotifications,
+  sendRevisionRequestedNotifications,
+  sendArticleRejectedNotifications
+} from '../services/notificationService';
 
 const router = Router();
 
@@ -148,6 +154,12 @@ router.post('/', requireAuth, requireRole(['author']), upload.fields([
       
       // Update article with pending authors
       await articleRef.update({ authors: newArticle.authors });
+    }
+
+    if (finalStatus === 'submitted') {
+      sendArticleSubmittedNotifications(articleRef.id).catch(err => {
+        console.error('Failed to trigger submission notifications on article create:', err);
+      });
     }
 
     res.json({ success: true, article: newArticle, invitationsQueued: invitees.length > 0 });
@@ -765,6 +777,12 @@ router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
 
     await articleRef.update(updateData);
 
+    if (updateData.status === 'submitted' && currentStatus !== 'submitted') {
+      sendArticleSubmittedNotifications(id).catch(err => {
+        console.error('Failed to trigger submission notifications on article update:', err);
+      });
+    }
+
     // Fetch latest data for summary if submitted
     let summary = null;
     if (updateData.status === 'submitted') {
@@ -918,6 +936,10 @@ router.patch('/:id/assign', requireAuth, requireRole(['admin']), async (req: Aut
       updatedAt: new Date()
     });
 
+    sendReviewerAssignedNotifications(id, reviewerIds).catch(err => {
+      console.error('Failed to trigger reviewer assigned notifications:', err);
+    });
+
     res.json({ success: true, message: 'Reviewers assigned successfully' });
   } catch (error: any) {
     console.error('Assign reviewer error:', error);
@@ -998,6 +1020,21 @@ router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), upl
       if (adminNote !== undefined) updateData.adminNote = adminNote;
 
       await articleRef.update(updateData);
+
+      // Trigger notifications based on status
+      if (status === 'revision_requested') {
+        sendRevisionRequestedNotifications(id, adminNote).catch(err => {
+          console.error('Failed to trigger revision requested notifications:', err);
+        });
+      } else if (status === 'desk_rejected') {
+        sendArticleRejectedNotifications(id, true, rejectionReason).catch(err => {
+          console.error('Failed to trigger desk rejection notifications:', err);
+        });
+      } else if (status === 'rejected') {
+        sendArticleRejectedNotifications(id, false, rejectionReason).catch(err => {
+          console.error('Failed to trigger rejection notifications:', err);
+        });
+      }
     }
 
     res.json({ success: true, message: 'Status updated successfully' });
@@ -1307,6 +1344,9 @@ router.post('/invitations/:token/accept', requireAuth, async (req: AuthRequest, 
         updatedAt: new Date()
       });
       autoSubmitted = true;
+      sendArticleSubmittedNotifications(articleId as string).catch(err => {
+        console.error('Failed to trigger submission notifications on auto-submit:', err);
+      });
     } else {
       await articleRef.update({ authors, updatedAt: new Date() });
     }

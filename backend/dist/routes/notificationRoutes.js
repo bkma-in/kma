@@ -75,6 +75,30 @@ router.patch('/:id/read', authMiddleware_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to update notification' });
     }
 });
+// Mark All Notifications as Read for Current User (Firestore Batch Update)
+router.post('/read-all', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const { uid } = req.user;
+        // Query all unread notifications for this user
+        const snapshot = await firebase_1.db.collection('notifications')
+            .where('userId', '==', uid)
+            .where('read', '==', false)
+            .get();
+        if (snapshot.empty) {
+            return res.json({ success: true, count: 0 });
+        }
+        const batch = firebase_1.db.batch();
+        snapshot.docs.forEach(doc => {
+            batch.update(doc.ref, { read: true, updatedAt: new Date() });
+        });
+        await batch.commit();
+        res.json({ success: true, count: snapshot.docs.length });
+    }
+    catch (error) {
+        console.error('Mark all notifications read error:', error);
+        res.status(500).json({ error: error.message || 'Failed to mark all notifications as read' });
+    }
+});
 // Delete a specific notification
 router.delete('/:id', authMiddleware_1.requireAuth, async (req, res) => {
     try {

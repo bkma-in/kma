@@ -97,9 +97,9 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
           <!-- Login Credentials Card -->
           <tr>
             <td style="padding: 0 40px 0 40px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #ffffff; border: 1px solid #d4d4d8; border-radius: 12px; padding: 24px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #ffffff; border: 1px solid #d4d4d8; border-radius: 12px;">
                 <tr>
-                  <td>
+                  <td style="padding: 24px;">
                     <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #000000;">Your Login Credentials</h3>
                     
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; margin-bottom: 24px;">
@@ -137,12 +137,14 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
           <!-- Security Notice -->
           <tr>
             <td style="padding: 0 40px 30px 40px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #fafafa; border-left: 4px solid #000000; border-top: 1px solid #e4e4e7; border-right: 1px solid #e4e4e7; border-bottom: 1px solid #e4e4e7; border-radius: 0 8px 8px 0; padding: 20px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #fafafa; border-left: 4px solid #000000; border-top: 1px solid #e4e4e7; border-right: 1px solid #e4e4e7; border-bottom: 1px solid #e4e4e7; border-radius: 0 8px 8px 0;">
                 <tr>
-                  <td>
+                  <td style="padding: 20px;">
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                       <tr>
-                        <td width="20" valign="top" style="font-size: 15px; line-height: 1; padding-top: 2px;">ℹ️</td>
+                        <td width="20" valign="top" style="padding-top: 2px;">
+                          <span style="display: block; width: 16px; height: 16px; border: 1.5px solid #000000; border-radius: 50%; text-align: center; font-size: 11px; line-height: 16px; font-weight: bold; color: #000000; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;">i</span>
+                        </td>
                         <td width="12" style="font-size: 0; line-height: 0;">&nbsp;</td>
                         <td valign="top" style="font-size: 13px; line-height: 1.5; color: #52525b;">
                           <strong style="color: #000000; display: block; margin-bottom: 4px; font-size: 14px; font-weight: 700;">Security Notice</strong>
@@ -180,17 +182,35 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
           <!-- Support Section -->
           <tr>
             <td style="padding: 0 40px 40px 40px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #ffffff; border: 1px dashed #e4e4e7; border-radius: 16px; padding: 24px; text-align: center;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; background-color: #ffffff; border: 1px dashed #e4e4e7; border-radius: 16px;">
                 <tr>
-                  <td>
+                  <td style="padding: 24px; text-align: center;">
                     <h3 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 700; color: #000000;">Need Help?</h3>
                     <p style="margin: 0 0 16px 0; font-size: 13px; color: #71717a; line-height: 1.5;">If you experience any difficulty accessing your account, please contact the BKMA Editorial Office.</p>
                     
                     <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
                       <tr>
-                        <td style="font-size: 13px; font-weight: 600;">
-                          <a href="mailto:keralamathsasso@gmail.com" style="color: #000000; text-decoration: none; margin-right: 20px;">✉ keralamathsasso@gmail.com</a>
-                          <a href="https://www.bkma.in" style="color: #000000; text-decoration: none;">🌐 www.bkma.in</a>
+                        <!-- Email Contact -->
+                        <td style="padding: 0 16px 8px 16px;">
+                          <table border="0" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td valign="middle" style="font-size: 16px; padding-right: 8px; line-height: 1; color: #000000;">✉</td>
+                              <td valign="middle" style="font-size: 13px; font-weight: 600;">
+                                <a href="mailto:keralamathsasso@gmail.com" style="color: #000000; text-decoration: none;">keralamathsasso@gmail.com</a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                        <!-- Website Contact -->
+                        <td style="padding: 0 16px 8px 16px;">
+                          <table border="0" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td valign="middle" style="font-size: 16px; padding-right: 8px; line-height: 1; color: #000000;">🌐</td>
+                              <td valign="middle" style="font-size: 13px; font-weight: 600;">
+                                <a href="https://www.bkma.in" style="color: #000000; text-decoration: none;">www.bkma.in</a>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
                       </tr>
                     </table>
@@ -779,3 +799,4 @@ router.post('/reviewers/:id/resend-credentials', requireAuth, requireRole(['admi
 });
 
 export default router;
+

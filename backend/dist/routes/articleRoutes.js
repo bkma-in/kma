@@ -10,6 +10,7 @@ const authMiddleware_1 = require("../middleware/authMiddleware");
 const uploadMiddleware_1 = require("../middleware/uploadMiddleware");
 const storageService_1 = require("../services/storageService");
 const cloudinaryService_1 = require("../services/cloudinaryService");
+const notificationService_1 = require("../services/notificationService");
 const router = (0, express_1.Router)();
 const normalizeRecommendation = (recommendation) => {
     if (!recommendation)
@@ -140,6 +141,11 @@ router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)
             await invitationsBatch.commit();
             // Update article with pending authors
             await articleRef.update({ authors: newArticle.authors });
+        }
+        if (finalStatus === 'submitted') {
+            (0, notificationService_1.sendArticleSubmittedNotifications)(articleRef.id).catch(err => {
+                console.error('Failed to trigger submission notifications on article create:', err);
+            });
         }
         res.json({ success: true, article: newArticle, invitationsQueued: invitees.length > 0 });
     }
@@ -715,6 +721,11 @@ router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRol
             }
         }
         await articleRef.update(updateData);
+        if (updateData.status === 'submitted' && currentStatus !== 'submitted') {
+            (0, notificationService_1.sendArticleSubmittedNotifications)(id).catch(err => {
+                console.error('Failed to trigger submission notifications on article update:', err);
+            });
+        }
         // Fetch latest data for summary if submitted
         let summary = null;
         if (updateData.status === 'submitted') {
@@ -844,6 +855,9 @@ router.patch('/:id/assign', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
             status: 'under_review',
             updatedAt: new Date()
         });
+        (0, notificationService_1.sendReviewerAssignedNotifications)(id, reviewerIds).catch(err => {
+            console.error('Failed to trigger reviewer assigned notifications:', err);
+        });
         res.json({ success: true, message: 'Reviewers assigned successfully' });
     }
     catch (error) {
@@ -921,6 +935,22 @@ router.patch('/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
             if (adminNote !== undefined)
                 updateData.adminNote = adminNote;
             await articleRef.update(updateData);
+            // Trigger notifications based on status
+            if (status === 'revision_requested') {
+                (0, notificationService_1.sendRevisionRequestedNotifications)(id, adminNote).catch(err => {
+                    console.error('Failed to trigger revision requested notifications:', err);
+                });
+            }
+            else if (status === 'desk_rejected') {
+                (0, notificationService_1.sendArticleRejectedNotifications)(id, true, rejectionReason).catch(err => {
+                    console.error('Failed to trigger desk rejection notifications:', err);
+                });
+            }
+            else if (status === 'rejected') {
+                (0, notificationService_1.sendArticleRejectedNotifications)(id, false, rejectionReason).catch(err => {
+                    console.error('Failed to trigger rejection notifications:', err);
+                });
+            }
         }
         res.json({ success: true, message: 'Status updated successfully' });
     }
@@ -1193,6 +1223,9 @@ router.post('/invitations/:token/accept', authMiddleware_1.requireAuth, async (r
                 updatedAt: new Date()
             });
             autoSubmitted = true;
+            (0, notificationService_1.sendArticleSubmittedNotifications)(articleId).catch(err => {
+                console.error('Failed to trigger submission notifications on auto-submit:', err);
+            });
         }
         else {
             await articleRef.update({ authors, updatedAt: new Date() });
