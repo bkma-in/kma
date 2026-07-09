@@ -1,5 +1,6 @@
 import React from 'react';
 import './ReceiptTemplate.css';
+import signatureImg from '../assets/signature.jpg';
 
 export interface ReceiptTemplateProps {
   receiptNumber?: string;
@@ -157,7 +158,7 @@ export const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
             <div className="receipt-signature-area">
               <div className="receipt-signature-space">
                 {status?.toUpperCase() === 'PAID' && (
-                  <span className="digital-signature-placeholder">Digitally Signed</span>
+                  <img src={signatureImg} alt="Digital Signature" className="receipt-signature-img" />
                 )}
               </div>
               <p className="receipt-signee-label">Executive Editor</p>

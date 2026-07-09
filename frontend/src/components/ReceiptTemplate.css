@@ -395,6 +395,12 @@
   letter-spacing: 0.5px;
 }
 
+.receipt-signature-img {
+  height: 35px;
+  object-fit: contain;
+  filter: invert(1) hue-rotate(180deg) contrast(150%);
+}
+
 .receipt-signee-label {
   font-size: 12.5px;
   font-weight: bold;
