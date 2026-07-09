@@ -515,9 +515,41 @@ const AdminArticles = () => {
                         <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider space-y-1.5 pl-1">
                           <div className="space-y-0.5">
                             <span className="text-[8px] text-zinc-400 font-black tracking-widest block uppercase mb-1">Assigned:</span>
-                            {article.assignedReviewers.map(r => (
-                              <div key={r} className="h-5 flex items-center truncate max-w-[150px]">{r}</div>
-                            ))}
+                            {article.assignedReviewers.map(r => {
+                              const review = article.reviews ? Object.values(article.reviews).find(
+                                (rev: any) => rev.reviewerName?.toLowerCase() === r.toLowerCase()
+                              ) : null;
+                              
+                              let recommendationBadge = null;
+                              if (review && review.recommendation) {
+                                if (['Approved', 'Accepted'].includes(review.recommendation)) {
+                                  recommendationBadge = (
+                                    <span className="mr-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-emerald-700 bg-emerald-50 border border-emerald-100 rounded">
+                                      Approved
+                                    </span>
+                                  );
+                                } else if (['Rejected'].includes(review.recommendation)) {
+                                  recommendationBadge = (
+                                    <span className="mr-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-rose-700 bg-rose-50 border border-rose-100 rounded">
+                                      Rejected
+                                    </span>
+                                  );
+                                } else if (['Needs Improvement', 'Need Improvements'].includes(review.recommendation)) {
+                                  recommendationBadge = (
+                                    <span className="mr-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-amber-700 bg-amber-50 border border-amber-200 rounded">
+                                      Revision
+                                    </span>
+                                  );
+                                }
+                              }
+
+                              return (
+                                <div key={r} className="h-5 flex items-center truncate max-w-[200px] font-sans">
+                                  {recommendationBadge}
+                                  <span>{r}</span>
+                                </div>
+                              );
+                            })}
                           </div>
                           {article.reviewDeadline && (
                             <div className="pt-1.5 border-t border-zinc-100 space-y-1">
