@@ -520,10 +520,10 @@ const AdminArticles = () => {
                       {/* Assigned reviewers + deadline */}
                       {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
                         <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider space-y-1.5 pl-1">
-                          <div>
-                            <span className="text-[8px] text-zinc-400 font-black tracking-widest block uppercase mb-0.5">Assigned:</span>
+                          <div className="space-y-0.5">
+                            <span className="text-[8px] text-zinc-400 font-black tracking-widest block uppercase mb-1">Assigned:</span>
                             {article.assignedReviewers.map(r => (
-                              <div key={r} className="truncate max-w-[150px]">{r}</div>
+                              <div key={r} className="h-5 flex items-center truncate max-w-[150px]">{r}</div>
                             ))}
                           </div>
                           {article.reviewDeadline && (
@@ -561,13 +561,29 @@ const AdminArticles = () => {
                     </div>
                   </td>
                   <td className="px-6 py-5">
-                    {article.reviewerFeedback?.remarks ? (
-                      <p className="text-[10px] text-zinc-600 font-medium line-clamp-2 italic max-w-[200px] leading-relaxed">
-                        "{article.reviewerFeedback.remarks}"
-                      </p>
-                    ) : (
-                      <span className="text-[10px] text-zinc-300 font-bold">—</span>
-                    )}
+                    <div className="space-y-2">
+                      {/* Invisible status spacer to match column 1 height */}
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] border border-transparent invisible select-none pointer-events-none">
+                        Spacer
+                      </span>
+                      {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
+                        <div className="space-y-0.5 pl-1">
+                          <span className="text-[8px] text-zinc-400 font-black tracking-widest block uppercase mb-1">Remarks:</span>
+                          {article.assignedReviewers.map(r => {
+                            const review = article.reviews ? Object.values(article.reviews).find(
+                              (rev: any) => rev.reviewerName?.toLowerCase() === r.toLowerCase()
+                            ) : null;
+                            return (
+                              <div key={r} className="h-5 flex items-center text-[10px] text-zinc-600 font-medium italic max-w-[250px] truncate">
+                                {review?.remarks ? `"${review.remarks}"` : '—'}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-zinc-300 font-bold">—</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center justify-end gap-2">
