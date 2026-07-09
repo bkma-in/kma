@@ -1,6 +1,6 @@
 import React from 'react';
 import './ReceiptTemplate.css';
-import signatureImg from '../assets/signature.jpg';
+import signatureImg from '../assets/signature.png';
 
 export interface ReceiptTemplateProps {
   receiptNumber?: string;
