@@ -472,14 +472,14 @@ export const sendReviewerAssignedNotifications = async (articleId: string, revie
           bodyText,
           'Assignment details',
           cardRows,
-          config.brevo.loginUrl,
-          'Login',
-          'Reviewer Guidelines',
-          'Please follow the reviewer guidelines and provide an objective critique. If you have a conflict of interest, please let the editors know.',
-          '🔍',
-          'Evaluate methodology',
-          '📝',
-          'Submit remarks & recommendation'
+          '',
+          '',
+          `<a href="${config.brevo.reviewerGuidelinesUrl}" style="color: #000000; text-decoration: underline; font-weight: 700;">Reviewer Guidelines</a>`,
+          `Please follow the <a href="${config.brevo.reviewerGuidelinesUrl}" style="color: #000000; text-decoration: underline;"><strong>Reviewer Guidelines</strong></a> and provide an objective critique. If you have a conflict of interest, please let the editors know.`,
+          '',
+          '',
+          '',
+          ''
         );
 
         sendTransactionalEmail(reviewer.email, reviewer.name || 'Reviewer', `Review Invitation: ${title}`, emailHtml).catch(err => {

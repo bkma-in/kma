@@ -417,7 +417,7 @@ const sendReviewerAssignedNotifications = async (articleId, reviewerIds) => {
                     { label: 'Review Deadline', value: formattedDeadline },
                     { label: 'Total Duration', value: durationStr },
                 ];
-                const emailHtml = (0, exports.buildHtmlEmail)(reviewer.name || 'Reviewer', 'New Review Assignment', bodyText, 'Assignment details', cardRows, env_1.config.brevo.loginUrl, 'Login', 'Reviewer Guidelines', 'Please follow the reviewer guidelines and provide an objective critique. If you have a conflict of interest, please let the editors know.', '🔍', 'Evaluate methodology', '📝', 'Submit remarks & recommendation');
+                const emailHtml = (0, exports.buildHtmlEmail)(reviewer.name || 'Reviewer', 'New Review Assignment', bodyText, 'Assignment details', cardRows, '', '', `<a href="${env_1.config.brevo.reviewerGuidelinesUrl}" style="color: #000000; text-decoration: underline; font-weight: 700;">Reviewer Guidelines</a>`, `Please follow the <a href="${env_1.config.brevo.reviewerGuidelinesUrl}" style="color: #000000; text-decoration: underline;"><strong>Reviewer Guidelines</strong></a> and provide an objective critique. If you have a conflict of interest, please let the editors know.`, '', '', '', '');
                 (0, emailService_1.sendTransactionalEmail)(reviewer.email, reviewer.name || 'Reviewer', `Review Invitation: ${title}`, emailHtml).catch(err => {
                     console.error(`[NOTIF-SERVICE] Failed to send review assignment email to reviewer ${reviewer.email}:`, err);
                 });
