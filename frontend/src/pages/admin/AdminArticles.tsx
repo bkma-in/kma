@@ -584,14 +584,14 @@ const AdminArticles = () => {
                     </div>
                   </td>
                   <td className="px-6 py-5">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex flex-col items-end justify-center gap-1.5 ml-auto">
                       {/* Contextual Action Buttons */}
                       {article.status === 'Revision Requested' ? (
-                        <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none bg-amber-50 border border-amber-200/50 px-3 py-1.5 rounded-xl font-sans">
+                        <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none bg-amber-50 border border-amber-200/50 px-3 py-1.5 rounded-xl font-sans w-full text-center min-w-[150px]">
                           Under Author Update
                         </span>
                       ) : ['Published', 'Ready to Publish', 'Rejected', 'Desk Rejected'].includes(article.status) ? (
-                        <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">No actions required</span>
+                        <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider w-full text-center min-w-[150px]">No actions required</span>
                       ) : (!article.assignedReviewers || article.assignedReviewers.length === 0) ? (
                         // Stage 1: Before Reviewer Assignment
                         <button 
@@ -604,7 +604,7 @@ const AdminArticles = () => {
                             setRejectionError(null);
                             setSelectedReviewersForAssigning([]);
                           }}
-                          className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase cursor-pointer"
+                          className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase cursor-pointer w-full text-center min-w-[150px]"
                         >
                           Review Submission
                         </button>
@@ -647,23 +647,21 @@ const AdminArticles = () => {
                         return (
                           <>
                             {showPublish && (
-                              <div className="flex flex-col items-center gap-1">
-                                <button
-                                  onClick={() => {
-                                    confirm({
-                                      title: 'Move to Publish List',
-                                      message: 'Move this article to the Ready to Publish list?',
-                                      confirmText: 'Move',
-                                      onConfirm: () => {
-                                        updateStatus(article.id, 'Ready to Publish', null, 'Article successfully moved to Ready to Publish list.');
-                                      }
-                                    });
-                                  }}
-                                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-emerald-700 transition-all uppercase cursor-pointer"
-                                >
-                                  Move to Publish List
-                                </button>
-                              </div>
+                              <button
+                                onClick={() => {
+                                  confirm({
+                                    title: 'Move to Publish List',
+                                    message: 'Move this article to the Ready to Publish list?',
+                                    confirmText: 'Move',
+                                    onConfirm: () => {
+                                      updateStatus(article.id, 'Ready to Publish', null, 'Article successfully moved to Ready to Publish list.');
+                                    }
+                                  });
+                                }}
+                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-emerald-700 transition-all uppercase cursor-pointer w-full text-center min-w-[150px]"
+                              >
+                                Move to Publish List
+                              </button>
                             )}
                             
                             {showSendBack && (
@@ -673,7 +671,7 @@ const AdminArticles = () => {
                                   setAdminNote('');
                                   setIsAdminNoteModalOpen(true);
                                 }}
-                                className="px-4 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all uppercase cursor-pointer"
+                                className="px-4 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all uppercase cursor-pointer w-full text-center min-w-[150px]"
                               >
                                 Send Back to Author
                               </button>
