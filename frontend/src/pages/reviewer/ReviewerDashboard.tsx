@@ -17,6 +17,7 @@ import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
 import { getArticles } from '../../services/article.service';
 import { useProfile } from '../../hooks/useProfile';
+import { formatDate } from '../../utils/dateHelpers';
 
 const ReviewerDashboard = () => {
   const { profile } = useProfile();
@@ -52,7 +53,7 @@ const ReviewerDashboard = () => {
     title: a.status === 'under_review' ? 'New Article Assigned' :
            a.status === 'accepted' ? 'Review Submitted' : 'Status Updated',
     detail: a.title,
-    time: new Date(a.createdAt).toLocaleDateString(),
+    time: formatDate(a.createdAt),
     icon: a.status === 'accepted' ? CheckCircle2 : FileText,
     iconColor: a.status === 'accepted' ? 'text-emerald-500' : 'text-blue-500',
     bgColor: a.status === 'accepted' ? 'bg-emerald-50' : 'bg-blue-50'
