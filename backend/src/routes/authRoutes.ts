@@ -188,8 +188,8 @@ router.post('/forgot-password/send-otp', async (req, res) => {
       [
         { label: 'OTP CODE', value: `<span style="font-family: monospace; font-size: 16px; font-weight: 800; letter-spacing: 0.15em; color: #000000;">${otp}</span>` }
       ],
-      loginUrl,
-      'Login',
+      '',
+      '',
       'Security Notice',
       `If you did not request a password reset, please ignore this email or contact <a href="${supportUrl}" style="color: #000000; text-decoration: underline;"><strong>support</strong></a>. Keep this verification code confidential.`,
       '🔒',

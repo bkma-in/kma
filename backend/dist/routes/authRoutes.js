@@ -162,7 +162,7 @@ router.post('/forgot-password/send-otp', async (req, res) => {
         const supportUrl = env_1.config.brevo.supportUrl;
         const emailHtml = (0, notificationService_1.buildHtmlEmail)(userName, 'Reset Your Password', 'You have requested to reset your password for the Bulletin of Kerala Mathematical Association portal. Use the following 6-digit One-Time Password (OTP) to verify your identity. This OTP is valid for 5 minutes.', 'Verification Code', [
             { label: 'OTP CODE', value: `<span style="font-family: monospace; font-size: 16px; font-weight: 800; letter-spacing: 0.15em; color: #000000;">${otp}</span>` }
-        ], loginUrl, 'Login', 'Security Notice', `If you did not request a password reset, please ignore this email or contact <a href="${supportUrl}" style="color: #000000; text-decoration: underline;"><strong>support</strong></a>. Keep this verification code confidential.`, '🔒', 'Do not share this code', '⏳', 'Expires in 5 minutes');
+        ], '', '', 'Security Notice', `If you did not request a password reset, please ignore this email or contact <a href="${supportUrl}" style="color: #000000; text-decoration: underline;"><strong>support</strong></a>. Keep this verification code confidential.`, '🔒', 'Do not share this code', '⏳', 'Expires in 5 minutes');
         await (0, emailService_1.sendTransactionalEmail)(normEmail, userName, 'KMA Portal Password Reset OTP', emailHtml);
         res.json({ success: true, message: 'Verification OTP has been sent to your email.' });
     }

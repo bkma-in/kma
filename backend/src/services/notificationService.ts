@@ -127,11 +127,12 @@ export const buildHtmlEmail = (
                   <td style="padding: 24px;">
                     <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #000000;">${cardTitle}</h3>
                     
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; margin-bottom: 24px;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%; ${(actionText && actionUrl) ? 'margin-bottom: 24px;' : 'margin-bottom: 0;' }">
                       <!-- Dynamic rows of key-values -->
                       ${rowsHtml}
                     </table>
                     
+                    ${(actionText && actionUrl) ? `
                     <!-- Action Button -->
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
                       <tr>
@@ -140,6 +141,7 @@ export const buildHtmlEmail = (
                         </td>
                       </tr>
                     </table>
+                    ` : ''}
                   </td>
                 </tr>
               </table>
