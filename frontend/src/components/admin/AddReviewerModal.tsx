@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, Mail, GraduationCap, Briefcase, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { addReviewer } from '../../services/user.service';
+import { addReviewer, resendReviewerCredentials } from '../../services/user.service';
 import { useNotification } from '../../utils/NotificationContext';
 
 interface AddReviewerModalProps {

@@ -53,3 +53,8 @@ export const getAuthors = async () => {
   return response.data;
 };
 
+export const resendReviewerCredentials = async (id: string) => {
+  const response = await api.post(`/users/reviewers/${id}/resend-credentials`);
+  return response.data;
+};
+
