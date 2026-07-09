@@ -211,6 +211,46 @@ const AddReviewerModal: React.FC<AddReviewerModalProps> = ({ isOpen, onClose, on
                       The reviewer account has been created successfully. If they do not receive the initial credentials email, they can reset their password and log in using the <strong>"Forgot Password"</strong> link on the login page.
                     </p>
                   </div>
+                
+                  <div className="flex gap-4 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="flex-1 py-4 bg-zinc-100 text-zinc-600 rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-200 transition-all active:scale-95 cursor-pointer"
+                    >
+                      CLOSE
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setIsLoading(true);
+                        try {
+                          const response = await resendReviewerCredentials(createdReviewerId);
+                          if (response.success) {
+                            showToast('Credentials have been sent successfully.', 'success');
+                            setEmailSent(true);
+                            onSuccess({ id: createdReviewerId, credentialsShared: true });
+                          }
+                        } catch (err: any) {
+                          console.error(err);
+                          const msg = err.response?.data?.error || 'Failed to resend credentials.';
+                          showToast(msg, 'error');
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }}
+                      disabled={isLoading}
+                      className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 size={18} className="animate-spin" />
+                          SENDING...
+                        </>
+                      ) : (
+                        'RESEND CREDENTIALS'
+                      )}
+                    </button>
+                  </div>
                   <button
                     onClick={handleClose}
                     className="w-full py-4 bg-black text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-800 transition-all active:scale-95 cursor-pointer mt-4"

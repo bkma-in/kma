@@ -367,7 +367,7 @@
   align-items: center;
   position: relative;
   min-width: 150px;
-  height: 80px;
+  height: 110px;
   justify-content: flex-end;
 }
 
@@ -378,7 +378,7 @@
 }
 
 .receipt-signature-space {
-  height: 35px;
+  height: 65px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -393,6 +393,13 @@
   padding: 1px 6px;
   border-radius: 4px;
   letter-spacing: 0.5px;
+}
+
+.receipt-signature-img {
+  height: 65px;
+  width: auto;
+  max-width: 180px;
+  object-fit: contain;
 }
 
 .receipt-signee-label {

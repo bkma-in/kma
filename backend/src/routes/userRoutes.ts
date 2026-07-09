@@ -537,7 +537,8 @@ router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRe
         status: data.status || 'Pending',
         rejectionReason: data.rejectionReason || '',
         profileImage: data.profileImage || null,
-        mustChangePassword: data.mustChangePassword === true
+        mustChangePassword: data.mustChangePassword === true,
+        credentialsShared: data.credentialsShared === true
       };
     });
 
@@ -719,6 +720,7 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
 
     if (emailSent) {
       await logAuditEvent('Credentials Email Sent', userRecord.uid, adminId);
+      await db.collection('users').doc(userRecord.uid).update({ credentialsShared: true });
     } else {
       await logAuditEvent('Credentials Email Failed', userRecord.uid, adminId);
     }
@@ -734,12 +736,65 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
         experience,
         regDate: userData.createdAt.toISOString(),
         status: 'Approved',
-        mustChangePassword: true
+        mustChangePassword: true,
+        credentialsShared: emailSent
       }
     });
   } catch (error: any) {
     console.error('Create reviewer error:', error);
     res.status(500).json({ error: error.message || 'Failed to create reviewer user' });
+  }
+});
+
+// Admin: Resend reviewer credentials (regenerates password, updates Auth, emails Reviewer, logs audit)
+router.post('/reviewers/:id/resend-credentials', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+  const adminId = req.user!.uid;
+  try {
+    const id = req.params.id as string;
+    const userRef = db.collection('users').doc(id);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'Reviewer not found' });
+    }
+
+    const userData = userDoc.data()!;
+    if (userData.role !== 'reviewer') {
+      return res.status(400).json({ error: 'User is not a reviewer' });
+    }
+
+    const tempPassword = generateTempPassword();
+
+    // 1. Update password securely in Firebase Authentication (invalidates old temp password)
+    await auth.updateUser(id, { password: tempPassword });
+
+    // 2. Reset mustChangePassword flag in Firestore document to true
+    await userRef.update({
+      mustChangePassword: true,
+      credentialsShared: false,
+      updatedAt: new Date()
+    });
+
+    // 3. Send email with new temporary credentials
+    const emailSent = await sendReviewerCredentialsEmail(userData.name, userData.email, tempPassword, req);
+
+    if (!emailSent) {
+      return res.status(500).json({ error: 'Failed to deliver credentials email. Please try again.' });
+    }
+
+    // Update credentialsShared to true on successful email delivery
+    await userRef.update({
+      credentialsShared: true,
+      updatedAt: new Date()
+    });
+
+    // 4. Record Credentials Resent in audit log
+    await logAuditEvent('Credentials Resent', id, adminId);
+
+    res.json({ success: true, message: 'Credentials have been sent successfully.' });
+  } catch (error: any) {
+    console.error('Resend credentials error:', error);
+    res.status(500).json({ error: error.message || 'Failed to resend credentials' });
   }
 });
 
