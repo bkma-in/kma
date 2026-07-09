@@ -20,10 +20,11 @@ export const buildHtmlEmail = (
   actionText: string,
   noticeTitle: string,
   noticeText: string,
-  bento1Icon: string,
-  bento1Text: string,
-  bento2Icon: string,
-  bento2Text: string
+  bento1Icon: string = '',
+  bento1Text: string = '',
+  bento2Icon: string = '',
+  bento2Text: string = '',
+  extraHtml?: string
 ): string => {
   const rowsHtml = rows
     .map((row, index) => {
@@ -148,6 +149,8 @@ export const buildHtmlEmail = (
             </td>
           </tr>
 
+          ${extraHtml || ''}
+
           <!-- Spacer -->
           <tr>
             <td height="24" style="font-size: 0; line-height: 0;">&nbsp;</td>
@@ -177,6 +180,7 @@ export const buildHtmlEmail = (
             </td>
           </tr>
 
+          ${(bento1Text && bento2Text) ? `
           <!-- What You Can Do (Bento Grid in Tables) -->
           <tr>
             <td style="padding: 0 40px 30px 40px;">
@@ -195,6 +199,7 @@ export const buildHtmlEmail = (
               </table>
             </td>
           </tr>
+          ` : ''}
 
           <!-- Support Section -->
           <tr>
@@ -566,22 +571,39 @@ export const sendArticleRejectedNotifications = async (articleId: string, isDesk
         const cardRows: EmailRow[] = [
           { label: 'Article Title', value: title },
           { label: 'Final Status', value: isDeskReject ? 'Desk Rejected' : 'Rejected' },
-          { label: 'Rejection Reason', value: reason || 'No specific reason provided' },
         ];
+        const extraHtml = `
+          <!-- Rejection Reason Section -->
+          <tr>
+            <td style="padding: 0 40px 24px 40px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100% !important; min-width: 100%;">
+                <tr>
+                  <td>
+                    <span style="font-size: 11px; font-weight: 700; color: #71717a; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 8px;">Rejection Reason</span>
+                    <div style="font-size: 14px; color: #e11d48; line-height: 1.6; font-weight: 600; padding: 16px; background-color: #fff1f2; border: 1px solid #ffe4e6; border-radius: 12px;">
+                      ${reason || 'No specific reason provided'}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        `;
         const emailHtml = buildHtmlEmail(
           author.name || 'Author',
           isDeskReject ? 'Editorial Decision: Desk Rejected' : 'Editorial Decision: Rejected',
           bodyText,
           'Decision details',
           cardRows,
-          config.brevo.loginUrl,
-          'Login',
+          '',
+          '',
           'Editorial Decision',
-          'Our decision is based on a high volume of submissions, suitability, and reviewers recommendation. We appreciate you choosing BKMA and wish you success with other publishing opportunities.',
-          '📊',
-          'Review feedback details',
-          '📧',
-          'Contact editorial office'
+          `For more details, please read the <a href="${config.brevo.authorGuidelinesUrl}" style="color: #000000; text-decoration: underline;"><strong>Authors Guidelines</strong></a>.`,
+          '',
+          '',
+          '',
+          '',
+          extraHtml
         );
 
         sendTransactionalEmail(author.email, author.name || 'Author', `Decision on Manuscript: ${title}`, emailHtml).catch(err => {
