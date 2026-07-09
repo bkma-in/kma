@@ -590,16 +590,18 @@ const AdminArticles = () => {
                             Move to Publish List
                           </button>
                           
-                          <button
-                            onClick={() => {
-                              setSelectedArticle(article);
-                              setAdminNote('');
-                              setIsAdminNoteModalOpen(true);
-                            }}
-                            className="px-4 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all uppercase cursor-pointer"
-                          >
-                            Send Back to Author
-                          </button>
+                          {article.status !== 'Revision Requested' && (
+                            <button
+                              onClick={() => {
+                                setSelectedArticle(article);
+                                setAdminNote('');
+                                setIsAdminNoteModalOpen(true);
+                              }}
+                              className="px-4 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all uppercase cursor-pointer"
+                            >
+                              Send Back to Author
+                            </button>
+                          )}
                         </>
                       )}
                     </div>

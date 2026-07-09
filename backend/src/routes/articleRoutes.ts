@@ -217,8 +217,12 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
 
     // In-memory sort since we can't use composite index easily
     articles.sort((a, b) => {
-      const timeA = a.createdAt?._seconds || 0;
-      const timeB = b.createdAt?._seconds || 0;
+      const dateA = a.updatedAt || a.createdAt;
+      const dateB = b.updatedAt || b.createdAt;
+      
+      const timeA = dateA && dateA._seconds ? dateA._seconds : (dateA ? Math.floor(new Date(dateA).getTime() / 1000) : 0);
+      const timeB = dateB && dateB._seconds ? dateB._seconds : (dateB ? Math.floor(new Date(dateB).getTime() / 1000) : 0);
+      
       return timeB - timeA;
     });
 
