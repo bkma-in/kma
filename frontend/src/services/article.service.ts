@@ -39,8 +39,19 @@ export const updateArticle = async (id: string, formData: FormData) => {
   return response.data;
 };
 
-export const assignReviewers = async (id: string, reviewerIds: string[], reviewerNames: string[]) => {
-  const response = await api.patch(`/articles/${id}/assign`, { reviewerIds, reviewerNames });
+export const assignReviewers = async (
+  id: string,
+  reviewerIds: string[],
+  reviewerNames: string[],
+  reviewDeadline?: string,
+  reviewerNote?: string
+) => {
+  const response = await api.patch(`/articles/${id}/assign`, {
+    reviewerIds,
+    reviewerNames,
+    reviewDeadline,
+    reviewerNote
+  });
   return response.data;
 };
 

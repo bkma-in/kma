@@ -22,6 +22,25 @@ const ReviewerArticles = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
+  const getRemainingDays = (deadline: string) => {
+    const deadlineDate = new Date(deadline);
+    if (isNaN(deadlineDate.getTime())) return null;
+    const deadlineStart = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
+    
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const diffMs = deadlineStart.getTime() - todayStart.getTime();
+    return Math.round(diffMs / (1000 * 60 * 60 * 24));
+  };
+
+  const formatDateTimeline = (val: any) => {
+    if (!val) return 'N/A';
+    const ms = val.seconds ? val.seconds * 1000 : (val._seconds ? val._seconds * 1000 : new Date(val).getTime());
+    if (isNaN(ms)) return String(val);
+    return new Date(ms).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
   useEffect(() => {
     const fetchArticles = async () => {
       try {
@@ -219,6 +238,59 @@ const ReviewerArticles = () => {
                       <div className="space-y-1">
                         <p className="text-[9px] font-black text-zinc-400 tracking-[0.2em] uppercase">{article.articleId}</p>
                         <h3 className="text-sm font-bold text-black group-hover:text-zinc-700 transition-colors line-clamp-2 leading-tight font-['Outfit']">{article.title}</h3>
+                        
+                        {article.reviewDeadline && (
+                          <div className="pt-3 mt-3 border-t border-zinc-100 space-y-2">
+                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Review Timeline</p>
+                            
+                            <div className="flex flex-wrap gap-2 items-center text-[10px] text-zinc-500">
+                              <span className="bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded text-zinc-600">
+                                <strong>Assigned On:</strong> {formatDateTimeline(article.assignedAt || article.createdAt)}
+                              </span>
+                              <span className="bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded text-zinc-600">
+                                <strong>Review Deadline:</strong> {formatDateTimeline(article.reviewDeadline)}
+                              </span>
+                              {(() => {
+                                const diff = getRemainingDays(article.reviewDeadline);
+                                if (diff === null) return null;
+                                if (diff < 0) {
+                                  return (
+                                    <span className="px-2 py-0.5 bg-rose-50 border border-rose-100 text-rose-600 rounded font-bold uppercase text-[9px] flex items-center gap-1">
+                                      🔴 Deadline Passed
+                                    </span>
+                                  );
+                                } else {
+                                  return (
+                                    <span className={cn(
+                                      "px-2 py-0.5 rounded border font-bold uppercase text-[9px] flex items-center gap-1",
+                                      diff <= 3 ? "bg-amber-50 border-amber-100 text-amber-600" : "bg-emerald-50 border-emerald-100 text-emerald-600"
+                                    )}>
+                                      {diff <= 3 ? '🟠 Due Soon' : '🟢 On Track'} ({diff === 0 ? 'Due Today' : `${diff} Days Left`})
+                                    </span>
+                                  );
+                                }
+                              })()}
+                            </div>
+
+                            {(() => {
+                              const diff = getRemainingDays(article.reviewDeadline);
+                              if (diff !== null && diff < 0) {
+                                return (
+                                  <div className="p-2.5 bg-rose-50 border border-rose-100 text-rose-800 rounded-xl text-[10px] leading-relaxed font-medium italic">
+                                    ⚠️ The recommended review timeline has passed. You can still complete and submit your review.
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+
+                            {article.reviewerNote && (
+                              <div className="p-2.5 bg-zinc-50 border border-zinc-100 rounded-xl text-[10px] text-zinc-500 leading-relaxed">
+                                <strong>Editor's Note:</strong> "{article.reviewerNote}"
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-8 py-8">

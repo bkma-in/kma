@@ -74,6 +74,10 @@ interface Article {
     reviewedFileName?: string;
     updatedAt?: any;
   }>;
+  reviewDeadline?: string;
+  assignedAt?: any;
+  assignedBy?: string;
+  reviewerNote?: string;
 }
 
 const AdminArticles = () => {
@@ -114,6 +118,27 @@ const AdminArticles = () => {
   const [isConfirmingAssignment, setIsConfirmingAssignment] = useState(false);
   const [assignmentValidationError, setAssignmentValidationError] = useState<string | null>(null);
   const [reviewerSearchTerm, setReviewerSearchTerm] = useState('');
+
+  const getDefaultDeadline = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().split('T')[0];
+  };
+
+  const [reviewDeadline, setReviewDeadline] = useState(getDefaultDeadline());
+  const [reviewerNote, setReviewerNote] = useState('');
+
+  const getRemainingDays = (deadline: string) => {
+    const deadlineDate = new Date(deadline);
+    if (isNaN(deadlineDate.getTime())) return null;
+    const deadlineStart = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate());
+    
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const diffMs = deadlineStart.getTime() - todayStart.getTime();
+    return Math.round(diffMs / (1000 * 60 * 60 * 24));
+  };
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -330,13 +355,29 @@ const AdminArticles = () => {
         return;
       }
 
-      const response = await assignReviewersService(id, reviewerIds, reviewers);
+      const response = await assignReviewersService(id, reviewerIds, reviewers, reviewDeadline, reviewerNote);
       if (response.success) {
-        setArticles(prev => prev.map(a => a.id === id ? { ...a, assignedReviewers: reviewers, status: 'Under Review' } : a));
+        setArticles(prev => prev.map(a => a.id === id ? { 
+          ...a, 
+          assignedReviewers: reviewers, 
+          status: 'Under Review',
+          reviewDeadline: reviewDeadline || undefined,
+          reviewerNote: reviewerNote || undefined
+        } : a));
         if (selectedArticle?.id === id) {
-          setSelectedArticle(prev => prev ? { ...prev, assignedReviewers: reviewers, status: 'Under Review' } : null);
+          setSelectedArticle(prev => prev ? { 
+            ...prev, 
+            assignedReviewers: reviewers, 
+            status: 'Under Review',
+            reviewDeadline: reviewDeadline || undefined,
+            reviewerNote: reviewerNote || undefined
+          } : null);
         }
         showToast("Reviewers assigned successfully.", 'success');
+        
+        // Reset states
+        setReviewDeadline(getDefaultDeadline());
+        setReviewerNote('');
       }
     } catch (error) {
       console.error('Failed to assign reviewers:', error);
@@ -453,11 +494,41 @@ const AdminArticles = () => {
                         {article.status}
                       </span>
                       {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
-                        <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider space-y-0.5 pl-1">
-                          <span className="text-[8px] text-zinc-400 font-black tracking-widest block uppercase">Assigned:</span>
-                          {article.assignedReviewers.map(r => (
-                            <div key={r} className="truncate max-w-[150px]">{r}</div>
-                          ))}
+                        <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider space-y-1.5 pl-1">
+                          <div>
+                            <span className="text-[8px] text-zinc-400 font-black tracking-widest block uppercase mb-0.5">Assigned:</span>
+                            {article.assignedReviewers.map(r => (
+                              <div key={r} className="truncate max-w-[150px]">{r}</div>
+                            ))}
+                          </div>
+                          {article.reviewDeadline && (
+                            <div className="pt-1.5 border-t border-zinc-100 space-y-1">
+                              <span className="text-[8px] text-zinc-400 font-black tracking-widest block uppercase">Deadline:</span>
+                              <div className="text-[9px] text-zinc-500 font-bold">
+                                {new Date(article.reviewDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </div>
+                              {(() => {
+                                const diff = getRemainingDays(article.reviewDeadline);
+                                if (diff === null) return null;
+                                if (diff < 0) {
+                                  return (
+                                    <span className="inline-block px-2 py-0.5 bg-rose-50 border border-rose-100 text-rose-600 rounded text-[8px] font-bold uppercase tracking-wide">
+                                      ⚠️ Overdue by {Math.abs(diff)} days
+                                    </span>
+                                  );
+                                } else {
+                                  return (
+                                    <span className={cn(
+                                      "inline-block px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border",
+                                      diff <= 3 ? "bg-amber-50 border-amber-100 text-amber-600" : "bg-emerald-50 border-emerald-100 text-emerald-600"
+                                    )}>
+                                      ⏰ {diff === 0 ? 'Due Today' : `${diff} days left`}
+                                    </span>
+                                  );
+                                }
+                              })()}
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="text-[8px] text-zinc-400 italic pl-1">No reviewers assigned</div>
@@ -914,9 +985,49 @@ const AdminArticles = () => {
                 )}
 
                 {(selectedArticle.status === 'Sent to Reviewer' || (selectedArticle.status === 'Under Review' && !selectedArticle.reviewerFeedback)) && (
-                  <div className="w-full py-5 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-black tracking-widest border border-indigo-100 flex items-center justify-center gap-3">
-                    <Send size={18} />
-                    WAITING FOR REVIEWER FEEDBACK
+                  <div className="space-y-3">
+                    <div className="w-full py-5 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-black tracking-widest border border-indigo-100 flex items-center justify-center gap-3">
+                      <Send size={18} />
+                      WAITING FOR REVIEWER FEEDBACK
+                    </div>
+                    {selectedArticle.reviewDeadline && (
+                      <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl space-y-2 text-xs">
+                        <div className="flex justify-between items-center text-zinc-500">
+                          <span>📅 Review Deadline:</span>
+                          <span className="font-bold text-black">
+                            {new Date(selectedArticle.reviewDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>⏳ Days Remaining:</span>
+                          {(() => {
+                            const diff = getRemainingDays(selectedArticle.reviewDeadline);
+                            if (diff === null) return <span className="font-bold text-zinc-500">N/A</span>;
+                            if (diff < 0) {
+                              return (
+                                <span className="px-2 py-0.5 bg-rose-50 border border-rose-100 text-rose-600 rounded font-bold uppercase text-[10px]">
+                                  ⚠️ Overdue by {Math.abs(diff)} days
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded font-bold uppercase text-[10px] border",
+                                  diff <= 3 ? "bg-amber-50 border-amber-100 text-amber-600" : "bg-emerald-50 border-emerald-100 text-emerald-600"
+                                )}>
+                                  {diff === 0 ? '⏰ Due Today' : `${diff} days left`}
+                                </span>
+                              );
+                            }
+                          })()}
+                        </div>
+                        {selectedArticle.reviewerNote && (
+                          <div className="pt-2 border-t border-zinc-200 text-zinc-400 italic">
+                            <strong>Note to Reviewer:</strong> "{selectedArticle.reviewerNote}"
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1251,6 +1362,44 @@ const AdminArticles = () => {
                         );
                       })}
                     </div>
+
+                    {/* Review Timeline Section */}
+                    <div className="border-t border-white/5 pt-6 mt-4 space-y-4">
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        📅 Review Timeline
+                      </h4>
+                      
+                      {/* Review Deadline */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 px-1" htmlFor="review-deadline">
+                          Review Deadline <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          id="review-deadline"
+                          type="date"
+                          min={new Date().toISOString().split('T')[0]}
+                          value={reviewDeadline}
+                          onChange={(e) => setReviewDeadline(e.target.value)}
+                          className="w-full px-4 py-3 bg-zinc-900 border border-white/10 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all"
+                          required
+                        />
+                      </div>
+
+                      {/* Optional Note to Reviewer */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 px-1" htmlFor="reviewer-note">
+                          Optional Note to Reviewer
+                        </label>
+                        <textarea
+                          id="reviewer-note"
+                          rows={3}
+                          placeholder="Please complete your review before the selected date."
+                          value={reviewerNote}
+                          onChange={(e) => setReviewerNote(e.target.value)}
+                          className="w-full px-4 py-3 bg-zinc-900 border border-white/10 rounded-xl text-xs font-medium text-white focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all placeholder:text-zinc-600 resize-none"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Inline validation and footer actions */}
@@ -1282,9 +1431,17 @@ const AdminArticles = () => {
                             setAssignmentValidationError("Maximum 5 reviewers allowed.");
                             return;
                           }
+                          const selectedDate = new Date(reviewDeadline);
+                          const today = new Date();
+                          const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                          if (isNaN(selectedDate.getTime()) || selectedDate < todayStart) {
+                            setAssignmentValidationError("Please select a valid future deadline.");
+                            return;
+                          }
                           setIsConfirmingAssignment(true);
                         }}
-                        className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs tracking-widest transition-all shadow-lg shadow-emerald-600/20 uppercase"
+                        disabled={selectedReviewersForAssigning.length === 0 || !reviewDeadline}
+                        className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-xs tracking-widest transition-all shadow-lg shadow-emerald-600/20 uppercase disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Assign Reviewers
                       </button>

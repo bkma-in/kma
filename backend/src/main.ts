@@ -2,9 +2,16 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config/env';
 import { runMigrations } from './services/migrationService';
+import { checkAndSendReviewReminders } from './services/notificationService';
 
 // Run migrations in background
 runMigrations().catch(err => console.error('Startup migration error:', err));
+
+// Run reviewer reminders at startup and set 12-hour interval scheduler
+checkAndSendReviewReminders().catch(err => console.error('Startup reminders check error:', err));
+setInterval(() => {
+  checkAndSendReviewReminders().catch(err => console.error('Scheduled reminders check error:', err));
+}, 12 * 60 * 60 * 1000);
 
 // Import Routes
 import authRoutes from './routes/authRoutes';
