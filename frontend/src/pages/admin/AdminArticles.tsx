@@ -280,19 +280,24 @@ const AdminArticles = () => {
 
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case 'Approved': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-      case 'Ready to Publish': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-      case 'Needs Improvement': return 'bg-amber-50 text-amber-600 border-amber-100';
-      case 'Need Improvements': return 'bg-amber-50 text-amber-600 border-amber-100';
-      case 'Revision Requested': return 'bg-rose-50 text-rose-600 border-rose-100';
-      case 'Rejected': return 'bg-red-50 text-red-600 border-red-100';
-      case 'Desk Rejected': return 'bg-red-50 text-red-600 border-red-100';
-      case 'Published': return 'bg-purple-50 text-purple-600 border-purple-100';
-      case 'Submitted': return 'bg-blue-50 text-blue-600 border-blue-100';
-      case 'Sent to Reviewer': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
-      case 'Under Review': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
-      case 'Awaiting Decision': return 'bg-violet-50 text-violet-600 border-violet-100';
-      default: return 'bg-zinc-100 text-zinc-600 border-zinc-200';
+      // Green — accepted / ready
+      case 'Approved':        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Ready to Publish': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Published':       return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      // Yellow — revision
+      case 'Revision Requested': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'Needs Improvement':  return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'Need Improvements':  return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'Awaiting Decision':  return 'bg-amber-50 text-amber-700 border-amber-200';
+      // Red — rejection
+      case 'Rejected':      return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'Desk Rejected': return 'bg-rose-50 text-rose-700 border-rose-200';
+      // Blue — under review
+      case 'Under Review':      return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'Sent to Reviewer':  return 'bg-blue-50 text-blue-700 border-blue-200';
+      // Default — submitted / other
+      case 'Submitted': return 'bg-zinc-100 text-zinc-600 border-zinc-200';
+      default:          return 'bg-zinc-100 text-zinc-600 border-zinc-200';
     }
   };
 
@@ -503,6 +508,7 @@ const AdminArticles = () => {
                   </td>
                   <td className="px-6 py-5">
                     <div className="space-y-2">
+                      {/* Workflow status chip */}
                       <span className={cn(
                         "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
                         getStatusStyles(article.status)
@@ -510,6 +516,8 @@ const AdminArticles = () => {
                         {getStatusIcon(article.status)}
                         {article.status}
                       </span>
+
+                      {/* Assigned reviewers + deadline */}
                       {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
                         <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider space-y-1.5 pl-1">
                           <div>
@@ -553,9 +561,13 @@ const AdminArticles = () => {
                     </div>
                   </td>
                   <td className="px-6 py-5">
-                    <p className="text-[10px] text-zinc-500 font-medium line-clamp-1 italic max-w-[200px]">
-                      {article.reviewerFeedback?.remarks || 'No feedback yet'}
-                    </p>
+                    {article.reviewerFeedback?.remarks ? (
+                      <p className="text-[10px] text-zinc-600 font-medium line-clamp-2 italic max-w-[200px] leading-relaxed">
+                        "{article.reviewerFeedback.remarks}"
+                      </p>
+                    ) : (
+                      <span className="text-[10px] text-zinc-300 font-bold">—</span>
+                    )}
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center justify-end gap-2">
