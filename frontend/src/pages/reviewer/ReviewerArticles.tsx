@@ -239,7 +239,7 @@ const ReviewerArticles = () => {
               <tr className="bg-zinc-50/50 border-b border-zinc-100">
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%]">Manuscript Details</th>
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Reference</th>
-                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] whitespace-nowrap">Time Limit</th>
+                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] whitespace-nowrap">Time and Date</th>
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%]">Decision</th>
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Upload Result</th>
                 <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Actions</th>
@@ -279,9 +279,16 @@ const ReviewerArticles = () => {
                       </button>
                     </td>
 
-                    {/* Time Limit – only rendered when admin set a review deadline */}
+                    {/* Time and Date column */}
                     <td className="px-8 py-8">
-                      {article.reviewDeadline ? (
+                      {isReviewed ? (
+                        <div className="space-y-1">
+                          <span className="font-black uppercase tracking-widest text-[8px] text-zinc-400 block mb-0.5">Reviewed On</span>
+                          <p className="text-xs font-bold text-emerald-600">
+                            {formatDateTimeline(article.reviewerFeedback?.updatedAt || article.updatedAt)}
+                          </p>
+                        </div>
+                      ) : article.reviewDeadline ? (
                         <div className="space-y-2 min-w-[160px]">
                           {/* Deadline date */}
                           <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
@@ -357,9 +364,9 @@ const ReviewerArticles = () => {
                       ) : (
                         <div className={cn(
                           "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
-                          article.selectedStatus === 'Accepted' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                          article.selectedStatus === 'Rejected' ? "bg-rose-50 text-rose-600 border-rose-100" :
-                          "bg-amber-50 text-amber-600 border-amber-100"
+                          (article.selectedStatus === 'Accepted' || article.selectedStatus === 'Approved') ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                          article.selectedStatus === 'Rejected' ? "bg-rose-50 text-rose-700 border-rose-200" :
+                          "bg-amber-50 text-amber-700 border-amber-200"
                         )}>
                           {article.selectedStatus}
                         </div>
