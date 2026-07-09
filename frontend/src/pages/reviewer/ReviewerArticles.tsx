@@ -218,11 +218,11 @@ const ReviewerArticles = () => {
           <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
               <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-1/3">Manuscript Details</th>
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Author</th>
+                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-1/4">Manuscript Details</th>
                 <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Reference</th>
-                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Upload Result</th>
+                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Time Limit</th>
                 <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Decision</th>
+                <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Upload Result</th>
                 <th className="px-8 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
@@ -234,70 +234,17 @@ const ReviewerArticles = () => {
                     "group transition-all duration-300",
                     isReviewed ? "opacity-60 bg-zinc-50/50" : "hover:bg-zinc-50/50"
                   )}>
+                    {/* Manuscript Details */}
                     <td className="px-8 py-8">
                       <div className="space-y-1">
                         <p className="text-[9px] font-black text-zinc-400 tracking-[0.2em] uppercase">{article.articleId}</p>
                         <h3 className="text-sm font-bold text-black group-hover:text-zinc-700 transition-colors line-clamp-2 leading-tight font-['Outfit']">{article.title}</h3>
-                        
-                        {article.reviewDeadline && (
-                          <div className="pt-3 mt-3 border-t border-zinc-100 space-y-2">
-                            <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Review Timeline</p>
-                            
-                            <div className="flex flex-wrap gap-2 items-center text-[10px] text-zinc-500">
-                              <span className="bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded text-zinc-600">
-                                <strong>Assigned On:</strong> {formatDateTimeline(article.assignedAt || article.createdAt)}
-                              </span>
-                              <span className="bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded text-zinc-600">
-                                <strong>Review Deadline:</strong> {formatDateTimeline(article.reviewDeadline)}
-                              </span>
-                              {(() => {
-                                const diff = getRemainingDays(article.reviewDeadline);
-                                if (diff === null) return null;
-                                if (diff < 0) {
-                                  return (
-                                    <span className="px-2 py-0.5 bg-rose-50 border border-rose-100 text-rose-600 rounded font-bold uppercase text-[9px] flex items-center gap-1">
-                                      🔴 Deadline Passed
-                                    </span>
-                                  );
-                                } else {
-                                  return (
-                                    <span className={cn(
-                                      "px-2 py-0.5 rounded border font-bold uppercase text-[9px] flex items-center gap-1",
-                                      diff <= 3 ? "bg-amber-50 border-amber-100 text-amber-600" : "bg-emerald-50 border-emerald-100 text-emerald-600"
-                                    )}>
-                                      {diff <= 3 ? '🟠 Due Soon' : '🟢 On Track'} ({diff === 0 ? 'Due Today' : `${diff} Days Left`})
-                                    </span>
-                                  );
-                                }
-                              })()}
-                            </div>
-
-                            {(() => {
-                              const diff = getRemainingDays(article.reviewDeadline);
-                              if (diff !== null && diff < 0) {
-                                return (
-                                  <div className="p-2.5 bg-rose-50 border border-rose-100 text-rose-800 rounded-xl text-[10px] leading-relaxed font-medium italic">
-                                    ⚠️ The recommended review timeline has passed. You can still complete and submit your review.
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
-
-                            {article.reviewerNote && (
-                              <div className="p-2.5 bg-zinc-50 border border-zinc-100 rounded-xl text-[10px] text-zinc-500 leading-relaxed">
-                                <strong>Editor's Note:</strong> "{article.reviewerNote}"
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </td>
-                    <td className="px-8 py-8">
-                      <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">{article.author || 'Anonymous Author'}</p>
-                    </td>
+
+                    {/* Reference – Download Button */}
                     <td className="px-8 py-8 text-center">
-                      <button 
+                      <button
                         onClick={() => handleDownload(article.articleId, article.title)}
                         className="p-3 bg-white text-zinc-600 rounded-xl hover:bg-black hover:text-white transition-all shadow-sm border border-zinc-100 group/btn"
                         title="Download Original Manuscript"
@@ -305,47 +252,66 @@ const ReviewerArticles = () => {
                         <Download size={18} className="group-hover/btn:scale-110 transition-transform" />
                       </button>
                     </td>
+
+                    {/* Time Limit – only rendered when admin set a review deadline */}
                     <td className="px-8 py-8">
-                      {!isReviewed ? (
-                        <div className="flex flex-col items-center gap-2">
-                          <button 
-                            onClick={() => fileInputRefs.current[article.articleId]?.click()}
-                            className={cn(
-                              "px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 border shadow-sm",
-                              article.uploadedFile 
-                                ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
-                                : "bg-white text-zinc-500 hover:border-black border-zinc-200"
-                            )}
-                          >
-                            <Upload size={14} />
-                            {article.uploadedFile ? 'Change File' : 'Upload Review'}
-                          </button>
-                          {article.uploadedFile && (
-                            <span className="text-[8px] text-zinc-400 font-bold truncate max-w-[120px] uppercase tracking-tighter">
-                              {article.uploadedFile.name}
-                            </span>
+                      {article.reviewDeadline ? (
+                        <div className="space-y-2 min-w-[160px]">
+                          {/* Deadline date */}
+                          <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+                            <span className="font-black uppercase tracking-widest text-[8px] text-zinc-400">Deadline</span>
+                          </div>
+                          <p className="text-xs font-bold text-black">
+                            {new Date(article.reviewDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </p>
+
+                          {/* Countdown badge */}
+                          {(() => {
+                            const diff = getRemainingDays(article.reviewDeadline);
+                            if (diff === null) return null;
+                            if (diff < 0) {
+                              return (
+                                <div className="space-y-1.5">
+                                  <span className="inline-block px-2 py-0.5 bg-rose-50 border border-rose-100 text-rose-600 rounded font-bold uppercase text-[8px] tracking-wide">
+                                    🔴 Deadline Passed
+                                  </span>
+                                  <p className="text-[9px] text-rose-500 italic leading-snug">
+                                    You can still submit your review.
+                                  </p>
+                                </div>
+                              );
+                            }
+                            return (
+                              <span className={cn(
+                                "inline-block px-2 py-0.5 rounded border font-bold uppercase text-[8px] tracking-wide",
+                                diff === 0
+                                  ? "bg-rose-50 border-rose-100 text-rose-600"
+                                  : diff <= 3
+                                    ? "bg-amber-50 border-amber-100 text-amber-600"
+                                    : "bg-emerald-50 border-emerald-100 text-emerald-600"
+                              )}>
+                                {diff === 0 ? '⏰ Due Today' : diff <= 3 ? `🟠 ${diff} Days Left` : `🟢 ${diff} Days Left`}
+                              </span>
+                            );
+                          })()}
+
+                          {/* Editor note */}
+                          {article.reviewerNote && (
+                            <div className="pt-1.5 border-t border-zinc-100 text-[9px] text-zinc-400 italic leading-relaxed">
+                              <strong className="not-italic text-zinc-500">Note:</strong> "{article.reviewerNote}"
+                            </div>
                           )}
-                          <input 
-                            type="file"
-                            ref={el => { fileInputRefs.current[article.articleId] = el; }}
-                            onChange={(e) => handleFileChange(article.articleId, e)}
-                            accept=".pdf,.doc,.docx"
-                            className="hidden"
-                          />
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center gap-1 text-emerald-600">
-                          <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center">
-                            <CheckCircle2 size={16} />
-                          </div>
-                          <span className="text-[9px] font-black uppercase tracking-widest">Logged</span>
-                        </div>
+                        <span className="text-[9px] text-zinc-300 font-bold uppercase tracking-widest">—</span>
                       )}
                     </td>
+
+                    {/* Decision */}
                     <td className="px-8 py-8">
                       {!isReviewed ? (
                         <div className="relative space-y-2">
-                          <select 
+                          <select
                             value={article.selectedStatus}
                             onChange={(e) => handleStatusChange(article.articleId, e.target.value as ReviewStatus)}
                             className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm"
@@ -373,9 +339,50 @@ const ReviewerArticles = () => {
                         </div>
                       )}
                     </td>
+
+                    {/* Upload Result */}
+                    <td className="px-8 py-8">
+                      {!isReviewed ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <button
+                            onClick={() => fileInputRefs.current[article.articleId]?.click()}
+                            className={cn(
+                              "px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 border shadow-sm",
+                              article.uploadedFile
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                                : "bg-white text-zinc-500 hover:border-black border-zinc-200"
+                            )}
+                          >
+                            <Upload size={14} />
+                            {article.uploadedFile ? 'Change File' : 'Upload Review'}
+                          </button>
+                          {article.uploadedFile && (
+                            <span className="text-[8px] text-zinc-400 font-bold truncate max-w-[120px] uppercase tracking-tighter">
+                              {article.uploadedFile.name}
+                            </span>
+                          )}
+                          <input
+                            type="file"
+                            ref={el => { fileInputRefs.current[article.articleId] = el; }}
+                            onChange={(e) => handleFileChange(article.articleId, e)}
+                            accept=".pdf,.doc,.docx"
+                            className="hidden"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-1 text-emerald-600">
+                          <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center">
+                            <CheckCircle2 size={16} />
+                          </div>
+                          <span className="text-[9px] font-black uppercase tracking-widest">Logged</span>
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Actions */}
                     <td className="px-8 py-8 text-right">
                       {!isReviewed ? (
-                        <button 
+                        <button
                           onClick={() => handleSubmit(article.articleId)}
                           disabled={submittingId === article.articleId}
                           className="px-6 py-3 bg-black text-white rounded-xl font-bold text-[10px] tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 active:scale-95 flex items-center justify-center gap-2 ml-auto disabled:bg-zinc-200 disabled:cursor-not-allowed"

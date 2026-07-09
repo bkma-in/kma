@@ -17,7 +17,8 @@ import {
   MessageSquare,
   AlertCircle,
   UserCheck,
-  Loader2
+  Loader2,
+  Calendar
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
@@ -1366,7 +1367,7 @@ const AdminArticles = () => {
                     {/* Review Timeline Section */}
                     <div className="border-t border-white/5 pt-6 mt-4 space-y-4">
                       <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                        📅 Review Timeline
+                        <Calendar size={14} className="text-white" /> Review Timeline
                       </h4>
                       
                       {/* Review Deadline */}
