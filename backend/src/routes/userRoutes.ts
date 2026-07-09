@@ -184,34 +184,36 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
                 <tr>
                   <td style="padding: 24px; text-align: center;">
                     <h3 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 700; color: #000000;">Need Help?</h3>
-                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #71717a; line-height: 1.5;">If you experience any difficulty accessing your account, please contact the BKMA Editorial Office.</p>
+                    <p style="margin: 0 0 16px 0; font-size: 13px; color: #71717a; line-height: 1.5;">If you experience any difficulty accessing your account, please contact:</p>
                     
                     <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
-                      <tr>
-                        <!-- Email Contact -->
-                        <td style="padding: 0 16px 8px 16px;">
-                          <table border="0" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td valign="middle" style="font-size: 16px; padding-right: 8px; line-height: 1; color: #000000;">✉</td>
-                              <td valign="middle" style="font-size: 13px; font-weight: 600;">
-                                <a href="mailto:keralamathsasso@gmail.com" style="color: #000000; text-decoration: none;">keralamathsasso@gmail.com</a>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                        <!-- Website Contact -->
-                        <td style="padding: 0 16px 8px 16px;">
-                          <table border="0" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td valign="middle" style="font-size: 16px; padding-right: 8px; line-height: 1; color: #000000;">🌐</td>
-                              <td valign="middle" style="font-size: 13px; font-weight: 600;">
-                                <a href="https://www.bkma.in" style="color: #000000; text-decoration: none;">www.bkma.in</a>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
+                       <tr>
+                         <!-- Email Contact -->
+                         <td style="padding: 0 8px 8px 8px; vertical-align: middle;">
+                           <table border="0" cellpadding="0" cellspacing="0">
+                             <tr>
+                               <td valign="middle" style="font-size: 16px; padding-right: 8px; line-height: 1; color: #000000;">✉</td>
+                               <td valign="middle" style="font-size: 13px; font-weight: 600;">
+                                 <a href="mailto:keralamathsasso@gmail.com" style="color: #000000; text-decoration: none;">keralamathsasso@gmail.com</a>
+                               </td>
+                             </tr>
+                           </table>
+                         </td>
+                         <!-- Separator Pipe -->
+                         <td style="padding: 0 8px 8px 8px; font-size: 13px; color: #71717a; vertical-align: middle;">|</td>
+                         <!-- Website Contact -->
+                         <td style="padding: 0 8px 8px 8px; vertical-align: middle;">
+                           <table border="0" cellpadding="0" cellspacing="0">
+                             <tr>
+                               <td valign="middle" style="font-size: 16px; padding-right: 8px; line-height: 1; color: #000000;">🌐</td>
+                               <td valign="middle" style="font-size: 13px; font-weight: 600;">
+                                 <a href="https://www.bkma.in" style="color: #000000; text-decoration: none;">www.bkma.in</a>
+                               </td>
+                             </tr>
+                           </table>
+                         </td>
+                       </tr>
+                     </table>
                   </td>
                 </tr>
               </table>
