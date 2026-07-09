@@ -83,7 +83,7 @@ const AdminDashboard = () => {
     { label: 'Decision Required', value: pendingAdminCount.toString(), icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Under Review', value: underReviewCount.toString(), icon: History, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: 'Approved', value: articles.filter(a => a.status === 'accepted' || a.status === 'published').length.toString(), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Rejected', value: articles.filter(a => a.status === 'rejected' || a.status === 'desk_rejected').length.toString(), icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: 'Rejected', value: articles.filter(a => a.status === 'rejected' || a.status === 'desk_rejected').length.toString(), icon: XCircle, color: 'text-red-600', bg: 'bg-red-50' },
   ];
 
   const getActivityTitle = (a: any) => {

@@ -26,6 +26,7 @@ exports.config = {
         loginUrl: process.env.PORTAL_LOGIN_URL || process.env.LOGIN_URL || 'http://localhost:5173/auth',
         privacyPolicyUrl: process.env.PRIVACY_POLICY_URL || 'http://localhost:5173/privacy-policy',
         reviewerGuidelinesUrl: process.env.REVIEWER_GUIDELINES_URL || 'http://localhost:5173/reviewer-guidelines',
+        authorGuidelinesUrl: process.env.AUTHOR_GUIDELINES_URL || 'http://localhost:5173/author-guidelines',
         supportUrl: process.env.SUPPORT_URL || 'http://localhost:5173/support',
     },
     payments: {

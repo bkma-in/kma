@@ -57,6 +57,7 @@ interface Article {
     recommendation: string;
   };
   adminNote?: string;
+  rejectionReason?: string;
   reviews?: Record<string, {
     remarks: string;
     recommendation: string;
@@ -244,7 +245,8 @@ const MyArticles = () => {
       case 'under_review': return 'Under Review';
       case 'revision_requested': return 'Revision Required';
       case 'accepted': return 'Approved';
-      case 'rejected': return 'Rejected';
+      case 'rejected':
+      case 'desk_rejected': return 'Rejected';
       default: return 'Submitted';
     }
   };
@@ -256,7 +258,7 @@ const MyArticles = () => {
       case 'Under Review': return 'bg-amber-50 text-amber-600 border-amber-100';
       case 'Revision Required': return 'bg-rose-50 text-rose-600 border-rose-100';
       case 'Approved': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-      case 'Rejected': return 'bg-zinc-100 text-zinc-500 border-zinc-200';
+      case 'Rejected': return 'bg-red-50 text-red-600 border-red-100';
     }
   };
 
@@ -716,18 +718,12 @@ const MyArticles = () => {
                         >
                           <Edit2 size={18} />
                         </button>
-                        {/* Only primary author can delete */}
-                        {article.authorId === currentUser?.uid && (
+                        {/* Only primary author can delete draft */}
+                        {article.authorId === currentUser?.uid && article.status === 'Draft' && (
                           <button 
                             onClick={() => handleDelete(article)}
-                            disabled={article.status !== 'Submitted' && article.status !== 'Draft'}
-                            className={cn(
-                              "p-2 rounded-lg transition-all",
-                              (article.status === 'Submitted' || article.status === 'Draft')
-                                ? "text-zinc-400 hover:text-rose-600 hover:bg-rose-50" 
-                                : "text-zinc-200 cursor-not-allowed"
-                            )}
-                            title={(article.status === 'Submitted' || article.status === 'Draft') ? 'Delete Manuscript' : 'Cannot delete after review begins'}
+                            className="p-2 rounded-lg transition-all text-zinc-400 hover:text-rose-600 hover:bg-rose-50"
+                            title="Delete Draft"
                           >
                             <Trash2 size={18} />
                           </button>
@@ -922,20 +918,22 @@ const MyArticles = () => {
                   </div>
                 </div>
 
-                {/* Reviewer Feedback / Revision Request Details (For Authors) */}
-                {selectedArticle.status === 'Revision Required' && (
+                {/* Reviewer Feedback / Revision Request / Rejection Details (For Authors) */}
+                {(selectedArticle.status === 'Revision Required' || selectedArticle.status === 'Rejected') && (
                   <div className="space-y-4 animate-in fade-in duration-300">
                     <div className="flex items-center gap-2 text-[10px] font-black text-rose-600 uppercase tracking-widest">
                       <AlertCircle size={14} />
-                      Revision Requirements
+                      {selectedArticle.status === 'Rejected' ? 'Rejection Details' : 'Revision Requirements'}
                     </div>
                     <div className="p-8 bg-rose-50/50 border border-rose-100 rounded-[2rem] space-y-6">
-                      {/* Admin Note */}
-                      {selectedArticle.adminNote && (
+                      {/* Admin / Rejection Note */}
+                      {(selectedArticle.rejectionReason || selectedArticle.adminNote) && (
                         <div>
-                          <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 font-['Outfit']">Rejected Reason / Reviewer Comments</h4>
+                          <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-2 font-['Outfit']">
+                            {selectedArticle.status === 'Rejected' ? 'Rejection Reason' : 'Rejected Reason / Reviewer Comments'}
+                          </h4>
                           <p className="text-xs text-zinc-700 leading-relaxed font-sans bg-white p-4 rounded-xl border border-rose-200/50">
-                            "{selectedArticle.adminNote}"
+                            "{selectedArticle.rejectionReason || selectedArticle.adminNote}"
                           </p>
                         </div>
                       )}
@@ -1028,19 +1026,15 @@ const MyArticles = () => {
                       <Edit2 size={16} />
                       {selectedArticle.status === 'Revision Required' ? 'Submit Revision' : 'Edit Locked'}
                     </button>
-                    <button 
-                      onClick={() => handleDelete(selectedArticle)}
-                      disabled={selectedArticle.status !== 'Submitted'}
-                      className={cn(
-                        "flex items-center gap-2 px-6 py-4 rounded-2xl font-bold text-[10px] tracking-[0.2em] transition-all uppercase shadow-xl shadow-black/5",
-                        selectedArticle.status === 'Submitted'
-                          ? "bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
-                          : "bg-zinc-50 text-zinc-300 cursor-not-allowed"
-                      )}
-                    >
-                      <Trash2 size={16} />
-                      Delete
-                    </button>
+                    {selectedArticle.status === 'Draft' && (
+                      <button 
+                        onClick={() => handleDelete(selectedArticle)}
+                        className="flex items-center gap-2 px-6 py-4 rounded-2xl font-bold text-[10px] tracking-[0.2em] transition-all uppercase shadow-xl shadow-black/5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white"
+                      >
+                        <Trash2 size={16} />
+                        Delete Draft
+                      </button>
+                    )}
                     <button 
                       onClick={async () => {
                         try {

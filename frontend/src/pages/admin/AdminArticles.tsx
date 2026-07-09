@@ -243,8 +243,8 @@ const AdminArticles = () => {
       case 'Needs Improvement': return 'bg-amber-50 text-amber-600 border-amber-100';
       case 'Need Improvements': return 'bg-amber-50 text-amber-600 border-amber-100';
       case 'Revision Requested': return 'bg-rose-50 text-rose-600 border-rose-100';
-      case 'Rejected': return 'bg-rose-50 text-rose-600 border-rose-100';
-      case 'Desk Rejected': return 'bg-rose-50 text-rose-600 border-rose-100';
+      case 'Rejected': return 'bg-red-50 text-red-600 border-red-100';
+      case 'Desk Rejected': return 'bg-red-50 text-red-600 border-red-100';
       case 'Published': return 'bg-purple-50 text-purple-600 border-purple-100';
       case 'Submitted': return 'bg-blue-50 text-blue-600 border-blue-100';
       case 'Sent to Reviewer': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
@@ -277,7 +277,7 @@ const AdminArticles = () => {
     // If statusFilter is 'All', exclude 'Ready to Publish', 'Published', and 'Revision Requested'
     // so they disappear from the active review queue immediately.
     const matchesStatus = statusFilter === 'All'
-      ? (art.status !== 'Ready to Publish' && art.status !== 'Published' && art.status !== 'Revision Requested' && art.status !== 'Rejected' && art.status !== 'Desk Rejected')
+      ? (art.status !== 'Ready to Publish' && art.status !== 'Published' && art.status !== 'Revision Requested')
       : art.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
