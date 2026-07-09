@@ -30,7 +30,7 @@ import { db } from '../../config/firebase';
 import { formatDate } from '../../utils/dateHelpers';
 import AddReviewerModal from '../../components/admin/AddReviewerModal';
 import { useNotification } from '../../utils/NotificationContext';
-import { getReviewers, updateReviewerStatus, resendReviewerCredentials } from '../../services/user.service';
+import { getReviewers, updateReviewerStatus } from '../../services/user.service';
 
 // Types
 type ReviewerStatus = 'Pending' | 'Approved' | 'Rejected' | 'Deactivated';
@@ -205,24 +205,6 @@ const AdminAuthors = () => {
     setIsModalOpen(true);
   };
 
-  const handleResendCredentials = async (reviewer: Reviewer) => {
-    confirm({
-      title: 'Resend Credentials',
-      message: `Are you sure you want to regenerate and resend login credentials to ${reviewer.name} (${reviewer.email})?\n\nThis will invalidate their previous temporary password.`,
-      confirmText: 'Resend',
-      onConfirm: async () => {
-        try {
-          const response = await resendReviewerCredentials(reviewer.id);
-          if (response.success) {
-            showToast('Credentials have been sent successfully.', 'success');
-          }
-        } catch (error: any) {
-          console.error('Failed to resend credentials:', error);
-          showToast(error.response?.data?.error || 'Failed to resend credentials.', 'error');
-        }
-      }
-    });
-  };
 
   const handleToggleActive = async (reviewerId: string, newStatus: 'Approved' | 'Deactivated') => {
     const isDeactivating = newStatus === 'Deactivated';
@@ -396,15 +378,6 @@ const AdminAuthors = () => {
                         </>
                       ) : reviewer.status === 'Approved' ? (
                         <div className="flex items-center gap-2">
-                          {reviewer.mustChangePassword && (
-                            <button 
-                              onClick={() => handleResendCredentials(reviewer)}
-                              className="px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-[10px] font-black tracking-widest text-zinc-700 rounded-lg transition-all border border-zinc-200 shadow-sm uppercase cursor-pointer"
-                              title="Resend Credentials"
-                            >
-                              Resend
-                            </button>
-                          )}
                           <button 
                             onClick={() => handleToggleActive(reviewer.id, 'Deactivated')}
                             className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-[10px] font-black tracking-widest text-rose-600 rounded-lg transition-all border border-rose-100 shadow-sm uppercase cursor-pointer"

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, User, Mail, GraduationCap, Briefcase, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { addReviewer, resendReviewerCredentials } from '../../services/user.service';
+import { addReviewer } from '../../services/user.service';
 import { useNotification } from '../../utils/NotificationContext';
 
 interface AddReviewerModalProps {
@@ -202,57 +202,21 @@ const AddReviewerModal: React.FC<AddReviewerModalProps> = ({ isOpen, onClose, on
                 </>
               ) : (
                 <>
-                  <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                    <AlertCircle size={40} />
+                  <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                    <CheckCircle2 size={40} />
                   </div>
                   <div className="space-y-2">
                     <h4 className="text-xl font-bold text-black font-['Outfit']">Reviewer created successfully.</h4>
-                    <p className="text-sm text-zinc-600 font-semibold">
-                      Unable to deliver login credentials via email.
-                    </p>
-                    <p className="text-xs text-zinc-400">
-                      Please click "Resend Credentials".
+                    <p className="text-sm text-zinc-600 font-medium leading-relaxed">
+                      The reviewer account has been created successfully. If they do not receive the initial credentials email, they can reset their password and log in using the <strong>"Forgot Password"</strong> link on the login page.
                     </p>
                   </div>
-                  
-                  <div className="flex gap-4 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleClose}
-                      className="flex-1 py-4 bg-zinc-100 text-zinc-600 rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-200 transition-all active:scale-95 cursor-pointer"
-                    >
-                      CLOSE
-                    </button>
-                    <button
-                      onClick={async () => {
-                        setIsLoading(true);
-                        try {
-                          const response = await resendReviewerCredentials(createdReviewerId);
-                          if (response.success) {
-                            showToast('Credentials have been sent successfully.', 'success');
-                            setEmailSent(true);
-                          }
-                        } catch (err: any) {
-                          console.error(err);
-                          const msg = err.response?.data?.error || 'Failed to resend credentials.';
-                          showToast(msg, 'error');
-                        } finally {
-                          setIsLoading(false);
-                        }
-                      }}
-                      disabled={isLoading}
-                      className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 size={18} className="animate-spin" />
-                          SENDING...
-                        </>
-                      ) : (
-                        'RESEND CREDENTIALS'
-                      )}
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleClose}
+                    className="w-full py-4 bg-black text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-800 transition-all active:scale-95 cursor-pointer mt-4"
+                  >
+                    DONE
+                  </button>
                 </>
               )}
             </div>

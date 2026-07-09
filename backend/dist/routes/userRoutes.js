@@ -188,12 +188,10 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
                     
                     <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
                       <tr>
-                        <td align="center" style="font-size: 13px; font-weight: 600; padding-bottom: 8px;">
+                        <td style="font-size: 13px; font-weight: 600; padding: 0 12px 8px 12px;">
                           <a href="mailto:keralamathsasso@gmail.com" style="color: #000000; text-decoration: none; white-space: nowrap;">✉&nbsp;keralamathsasso@gmail.com</a>
                         </td>
-                      </tr>
-                      <tr>
-                        <td align="center" style="font-size: 13px; font-weight: 600;">
+                        <td style="font-size: 13px; font-weight: 600; padding: 0 12px 8px 12px;">
                           <a href="https://www.bkma.in" style="color: #000000; text-decoration: none; white-space: nowrap;">🌐&nbsp;www.bkma.in</a>
                         </td>
                       </tr>
@@ -659,42 +657,6 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
     catch (error) {
         console.error('Create reviewer error:', error);
         res.status(500).json({ error: error.message || 'Failed to create reviewer user' });
-    }
-});
-// Admin: Resend reviewer credentials (regenerates password, updates Auth, emails Reviewer, logs audit)
-router.post('/reviewers/:id/resend-credentials', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
-    const adminId = req.user.uid;
-    try {
-        const id = req.params.id;
-        const userRef = firebase_1.db.collection('users').doc(id);
-        const userDoc = await userRef.get();
-        if (!userDoc.exists) {
-            return res.status(404).json({ error: 'Reviewer not found' });
-        }
-        const userData = userDoc.data();
-        if (userData.role !== 'reviewer') {
-            return res.status(400).json({ error: 'User is not a reviewer' });
-        }
-        const tempPassword = generateTempPassword();
-        // 1. Update password securely in Firebase Authentication (invalidates old temp password)
-        await firebase_1.auth.updateUser(id, { password: tempPassword });
-        // 2. Reset mustChangePassword flag in Firestore document to true
-        await userRef.update({
-            mustChangePassword: true,
-            updatedAt: new Date()
-        });
-        // 3. Send email with new temporary credentials
-        const emailSent = await sendReviewerCredentialsEmail(userData.name, userData.email, tempPassword, req);
-        if (!emailSent) {
-            return res.status(500).json({ error: 'Failed to deliver credentials email. Please try again.' });
-        }
-        // 4. Record Credentials Resent in audit log
-        await (0, auditService_1.logAuditEvent)('Credentials Resent', id, adminId);
-        res.json({ success: true, message: 'Credentials have been sent successfully.' });
-    }
-    catch (error) {
-        console.error('Resend credentials error:', error);
-        res.status(500).json({ error: error.message || 'Failed to resend credentials' });
     }
 });
 exports.default = router;
