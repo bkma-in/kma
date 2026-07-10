@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Search, ChevronRight, FileText, Globe, Eye, UserCheck, Shield, Mail } from 'lucide-react';
+import { Search, ChevronRight, Copyright as CopyIcon, FileText, Lock, Mail } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
 import { getDashboardByRole } from '../utils/auth';
 import GlobalFooter from '../components/GlobalFooter';
 
-const TermsAndConditions: React.FC = () => {
+const Copyright: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -108,17 +108,17 @@ const TermsAndConditions: React.FC = () => {
           
           <div className="max-w-4xl mx-auto text-center relative z-10 space-y-2.5">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-['Playfair_Display']">
-              Terms & Conditions
+              Copyright Policy
             </h2>
             <p className="text-zinc-400 text-xs sm:text-sm uppercase tracking-widest font-semibold">
-              Rules and guidelines for accessing and publishing on the BKMA platform.
+              Intellectual Property Rights and Publishing Agreements with BKMA.
             </p>
             
             {/* Breadcrumb Navigation */}
             <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-wider pt-2">
               <Link to="/" className="hover:text-white transition-colors">Home</Link>
               <ChevronRight size={12} className="text-zinc-600" />
-              <span className="text-zinc-300">Terms & Conditions</span>
+              <span className="text-zinc-300">Copyright Policy</span>
             </div>
           </div>
         </section>
@@ -126,124 +126,82 @@ const TermsAndConditions: React.FC = () => {
         {/* Content Section */}
         <section className="max-w-4xl mx-auto px-6 py-12 sm:py-16 space-y-12">
           
-          {/* Card: Introduction */}
+          {/* Card: Main Copyright statement */}
           <div className="bg-white rounded-3xl p-8 sm:p-12 border border-zinc-100 shadow-xl shadow-zinc-200/50 space-y-6">
             <div className="flex items-center gap-4 border-b border-zinc-100 pb-4">
               <div className="w-12 h-12 rounded-2xl bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm shrink-0">
-                <FileText size={22} />
+                <CopyIcon size={22} />
               </div>
               <h3 className="text-xl sm:text-2xl font-bold font-['Outfit'] text-zinc-900">
-                Introduction
+                Copyright Policy & Terms
               </h3>
             </div>
-            <p className="text-zinc-600 text-base sm:text-lg leading-relaxed font-serif">
-              Welcome to <strong className="text-black">BKMA (Bulletin of Kerala Mathematical Association)</strong>. By accessing, browsing, or using this website, you agree to comply with and be bound by these Terms & Conditions. If you do not agree with any part of these terms, you should discontinue use of the website.
-            </p>
+            
+            <div className="space-y-6">
+              <p className="text-zinc-600 text-base sm:text-lg leading-relaxed font-serif">
+                All content published by the Bulletin of Kerala Mathematical Association (BKMA) is protected under applicable copyright laws. Authors retain copyright to their original work while granting BKMA the right to publish and archive accepted manuscripts.
+              </p>
+              <p className="text-zinc-600 text-base sm:text-lg leading-relaxed font-serif">
+                Published articles may be used for educational and non-commercial purposes with proper attribution. Unauthorized reproduction, distribution, or commercial use without prior written permission is prohibited. BKMA is committed to protecting intellectual property and maintaining the highest standards of academic publishing.
+              </p>
+            </div>
           </div>
 
-          {/* Grid Layout: Use of Website & Privacy */}
+          {/* Grid Layout: Authors & Readers Rights */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
-            {/* Card: Use of the Website */}
+            {/* Card: Authors Rights */}
             <div className="bg-white rounded-3xl p-8 border border-zinc-100 shadow-lg shadow-zinc-200/40 space-y-5">
               <div className="flex items-center gap-3 border-b border-zinc-100 pb-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                  <Globe size={18} />
+                  <FileText size={18} />
                 </div>
                 <h3 className="text-lg font-bold font-['Outfit'] text-zinc-900">
-                  Use of the Website
+                  Author Rights
                 </h3>
               </div>
               <div className="space-y-3 text-zinc-600 text-sm sm:text-base leading-relaxed">
                 <p>
-                  The BKMA website is intended to provide information related to mathematical research, publications, academic activities, memberships, and associated services.
-                </p>
-                <p>
-                  Users agree to use the platform only for lawful purposes and in a manner that does not interfere with the operation, security, or accessibility of the website.
+                  Authors retain moral rights and copy-ownership of their papers. By publishing with BKMA, authors grant the association a non-exclusive license to format, distribute, index, and archive the work globally in print and digital databases.
                 </p>
               </div>
             </div>
 
-            {/* Card: Privacy */}
+            {/* Card: Permissions & Usage */}
             <div className="bg-white rounded-3xl p-8 border border-zinc-100 shadow-lg shadow-zinc-200/40 space-y-5">
               <div className="flex items-center gap-3 border-b border-zinc-100 pb-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                  <Eye size={18} />
+                  <Lock size={18} />
                 </div>
                 <h3 className="text-lg font-bold font-['Outfit'] text-zinc-900">
-                  Privacy
+                  Usage & Restrictions
                 </h3>
               </div>
-              <p className="text-zinc-600 text-sm sm:text-base leading-relaxed">
-                Use of the website is also governed by the BKMA Privacy Policy. By using the platform, users consent to the collection and use of information as described in the Privacy Policy.
-              </p>
+              <div className="space-y-3 text-zinc-600 text-sm sm:text-base leading-relaxed">
+                <p>
+                  Any reuse of figures, tables, or text excerpts for commercial purposes requires explicit prior written consent from both BKMA and the authors. Proper citation attribution must always be visible when using articles for educational purposes.
+                </p>
+              </div>
             </div>
 
           </div>
 
-          {/* Card: User Accounts */}
+          {/* Card: Contact Editorial Board */}
           <div className="bg-white rounded-3xl p-8 sm:p-12 border border-zinc-100 shadow-xl shadow-zinc-200/50 space-y-6">
             <div className="flex items-center gap-4 border-b border-zinc-100 pb-4">
               <div className="w-12 h-12 rounded-2xl bg-indigo-50/80 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
-                <UserCheck size={22} />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-bold font-['Outfit'] text-zinc-900">
-                User Accounts
-              </h3>
-            </div>
-            
-            <div className="space-y-4">
-              <p className="text-zinc-600 text-sm sm:text-base leading-relaxed">
-                Certain features may require registration or account creation. Users are responsible for:
-              </p>
-              <ul className="list-disc pl-5 space-y-2 text-zinc-600 text-sm sm:text-base leading-relaxed">
-                <li>Providing accurate and up-to-date information.</li>
-                <li>Maintaining the confidentiality of login credentials.</li>
-                <li>Ensuring that account activities are conducted responsibly.</li>
-                <li>Not sharing account access with unauthorized individuals.</li>
-              </ul>
-              <p className="text-zinc-600 text-sm sm:text-base leading-relaxed italic">
-                BKMA reserves the right to suspend or terminate accounts that violate these terms.
-              </p>
-            </div>
-          </div>
-
-          {/* Card: Intellectual Property */}
-          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-zinc-100 shadow-xl shadow-zinc-200/50 space-y-6">
-            <div className="flex items-center gap-4 border-b border-zinc-100 pb-4">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50/80 border border-rose-100 flex items-center justify-center text-rose-600 shadow-sm shrink-0">
-                <Shield size={22} />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-bold font-['Outfit'] text-zinc-900">
-                Intellectual Property
-              </h3>
-            </div>
-            <div className="space-y-4 text-zinc-600 text-sm sm:text-base leading-relaxed">
-              <p>
-                All content published on the website, including articles, logos, graphics, designs, and text, remains the property of BKMA or the respective content owners unless otherwise stated.
-              </p>
-              <p>
-                Users may not reproduce, distribute, modify, or republish website content without prior authorization.
-              </p>
-            </div>
-          </div>
-
-          {/* Card: Contact Information */}
-          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-zinc-100 shadow-xl shadow-zinc-200/50 space-y-6">
-            <div className="flex items-center gap-4 border-b border-zinc-100 pb-4">
-              <div className="w-12 h-12 rounded-2xl bg-teal-50/80 border border-teal-100 flex items-center justify-center text-teal-600 shadow-sm shrink-0">
                 <Mail size={22} />
               </div>
               <h3 className="text-xl sm:text-2xl font-bold font-['Outfit'] text-zinc-900">
-                Contact Information
+                Permission Enquiries
               </h3>
             </div>
             <div className="space-y-4 text-zinc-600 text-sm sm:text-base leading-relaxed">
               <p>
-                For questions regarding these Terms & Conditions, users may contact BKMA through the official contact channels available on the website.
+                To request permissions for translation, reproduction, or republication of materials, please send a written request to the BKMA Editorial Board.
               </p>
               <p className="font-semibold text-black">
-                By continuing to use the BKMA website, you acknowledge that you have read, understood, and agreed to these Terms & Conditions.
+                Email: editor@keralamathematicalassociation.org
               </p>
             </div>
           </div>
@@ -350,4 +308,4 @@ const TermsAndConditions: React.FC = () => {
   );
 };
 
-export default TermsAndConditions;
+export default Copyright;

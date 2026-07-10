@@ -246,6 +246,10 @@ const AboutUs: React.FC = () => {
                       <Link to="/privacy-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
                         {link}
                       </Link>
+                    ) : link === 'Copyright' ? (
+                      <Link to="/copyright" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
                     ) : (
                       <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
                     )}

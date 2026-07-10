@@ -37,8 +37,8 @@ const PrivacyPolicy: React.FC = () => {
     <div className="min-h-screen bg-zinc-50 font-sans text-black selection:bg-black selection:text-white animate-in fade-in duration-700 flex flex-col">
       {/* Navigation Header */}
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 px-4 sm:px-6 py-4 lg:py-6 ${isScrolled
-          ? "bg-white/70 backdrop-blur-lg border-b border-zinc-200 py-3 shadow-sm"
-          : "bg-white border-b border-zinc-100 py-4 lg:py-6"
+        ? "bg-white/70 backdrop-blur-lg border-b border-zinc-200 py-3 shadow-sm"
+        : "bg-white border-b border-zinc-100 py-4 lg:py-6"
         }`}>
         <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-4 lg:gap-6">
           <div className="flex items-center gap-3 sm:gap-4 lg:gap-5 shrink-0">
@@ -100,12 +100,12 @@ const PrivacyPolicy: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 pt-28 sm:pt-32 pb-20">
-        
+
         {/* Hero Banner Section */}
         <section className="bg-black text-white py-8 sm:py-10 px-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -mr-48 -mt-48" />
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-zinc-800/10 rounded-full blur-3xl -ml-48 -mb-48" />
-          
+
           <div className="max-w-4xl mx-auto text-center relative z-10 space-y-2.5">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-['Playfair_Display']">
               Privacy Policy
@@ -113,7 +113,7 @@ const PrivacyPolicy: React.FC = () => {
             <p className="text-zinc-400 text-xs sm:text-sm uppercase tracking-widest font-semibold">
               BKMA Commitment to Protecting Your Personal Data and Privacy.
             </p>
-            
+
             {/* Breadcrumb Navigation */}
             <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-wider pt-2">
               <Link to="/" className="hover:text-white transition-colors">Home</Link>
@@ -125,7 +125,7 @@ const PrivacyPolicy: React.FC = () => {
 
         {/* Content Section */}
         <section className="max-w-4xl mx-auto px-6 py-12 sm:py-16 space-y-12">
-          
+
           {/* Card: Main Privacy Policy statement */}
           <div className="bg-white rounded-3xl p-8 sm:p-12 border border-zinc-100 shadow-xl shadow-zinc-200/50 space-y-6">
             <div className="flex items-center gap-4 border-b border-zinc-100 pb-4">
@@ -136,7 +136,7 @@ const PrivacyPolicy: React.FC = () => {
                 Privacy Policy Statement
               </h3>
             </div>
-            
+
             <div className="space-y-6">
               <p className="text-zinc-600 text-base sm:text-lg leading-relaxed font-serif">
                 The Bulletin of Kerala Mathematical Association respects your privacy and is committed to protecting your personal information. We collect only the information necessary to manage user accounts, manuscript submissions, peer reviews, and journal publications.
@@ -149,7 +149,7 @@ const PrivacyPolicy: React.FC = () => {
 
           {/* Grid Layout: Security & Data Policy */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
+
             {/* Card: Data Security */}
             <div className="bg-white rounded-3xl p-8 border border-zinc-100 shadow-lg shadow-zinc-200/40 space-y-5">
               <div className="flex items-center gap-3 border-b border-zinc-100 pb-3">
@@ -201,7 +201,7 @@ const PrivacyPolicy: React.FC = () => {
                 For questions, corrections to personal records, data removal requests, or policy inquiries, please contact the BKMA Editorial Office.
               </p>
               <p className="font-semibold text-black">
-                Email: editor@keralamathematicalassociation.org
+                Email: keralamathsasso@gmail.com
               </p>
             </div>
           </div>
@@ -244,6 +244,10 @@ const PrivacyPolicy: React.FC = () => {
                       </Link>
                     ) : link === 'Privacy Policy' ? (
                       <Link to="/privacy-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : link === 'Copyright' ? (
+                      <Link to="/copyright" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
                         {link}
                       </Link>
                     ) : (

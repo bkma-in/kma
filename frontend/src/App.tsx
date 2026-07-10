@@ -37,6 +37,7 @@ import PricingPage from './pages/PricingPage';
 import ServiceDescription from './pages/ServiceDescription';
 
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import Copyright from './pages/Copyright';
 
 // Reader Portal Imports
 import ReaderLayout from './layouts/ReaderLayout';
@@ -127,6 +128,9 @@ function App() {
           <Route path="/refund-cancellation-policy" element={<Navigate to="/refund-policy" replace />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/privacy policy" element={<Navigate to="/privacy-policy" replace />} />
+          <Route path="/copyright" element={<Copyright />} />
+          <Route path="/copyright-policy" element={<Navigate to="/copyright" replace />} />
+          <Route path="/copyright policy" element={<Navigate to="/copyright" replace />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="/terms" element={<Navigate to="/terms-and-conditions" replace />} />
           <Route path="/pricing" element={<PricingPage />} />
