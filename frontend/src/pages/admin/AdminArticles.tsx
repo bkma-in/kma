@@ -403,8 +403,7 @@ const AdminArticles = () => {
   const handleDownload = async (articleId: string, title: string, key?: string) => {
     try {
       showToast(`Generating secure download link...`, 'info');
-      const urlParam = key ? `${articleId}?key=${encodeURIComponent(key)}` : articleId;
-      const res = await getPdfUrl(urlParam);
+      const res = await getPdfUrl(articleId, key);
       if (res.success && res.url) {
         window.open(res.url, '_blank');
       } else {
