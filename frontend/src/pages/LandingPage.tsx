@@ -504,6 +504,10 @@ const LandingPage: React.FC = () => {
                       <Link to="/refund-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
                         {link}
                       </Link>
+                    ) : link === 'Privacy Policy' ? (
+                      <Link to="/privacy-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
                     ) : (
                       <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
                     )}

@@ -258,7 +258,6 @@ const RefundPolicy: React.FC = () => {
               </div>
             </div>
 
-            {/* Column 2: Policies */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Policies</h4>
               <ul className="space-y-2.5">
@@ -266,6 +265,10 @@ const RefundPolicy: React.FC = () => {
                   <li key={link}>
                     {link === 'Refund/Cancellation Policy' ? (
                       <Link to="/refund-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : link === 'Privacy Policy' ? (
+                      <Link to="/privacy-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
                         {link}
                       </Link>
                     ) : (
