@@ -62,38 +62,31 @@ const Copyright: React.FC = () => {
               />
             </div>
 
-            {isLoggedIn ? (
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={handleLogout}
-                  className="text-[10px] font-black text-zinc-400 hover:text-black uppercase tracking-widest transition-colors cursor-pointer"
-                >
-                  Logout
-                </button>
-                <button
-                  onClick={() => currentUser && navigate(getDashboardByRole(currentUser.role))}
-                  className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-bold shadow-lg shadow-black/20 cursor-pointer"
-                >
-                  USER
-                </button>
-              </div>
-            ) : (
-              <>
-                <button
-                  onClick={() => navigate('/auth?mode=login')}
-                  className="text-sm sm:text-base font-bold hover:text-zinc-600 transition-colors shrink-0 uppercase tracking-widest cursor-pointer"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => navigate('/auth?mode=register')}
-                  className="bg-black text-white text-sm sm:text-base font-black py-3 px-5 sm:py-4 sm:px-10 rounded-xl shadow-2xl shadow-black/20 hover:bg-zinc-800 transition-all active:scale-95 text-center leading-tight sm:leading-normal uppercase tracking-[0.1em] shrink-0 cursor-pointer"
-                >
-                  <span className="hidden sm:inline">Get Started</span>
-                  <span className="sm:hidden">Get <br /> Started</span>
-                </button>
-              </>
-            )}
+            <button 
+              onClick={() => {
+                if (isLoggedIn && currentUser) {
+                  navigate(getDashboardByRole(currentUser.role));
+                } else {
+                  navigate('/auth?mode=login');
+                }
+              }}
+              className="text-sm sm:text-base font-bold hover:text-zinc-600 transition-colors shrink-0 uppercase tracking-widest cursor-pointer"
+            >
+              Login
+            </button>
+            <button 
+              onClick={() => {
+                if (isLoggedIn && currentUser) {
+                  navigate(getDashboardByRole(currentUser.role));
+                } else {
+                  navigate('/auth?mode=register');
+                }
+              }}
+              className="bg-black text-white text-sm sm:text-base font-black py-3 px-5 sm:py-4 sm:px-10 rounded-xl shadow-2xl shadow-black/20 hover:bg-zinc-800 transition-all active:scale-95 text-center leading-tight sm:leading-normal uppercase tracking-[0.1em] shrink-0 cursor-pointer"
+            >
+              <span className="hidden sm:inline">Get Started</span>
+              <span className="sm:hidden">Get <br /> Started</span>
+            </button>
           </div>
         </div>
       </nav>
