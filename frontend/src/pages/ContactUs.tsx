@@ -210,11 +210,10 @@ const ContactUs: React.FC = () => {
               </ul>
             </div>
 
-            {/* Column 3: Access */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Access</h4>
               <ul className="space-y-2.5">
-                {['Pricing', 'How it Works', 'Service Description', 'Editorial Board', 'Terms & Conditions'].map(link => (
+                {['Pricing', 'Service Description', 'Editorial Board', 'Terms & Conditions'].map(link => (
                   <li key={link}>
                     {link === 'Terms & Conditions' ? (
                       <Link to="/terms" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
