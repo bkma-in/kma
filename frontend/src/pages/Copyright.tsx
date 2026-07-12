@@ -218,10 +218,10 @@ const Copyright: React.FC = () => {
               <p className="text-zinc-500 text-[11px] leading-relaxed max-w-sm">
                 Advancing mathematical research and higher education through global collaboration and peer-reviewed scholarly excellence.
               </p>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-2.5 sm:gap-4">
                 <Link to="/about-us" className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">About Us</Link>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Guidelines</button>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Archives</button>
+                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Author Guidelines</button>
+                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Reviewer Guidelines</button>
               </div>
             </div>
 
