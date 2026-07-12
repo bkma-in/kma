@@ -267,11 +267,10 @@ const TermsAndConditions: React.FC = () => {
               </div>
             </div>
 
-            {/* Column 2: Policies */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Policies</h4>
               <ul className="space-y-2.5">
-                {['Publication', 'Review Guidelines', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
+                {['Publication', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
                   <li key={link}>
                     {link === 'Refund/Cancellation Policy' ? (
                       <Link to="/refund-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
