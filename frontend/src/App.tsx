@@ -38,6 +38,7 @@ import ServiceDescription from './pages/ServiceDescription';
 
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import Copyright from './pages/Copyright';
+import ContactUs from './pages/ContactUs';
 
 // Reader Portal Imports
 import ReaderLayout from './layouts/ReaderLayout';
@@ -135,6 +136,9 @@ function App() {
           <Route path="/terms" element={<Navigate to="/terms-and-conditions" replace />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/service-description" element={<ServiceDescription />} />
+          <Route path="/contact-us" element={<ContactUs />} />
+          <Route path="/contact" element={<Navigate to="/contact-us" replace />} />
+          <Route path="/contact us" element={<Navigate to="/contact-us" replace />} />
           <Route path="/auth" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Auth />} />
           <Route path="/login" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
           <Route path="/signin" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />

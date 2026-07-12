@@ -283,7 +283,13 @@ const AboutUs: React.FC = () => {
               <ul className="space-y-2.5">
                 {['Contact Us', 'Help Center', 'Report Issue'].map(link => (
                   <li key={link}>
-                    <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
+                    {link === 'Contact Us' ? (
+                      <Link to="/contact-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : (
+                      <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
+                    )}
                   </li>
                 ))}
               </ul>
