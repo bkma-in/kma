@@ -195,8 +195,8 @@ const SubmitArticle = () => {
       if (!formData.category) newErrors.category = 'Please select a research category';
       if (!formData.abstract.trim()) {
         newErrors.abstract = 'Executive abstract is required';
-      } else if (formData.abstract.trim().split(/\s+/).length < 10) { // Using 10 for demo, requirement says min 200 words
-        newErrors.abstract = 'Abstract must be at least 10 words (current guidelines suggest 200+)';
+      } else if (formData.abstract.trim().split(/\s+/).length < 10) { 
+        newErrors.abstract = 'Abstract must be at least 10 words';
       }
     }
     
@@ -293,7 +293,7 @@ const SubmitArticle = () => {
       if (!formData.abstract.trim()) {
         allErrors.abstract = 'Executive abstract is required';
       } else if (formData.abstract.trim().split(/\s+/).length < 10) {
-        allErrors.abstract = 'Abstract must be at least 10 words (current guidelines suggest 200+)';
+        allErrors.abstract = 'Abstract must be at least 10 words';
       }
       
       // Step 2 check
@@ -683,7 +683,6 @@ const SubmitArticle = () => {
                   <div>
                     <div className="flex justify-between items-center mb-2 px-1">
                       <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest">Executive Abstract *</label>
-                      <span className="text-[8px] font-bold text-zinc-400 tracking-wider bg-zinc-50 px-2 py-1 rounded">MIN. 200 WORDS</span>
                     </div>
                     <textarea 
                       name="abstract"
