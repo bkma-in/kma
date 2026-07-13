@@ -33,7 +33,7 @@ import { auth, db } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 // Types
-type Status = 'Submitted' | 'Under Review' | 'Revision Required' | 'Approved' | 'Rejected' | 'Published' | 'Revised';
+type Status = 'Submitted' | 'Revised Submitted' | 'Under Review' | 'Revision Required' | 'Approved' | 'Rejected' | 'Published' | 'Revised';
 
 interface Version {
   version: number;
@@ -252,6 +252,7 @@ const MyArticles = () => {
   const mapStatus = (backendStatus: string): Status => {
     switch(backendStatus) {
       case 'submitted': return 'Submitted';
+      case 'revised_submitted': return 'Revised';
       case 'under_review': return 'Under Review';
       case 'revision_requested': return 'Revision Required';
       case 'revision_submitted': return 'Revised';
@@ -267,6 +268,7 @@ const MyArticles = () => {
     switch (status) {
       case 'Draft': return 'bg-zinc-100 text-zinc-600 border-zinc-200';
       case 'Submitted': return 'bg-blue-50 text-blue-600 border-blue-100';
+      case 'Revised Submitted': return 'bg-blue-50 text-blue-600 border-blue-100';
       case 'Under Review': return 'bg-amber-50 text-amber-600 border-amber-100';
       case 'Revision Required': return 'bg-rose-50 text-rose-600 border-rose-100';
       case 'Revised': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
@@ -280,6 +282,7 @@ const MyArticles = () => {
     switch (status) {
       case 'Draft': return <Edit2 size={12} />;
       case 'Submitted': return <Clock size={12} />;
+      case 'Revised Submitted': return <Clock size={12} />;
       case 'Under Review': return <History size={12} />;
       case 'Revision Required': return <AlertCircle size={12} />;
       case 'Revised': return <RefreshCw size={12} />;
@@ -687,7 +690,6 @@ const MyArticles = () => {
                   >
                     <td className="px-6 py-5">
                       <div>
-                        <p className="text-[9px] font-black text-zinc-400 mb-1 leading-none tracking-widest">{article.id}</p>
                         <h3 className="text-sm font-bold text-black group-hover:text-zinc-700 transition-colors line-clamp-1">{article.title}</h3>
                       </div>
                     </td>
@@ -700,7 +702,7 @@ const MyArticles = () => {
                       {new Date(article.dateSubmitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
                     <td className="px-6 py-5">
-                      <div className="flex flex-col items-center gap-1">
+                      <div className="flex flex-col items-center gap-1.5">
                         <div className={cn(
                           "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
                           getStatusStyles(article.status)
@@ -708,6 +710,11 @@ const MyArticles = () => {
                           {getStatusIcon(article.status)}
                           {article.status}
                         </div>
+                        {article.versions && article.versions.length > 1 && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                            Revised
+                          </span>
+                        )}
                         {(article.status === 'Rejected' || article.status === 'Published') && formatStatusDate(article) && (
                           <div className={cn(
                             "flex items-center gap-1 text-[9px] font-semibold tracking-tight",
@@ -823,7 +830,14 @@ const MyArticles = () => {
                 </div>
                 <div>
                   <h3 className="font-bold text-black tracking-tight font-['Outfit'] text-lg">{selectedArticle.id}</h3>
-                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Manuscript Details</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Manuscript Details</p>
+                    {selectedArticle.versions && selectedArticle.versions.length > 1 && (
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide bg-amber-500/10 text-amber-600 border border-amber-500/20 leading-none">
+                        Revised
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button 

@@ -324,14 +324,25 @@ const sendArticleSubmittedNotifications = async (articleId) => {
                 });
             }
             if (author.email) {
-                const bodyText = `Congratulations! Your manuscript has been successfully submitted to the Bulletin of Kerala Mathematical Association. It is now registered in our peer-review queue. We will notify you once reviewers have been assigned.`;
+                const isRevision = (Array.isArray(article.revisionHistory) && article.revisionHistory.length > 0) ||
+                    (article.adminNote !== undefined) ||
+                    (article.reviews !== undefined);
+                const bodyText = isRevision
+                    ? `Congratulations! The revised version of your manuscript has been successfully submitted to the Bulletin of Kerala Mathematical Association. It has been returned to our peer-review queue for further assessment.`
+                    : `Congratulations! Your manuscript has been successfully submitted to the Bulletin of Kerala Mathematical Association. It is now registered in our peer-review queue.`;
+                const emailTitle = isRevision ? 'Manuscript Revision Received' : 'Manuscript Received Successfully';
+                const sectionHeader = isRevision ? 'Review Process' : 'Desk Review Process';
+                const sectionText = isRevision
+                    ? 'BKMA editors and reviewers will assess the revised submission to determine if the requested changes have been addressed.'
+                    : 'BKMA editors will conduct a desk review of the submission. If it meets BKMA guidelines, it will proceed to external peer review.';
                 const cardRows = [
                     { label: 'Article Title', value: title },
                     { label: 'Authors', value: authorNamesStr },
                 ];
-                const emailHtml = (0, exports.buildHtmlEmail)(author.name || 'Author', 'Manuscript Received Successfully', bodyText, 'Submission details', cardRows, '', '', 'Desk Review Process', 'BKMA editors will conduct a desk review of the submission. If it meets BKMA guidelines, it will proceed to external peer review.', '', '', '', '');
+                const emailHtml = (0, exports.buildHtmlEmail)(author.name || 'Author', emailTitle, bodyText, 'Submission details', cardRows, '', '', sectionHeader, sectionText, '', '', '', '');
                 // Send email (non-blocking call)
-                (0, emailService_1.sendTransactionalEmail)(author.email, author.name || 'Author', `Submission Confirmation: ${title}`, emailHtml).catch(err => {
+                const emailSubject = isRevision ? `Manuscript Revision Received: ${title}` : `Submission Confirmation: ${title}`;
+                (0, emailService_1.sendTransactionalEmail)(author.email, author.name || 'Author', emailSubject, emailHtml).catch(err => {
                     console.error(`[NOTIF-SERVICE] Failed to send submission email to author ${author.email}:`, err);
                 });
             }
