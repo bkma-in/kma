@@ -26,10 +26,12 @@ import api from '../../services/api';
 import { useNotification } from '../../utils/NotificationContext';
 import { useProfile } from '../../hooks/useProfile';
 import { useEffect } from 'react';
+import ReportIssueModal from '../../components/ReportIssueModal';
 
 const SubmitArticle = () => {
   const { showToast } = useNotification();
   const { profile } = useProfile();
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   
   // Stepper State
   const location = useLocation();
@@ -195,8 +197,8 @@ const SubmitArticle = () => {
       if (!formData.category) newErrors.category = 'Please select a research category';
       if (!formData.abstract.trim()) {
         newErrors.abstract = 'Executive abstract is required';
-      } else if (formData.abstract.trim().split(/\s+/).length < 10) { // Using 10 for demo, requirement says min 200 words
-        newErrors.abstract = 'Abstract must be at least 10 words (current guidelines suggest 200+)';
+      } else if (formData.abstract.trim().split(/\s+/).length < 10) { 
+        newErrors.abstract = 'Abstract must be at least 10 words';
       }
     }
     
@@ -293,7 +295,7 @@ const SubmitArticle = () => {
       if (!formData.abstract.trim()) {
         allErrors.abstract = 'Executive abstract is required';
       } else if (formData.abstract.trim().split(/\s+/).length < 10) {
-        allErrors.abstract = 'Abstract must be at least 10 words (current guidelines suggest 200+)';
+        allErrors.abstract = 'Abstract must be at least 10 words';
       }
       
       // Step 2 check
@@ -683,7 +685,6 @@ const SubmitArticle = () => {
                   <div>
                     <div className="flex justify-between items-center mb-2 px-1">
                       <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest">Executive Abstract *</label>
-                      <span className="text-[8px] font-bold text-zinc-400 tracking-wider bg-zinc-50 px-2 py-1 rounded">MIN. 200 WORDS</span>
                     </div>
                     <textarea 
                       name="abstract"
@@ -1056,10 +1057,22 @@ const SubmitArticle = () => {
             <h4 className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40">Submission Support</h4>
             <p className="text-xs font-bold">Having trouble with your upload?</p>
             <p className="text-[10px] text-zinc-400 leading-relaxed">Our technical editorial team is available to assist with formatting issues.</p>
-            <button className="text-[9px] font-black uppercase tracking-widest text-white border-b border-white/20 pb-0.5 hover:border-white transition-all">Contact Support</button>
+            <button 
+              type="button"
+              onClick={() => setIsReportModalOpen(true)}
+              className="text-[9px] font-black uppercase tracking-widest text-white border-b border-white/20 pb-0.5 hover:border-white transition-all"
+            >
+              Contact Support
+            </button>
           </div>
         </div>
       </div>
+
+      <ReportIssueModal 
+        isOpen={isReportModalOpen} 
+        onClose={() => setIsReportModalOpen(false)} 
+        userRole="author"
+      />
     </div>
   );
 };
