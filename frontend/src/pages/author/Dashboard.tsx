@@ -56,6 +56,13 @@ const Dashboard = () => {
             
             return true;
           });
+          
+          filteredArticles.sort((a: any, b: any) => {
+            const timeA = new Date(a.createdAt).getTime();
+            const timeB = new Date(b.createdAt).getTime();
+            return timeB - timeA;
+          });
+
           setArticles(filteredArticles);
         }
       } catch (error) {

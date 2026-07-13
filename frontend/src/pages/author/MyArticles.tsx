@@ -217,16 +217,8 @@ const MyArticles = () => {
       });
       
       mappedArticles.sort((a, b) => {
-        const dateA = a.updatedAt || a.dateSubmitted;
-        const dateB = b.updatedAt || b.dateSubmitted;
-        
-        const timeA = dateA && dateA._seconds 
-          ? dateA._seconds * 1000 
-          : (dateA ? new Date(dateA).getTime() : 0);
-        const timeB = dateB && dateB._seconds 
-          ? dateB._seconds * 1000 
-          : (dateB ? new Date(dateB).getTime() : 0);
-        
+        const timeA = new Date(a.dateSubmitted).getTime();
+        const timeB = new Date(b.dateSubmitted).getTime();
         return timeB - timeA;
       });
       
