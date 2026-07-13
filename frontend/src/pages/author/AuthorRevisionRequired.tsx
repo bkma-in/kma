@@ -29,6 +29,7 @@ interface Version {
   uploadedBy: 'Author' | 'Reviewer';
   timestamp: string;
   fileName: string;
+  pdfUrl?: string;
 }
 
 interface Article {
@@ -118,9 +119,22 @@ const AuthorRevisionRequired = () => {
             data.revisionHistory.map((v: any, idx: number) => ({
               version: idx + 1,
               uploadedBy: 'Author',
-              timestamp: formatDate(v.replacedAt),
-              fileName: v.pdfName || 'manuscript.pdf'
-            })) : [{ version: 1, uploadedBy: 'Author', timestamp: formatDate(data.createdAt), fileName: data.pdfName || 'manuscript.pdf' }],
+              timestamp: formatDate(v.replacedAt || v.submittedAt),
+              fileName: v.pdfName || 'manuscript.pdf',
+              pdfUrl: v.pdfUrl
+            })).concat([{
+              version: data.revisionHistory.length + 1,
+              uploadedBy: 'Author',
+              timestamp: formatDate(data.updatedAt || data.createdAt),
+              fileName: data.pdfName || 'manuscript.pdf',
+              pdfUrl: data.pdfUrl
+            }]) : [{ 
+              version: 1, 
+              uploadedBy: 'Author', 
+              timestamp: formatDate(data.createdAt), 
+              fileName: data.pdfName || 'manuscript.pdf',
+              pdfUrl: data.pdfUrl 
+            }],
           adminNote: data.adminNote || '',
           rejectionReason: data.rejectionReason || '',
           pdfUrl: data.pdfUrl || '',
@@ -259,7 +273,7 @@ const AuthorRevisionRequired = () => {
           const payload = new FormData();
           payload.append('abstract', article.abstract);
           payload.append('title', article.title);
-          payload.append('status', 'submitted'); // updates status to submitted on backend
+          payload.append('status', 'revised_submitted'); // updates status to revised_submitted on backend
 
           const response = await api.put(`/articles/${article.id}`, payload);
           if (response.data.success) {
@@ -324,9 +338,16 @@ const AuthorRevisionRequired = () => {
                         >
                           <td className="px-6 py-5">
                             <div>
-                              <span className="inline-flex px-2 py-0.5 bg-rose-50 text-rose-600 border border-rose-100 rounded text-[8px] font-bold uppercase tracking-wider mb-2 font-['Outfit']">
-                                Revision Required
-                              </span>
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="inline-flex px-2 py-0.5 bg-rose-50 text-rose-600 border border-rose-100 rounded text-[8px] font-bold uppercase tracking-wider font-['Outfit']">
+                                  Revision Required
+                                </span>
+                                {article.versions && article.versions.length > 1 && (
+                                  <span className="inline-flex px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-amber-500/20 font-['Outfit'] leading-none">
+                                    Revised
+                                  </span>
+                                )}
+                              </div>
                               <h3 className="text-sm font-bold text-black line-clamp-1 group-hover:text-amber-600 transition-colors">
                                 {article.title}
                               </h3>
@@ -393,6 +414,11 @@ const AuthorRevisionRequired = () => {
                   <span className="px-2 py-0.5 bg-rose-50 text-rose-600 border border-rose-100 rounded text-[8px] font-black uppercase tracking-wider font-['Outfit']">
                     Revision Required
                   </span>
+                  {selectedArticle.versions && selectedArticle.versions.length > 1 && (
+                    <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide bg-amber-500/10 text-amber-600 border border-amber-500/20 leading-none">
+                      Revised
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -437,6 +463,32 @@ const AuthorRevisionRequired = () => {
                       <p className="text-xs text-zinc-700 leading-relaxed font-medium italic">
                         "{selectedArticle.adminNote || 'No feedback left. Please edit to resubmit revised abstract/document.'}"
                       </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Revision History Log */}
+                {selectedArticle.versions && selectedArticle.versions.length > 1 && (
+                  <div className="space-y-2 border-t border-zinc-100 pt-4">
+                    <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest px-1 font-['Outfit']">
+                      Revision History Log
+                    </h4>
+                    <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                      {selectedArticle.versions.map((v) => (
+                        <div key={v.version} className="p-3 bg-zinc-50 border border-zinc-150 rounded-xl flex items-center justify-between text-xs font-sans">
+                          <div>
+                            <p className="font-bold text-zinc-800">Version {v.version}</p>
+                            <p className="text-[9px] text-zinc-400 font-bold uppercase">{v.timestamp}</p>
+                          </div>
+                          <button
+                            onClick={() => handleDownload(v.pdfUrl || selectedArticle.pdfUrl || '', selectedArticle.id)}
+                            className="p-1.5 hover:bg-zinc-200 rounded text-zinc-500 hover:text-black transition-all cursor-pointer"
+                            title={`Download Version ${v.version}`}
+                          >
+                            <Download size={14} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
