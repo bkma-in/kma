@@ -244,17 +244,17 @@ const RefundPolicy: React.FC = () => {
               <p className="text-zinc-500 text-[11px] leading-relaxed max-w-sm">
                 Advancing mathematical research and higher education through global collaboration and peer-reviewed scholarly excellence.
               </p>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-2.5 sm:gap-4">
                 <Link to="/about-us" className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">About Us</Link>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Guidelines</button>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Archives</button>
+                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Author Guidelines</button>
+                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Reviewer Guidelines</button>
               </div>
             </div>
 
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Policies</h4>
               <ul className="space-y-2.5">
-                {['Publication', 'Review Guidelines', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
+                {['Publication', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
                   <li key={link}>
                     {link === 'Refund/Cancellation Policy' ? (
                       <Link to="/refund-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
@@ -276,11 +276,10 @@ const RefundPolicy: React.FC = () => {
               </ul>
             </div>
 
-            {/* Column 3: Access */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Access</h4>
               <ul className="space-y-2.5">
-                {['Pricing', 'How it Works', 'Service Description', 'Editorial Board', 'Terms & Conditions'].map(link => (
+                {['Pricing', 'Service Description', 'Editorial Board', 'Terms & Conditions'].map(link => (
                   <li key={link}>
                     {link === 'Terms & Conditions' ? (
                       <Link to="/terms" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
@@ -308,7 +307,13 @@ const RefundPolicy: React.FC = () => {
               <ul className="space-y-2.5">
                 {['Contact Us', 'Help Center', 'Report Issue'].map(link => (
                   <li key={link}>
-                    <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
+                    {link === 'Contact Us' ? (
+                      <Link to="/contact-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : (
+                      <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
+                    )}
                   </li>
                 ))}
               </ul>

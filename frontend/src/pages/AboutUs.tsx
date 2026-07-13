@@ -119,38 +119,31 @@ const AboutUs: React.FC = () => {
         {/* Content Section */}
         <section className="max-w-4xl mx-auto px-6 py-12 sm:py-16 space-y-12">
           
-          {/* Card: Overview */}
+          {/* Card: About Us / Organization Overview */}
           <div className="bg-white rounded-3xl p-8 sm:p-12 border border-zinc-100 shadow-xl shadow-zinc-200/50 space-y-6">
             <div className="flex items-center gap-4 border-b border-zinc-100 pb-4">
               <div className="w-12 h-12 rounded-2xl bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm shrink-0">
                 <Info size={22} />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold font-['Outfit'] text-zinc-900">
-                Organization Overview
-              </h3>
-            </div>
-            <p className="text-zinc-600 text-base sm:text-lg leading-relaxed font-serif">
-              The <strong className="text-black">Kerala Mathematical Association (BKMA)</strong> is a premier academic organization established to serve the mathematical community. It connects students, teachers, and active researchers inside Kerala, across India, and globally. Today, the association comprises approximately 1,000 members—with nearly half serving as life members, and about 300 international and national scholars operating outside the state of Kerala.
-            </p>
-          </div>
-
-          {/* Grid Layout: History & Mission */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Card: History */}
-            <div className="bg-white rounded-3xl p-8 border border-zinc-100 shadow-lg shadow-zinc-200/40 space-y-5">
-              <div className="flex items-center gap-3 border-b border-zinc-100 pb-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                  <History size={18} />
-                </div>
-                <h3 className="text-lg font-bold font-['Outfit'] text-zinc-900">
-                  Brief History & Growth
+              <div>
+                <h3 className="text-xl sm:text-2xl font-bold font-['Outfit'] text-zinc-900 leading-tight">
+                  Advancing Mathematical Research Through Knowledge and Collaboration
                 </h3>
+                <p className="text-xs text-zinc-500 font-medium mt-1">Kerala Mathematical Association (KMA)</p>
               </div>
-              <p className="text-zinc-600 text-sm sm:text-base leading-relaxed">
-                Founded in <strong className="text-black">1962</strong>, BKMA has spent over six decades building a robust ecosystem for scientific discourse. A prominent milestone in its rich history was the establishment of the annual <strong className="text-black">Prof. T.A. Sarasvati Amma Memorial Lecture</strong> in 2002, endowed by the celebrated historian of Indian mathematics, Radha Charan Gupta.
+            </div>
+            <div className="space-y-4 text-zinc-600 text-base sm:text-lg leading-relaxed font-serif">
+              <p>
+                The <strong className="text-black">Bulletin of Kerala Mathematical Association (BKMA)</strong> is the official academic publication of the Kerala Mathematical Association (KMA). Established with the vision of promoting excellence in mathematical sciences, BKMA serves as a trusted platform for researchers, academicians, educators, and students to publish and share high-quality mathematical research.
+              </p>
+              <p>
+                Our journal is dedicated to fostering innovation, encouraging scholarly collaboration, and supporting the global exchange of mathematical knowledge across diverse disciplines.
               </p>
             </div>
+          </div>
 
+          {/* Grid Layout: Mission & Vision */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Card: Mission */}
             <div className="bg-white rounded-3xl p-8 border border-zinc-100 shadow-lg shadow-zinc-200/40 space-y-5">
               <div className="flex items-center gap-3 border-b border-zinc-100 pb-3">
@@ -158,46 +151,35 @@ const AboutUs: React.FC = () => {
                   <Target size={18} />
                 </div>
                 <h3 className="text-lg font-bold font-['Outfit'] text-zinc-900">
-                  Mission & Objectives
+                  Our Mission
                 </h3>
               </div>
-              <p className="text-zinc-600 text-sm sm:text-base leading-relaxed">
-                Our mission is to advance mathematical education and research through state-of-the-art academic orientation programs, national workshops, and peer-reviewed publishing. We aim to equip educators with modern mathematical developments and bridge the gap between regional scholars and international research networks.
-              </p>
-            </div>
-          </div>
-
-          {/* Card: Contributions to Mathematics */}
-          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-zinc-100 shadow-xl shadow-zinc-200/50 space-y-6">
-            <div className="flex items-center gap-4 border-b border-zinc-100 pb-4">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50/80 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
-                <Award size={22} />
+              <div className="space-y-3 text-zinc-600 text-sm sm:text-base leading-relaxed">
+                <p>
+                  Our mission is to promote the advancement of mathematics by providing a transparent, ethical, and peer-reviewed publication platform that encourages original research, critical thinking, and academic excellence.
+                </p>
+                <p>
+                  We strive to create opportunities for researchers worldwide to contribute meaningful work that strengthens the mathematical community.
+                </p>
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold font-['Outfit'] text-zinc-900">
-                Contributions to Mathematics
-              </h3>
             </div>
-            <p className="text-zinc-600 text-sm sm:text-base leading-relaxed">
-              The Kerala Mathematical Association has made substantial contributions to the mathematical sciences and education by hosting an average of <strong className="text-black">10 to 12 national and international seminars, workshops, and orientation conferences annually</strong> across different regions. These events bring together mathematical researchers, teachers, and students, facilitating key orientation programs and creating platforms for mathematical training, research dissemination, and research activities.
-            </p>
-          </div>
 
-          {/* Card: Publications & Activities */}
-          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-zinc-100 shadow-xl shadow-zinc-200/50 space-y-6">
-            <div className="flex items-center gap-4 border-b border-zinc-100 pb-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50/80 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
-                <BookOpen size={22} />
+            {/* Card: Vision */}
+            <div className="bg-white rounded-3xl p-8 border border-zinc-100 shadow-lg shadow-zinc-200/40 space-y-5 flex flex-col">
+              <div className="flex items-center gap-3 border-b border-zinc-100 pb-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                  <BookOpen size={18} />
+                </div>
+                <h3 className="text-lg font-bold font-['Outfit'] text-zinc-900">
+                  Our Vision
+                </h3>
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold font-['Outfit'] text-zinc-900">
-                Publications & Activities
-              </h3>
+              <div className="space-y-3 text-zinc-600 text-sm sm:text-base leading-relaxed flex-1">
+                <p>
+                  To become a globally recognized mathematical journal that inspires research, encourages innovation, and contributes to the advancement of mathematical sciences through quality publications and international collaboration.
+                </p>
+              </div>
             </div>
-            <p className="text-zinc-600 text-sm sm:text-base leading-relaxed">
-              To support modern research dissemination, the association compiles and publishes the official proceedings of its seminars and workshops. Crucially, the association has published its flagship international peer-reviewed journal, the <strong className="text-black">Bulletin of Kerala Mathematical Association (BKMA)</strong>, since 2004. Published twice a year, the journal showcases original, high-quality research papers spanning pure mathematics, applied mathematics, and their interdisciplinary applications.
-            </p>
-            <p className="text-zinc-600 text-sm sm:text-base leading-relaxed">
-              In addition to academic publishing, BKMA is highly active in organizing mathematical exhibitions, talent search examinations, and popular lectures to stimulate interest in mathematics among high school and college students, helping nurture the next generation of mathematicians.
-            </p>
           </div>
 
         </section>
@@ -219,17 +201,17 @@ const AboutUs: React.FC = () => {
               <p className="text-zinc-500 text-[11px] leading-relaxed max-w-sm">
                 Advancing mathematical research and higher education through global collaboration and peer-reviewed scholarly excellence.
               </p>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-2.5 sm:gap-4">
                 <Link to="/about-us" className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">About Us</Link>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Guidelines</button>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Archives</button>
+                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Author Guidelines</button>
+                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Reviewer Guidelines</button>
               </div>
             </div>
 
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Policies</h4>
               <ul className="space-y-2.5">
-                {['Publication', 'Review Guidelines', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
+                {['Publication', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
                   <li key={link}>
                     {link === 'Refund/Cancellation Policy' ? (
                       <Link to="/refund-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
@@ -251,11 +233,10 @@ const AboutUs: React.FC = () => {
               </ul>
             </div>
 
-            {/* Column 3: Access */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Access</h4>
               <ul className="space-y-2.5">
-                {['Pricing', 'How it Works', 'Service Description', 'Editorial Board', 'Terms & Conditions'].map(link => (
+                {['Pricing', 'Service Description', 'Editorial Board', 'Terms & Conditions'].map(link => (
                   <li key={link}>
                     {link === 'Terms & Conditions' ? (
                       <Link to="/terms" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
@@ -283,7 +264,13 @@ const AboutUs: React.FC = () => {
               <ul className="space-y-2.5">
                 {['Contact Us', 'Help Center', 'Report Issue'].map(link => (
                   <li key={link}>
-                    <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
+                    {link === 'Contact Us' ? (
+                      <Link to="/contact-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : (
+                      <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
+                    )}
                   </li>
                 ))}
               </ul>
