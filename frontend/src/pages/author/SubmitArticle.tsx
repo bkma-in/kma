@@ -26,10 +26,12 @@ import api from '../../services/api';
 import { useNotification } from '../../utils/NotificationContext';
 import { useProfile } from '../../hooks/useProfile';
 import { useEffect } from 'react';
+import ReportIssueModal from '../../components/ReportIssueModal';
 
 const SubmitArticle = () => {
   const { showToast } = useNotification();
   const { profile } = useProfile();
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   
   // Stepper State
   const location = useLocation();
@@ -1055,10 +1057,22 @@ const SubmitArticle = () => {
             <h4 className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40">Submission Support</h4>
             <p className="text-xs font-bold">Having trouble with your upload?</p>
             <p className="text-[10px] text-zinc-400 leading-relaxed">Our technical editorial team is available to assist with formatting issues.</p>
-            <button className="text-[9px] font-black uppercase tracking-widest text-white border-b border-white/20 pb-0.5 hover:border-white transition-all">Contact Support</button>
+            <button 
+              type="button"
+              onClick={() => setIsReportModalOpen(true)}
+              className="text-[9px] font-black uppercase tracking-widest text-white border-b border-white/20 pb-0.5 hover:border-white transition-all"
+            >
+              Contact Support
+            </button>
           </div>
         </div>
       </div>
+
+      <ReportIssueModal 
+        isOpen={isReportModalOpen} 
+        onClose={() => setIsReportModalOpen(false)} 
+        userRole="author"
+      />
     </div>
   );
 };
