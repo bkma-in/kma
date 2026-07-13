@@ -489,7 +489,6 @@ const AdminReadyToPublish = () => {
                     </td>
                     <td className="px-6 py-5">
                       <div>
-                        <p className="text-[9px] font-black text-zinc-400 mb-1 tracking-widest">{article.id}</p>
                         <h3 className="text-sm font-bold text-black line-clamp-1">
                           {article.title}
                         </h3>

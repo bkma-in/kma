@@ -29,6 +29,7 @@ import { formatDate } from '../../utils/dateHelpers';
 // Types
 type ArticleStatus = 
   | 'Submitted' 
+  | 'Revised Submitted'
   | 'Need Improvements' 
   | 'Revision Requested'
   | 'Approved' 
@@ -79,6 +80,8 @@ interface Article {
   assignedAt?: any;
   assignedBy?: string;
   reviewerNote?: string;
+  revisionHistory?: any[];
+  pastReviews?: any[];
 }
 
 const AdminArticles = () => {
@@ -91,7 +94,7 @@ const AdminArticles = () => {
   useEffect(() => {
     const statusParam = searchParams.get('status');
     if (statusParam) {
-      const validStatuses = ['Submitted', 'Need Improvements', 'Revision Requested', 'Approved', 'Ready to Publish', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected', 'Awaiting Decision'];
+      const validStatuses = ['Submitted', 'Revised Submitted', 'Need Improvements', 'Revision Requested', 'Approved', 'Ready to Publish', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected', 'Awaiting Decision'];
       if (validStatuses.includes(statusParam)) {
         setStatusFilter(statusParam as ArticleStatus);
       } else if (statusParam === 'All') {
@@ -209,6 +212,7 @@ const AdminArticles = () => {
         if (articlesRes.success) {
           const backendToFrontendStatusMap: Record<string, ArticleStatus> = {
             'submitted': 'Submitted',
+            'revised_submitted': 'Revised Submitted',
             'revision_requested': 'Revision Requested',
             'accepted': 'Ready to Publish',
             'published': 'Published',
@@ -218,7 +222,21 @@ const AdminArticles = () => {
           };
           
           const mappedArticles = articlesRes.articles.map((a: any) => {
-            const hasReviews = a.reviews && Object.keys(a.reviews).length > 0;
+            // Filter reviews to only count active ones for the current round
+            const activeReviews: Record<string, any> = {};
+            const assignedTime = a.assignedAt ? new Date(a.assignedAt._seconds ? a.assignedAt._seconds * 1000 : (a.assignedAt.seconds ? a.assignedAt.seconds * 1000 : a.assignedAt)).getTime() : 0;
+
+            if (a.reviews) {
+              Object.entries(a.reviews).forEach(([uid, r]: [string, any]) => {
+                const reviewTime = r.updatedAt ? new Date(r.updatedAt._seconds ? r.updatedAt._seconds * 1000 : (r.updatedAt.seconds ? r.updatedAt.seconds * 1000 : r.updatedAt)).getTime() : 0;
+                // Add a buffer of 5 seconds to handle execution timestamps
+                if (reviewTime >= assignedTime - 5000) {
+                  activeReviews[uid] = r;
+                }
+              });
+            }
+
+            const hasReviews = Object.keys(activeReviews).length > 0;
             const mappedStatus = backendToFrontendStatusMap[a.status] || 'Submitted';
             
             let status: ArticleStatus = mappedStatus;
@@ -237,14 +255,29 @@ const AdminArticles = () => {
               status,
               assignedReviewers: a.assignedReviewers || [],
               lastUpdated: formatDate(a.updatedAt || a.createdAt),
-              versions: (a.versions || [{ version: 1, uploadedBy: 'Author', timestamp: a.createdAt, fileName: a.pdfName || 'manuscript.pdf' }]).map((v: any) => ({
-                ...v,
-                timestamp: formatDate(v.timestamp || a.createdAt)
-              })),
+              versions: a.revisionHistory ? 
+                a.revisionHistory.map((v: any, idx: number) => ({
+                  version: idx + 1,
+                  uploadedBy: 'Author' as const,
+                  timestamp: formatDate(v.replacedAt || v.submittedAt || a.createdAt),
+                  fileName: v.pdfName || 'manuscript.pdf'
+                })).concat([{
+                  version: a.revisionHistory.length + 1,
+                  uploadedBy: 'Author' as const,
+                  timestamp: formatDate(a.updatedAt || a.createdAt),
+                  fileName: a.pdfName || 'manuscript.pdf'
+                }]) : [{ 
+                  version: 1, 
+                  uploadedBy: 'Author' as const, 
+                  timestamp: formatDate(a.createdAt), 
+                  fileName: a.pdfName || 'manuscript.pdf' 
+                }],
               rejectionReason: a.rejectionReason,
               adminNote: a.adminNote,
               reviewerFeedback: a.reviewerFeedback,
-              reviews: a.reviews
+              reviews: activeReviews,
+              revisionHistory: a.revisionHistory || [],
+              pastReviews: a.pastReviews || []
             };
           });
           setArticles(mappedArticles);
@@ -290,6 +323,7 @@ const AdminArticles = () => {
       case 'Sent to Reviewer':  return 'bg-blue-50 text-blue-700 border-blue-200';
       // Default — submitted / other
       case 'Submitted': return 'bg-zinc-100 text-zinc-600 border-zinc-200';
+      case 'Revised Submitted': return 'bg-blue-50 text-blue-700 border-blue-200';
       default:          return 'bg-zinc-100 text-zinc-600 border-zinc-200';
     }
   };
@@ -305,6 +339,7 @@ const AdminArticles = () => {
       case 'Desk Rejected': return <XCircle size={12} />;
       case 'Published': return <UploadCloud size={12} />;
       case 'Submitted': return <FileText size={12} />;
+      case 'Revised Submitted': return <Clock size={12} />;
       case 'Sent to Reviewer': return <Send size={12} />;
       case 'Under Review': return <Send size={12} />;
       case 'Awaiting Decision': return <MessageSquare size={12} />;
@@ -331,6 +366,7 @@ const AdminArticles = () => {
     try {
       const backendStatusMap: Record<string, string> = {
         'Submitted': 'submitted',
+        'Revised Submitted': 'revised_submitted',
         'Need Improvements': 'revision_requested',
         'Needs Improvement': 'revision_requested',
         'Revision Requested': 'revision_requested',
@@ -377,7 +413,10 @@ const AdminArticles = () => {
           assignedReviewers: reviewers, 
           status: 'Under Review',
           reviewDeadline: reviewDeadline || undefined,
-          reviewerNote: reviewerNote || undefined
+          reviewerNote: reviewerNote || undefined,
+          assignedAt: new Date(),
+          reviews: {},
+          reviewerFeedback: undefined
         } : a));
         if (selectedArticle?.id === id) {
           setSelectedArticle(prev => prev ? { 
@@ -385,7 +424,10 @@ const AdminArticles = () => {
             assignedReviewers: reviewers, 
             status: 'Under Review',
             reviewDeadline: reviewDeadline || undefined,
-            reviewerNote: reviewerNote || undefined
+            reviewerNote: reviewerNote || undefined,
+            assignedAt: new Date(),
+            reviews: {},
+            reviewerFeedback: undefined
           } : null);
         }
         showToast("Reviewers assigned successfully.", 'success');
@@ -456,7 +498,7 @@ const AdminArticles = () => {
               className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer"
             >
               <option value="All">All Workflow States</option>
-              {['Submitted', 'Need Improvements', 'Revision Requested', 'Ready to Publish', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected', 'Awaiting Decision'].map(s => (
+              {['Submitted', 'Revised Submitted', 'Need Improvements', 'Revision Requested', 'Ready to Publish', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected', 'Awaiting Decision'].map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -485,7 +527,6 @@ const AdminArticles = () => {
                 )}>
                   <td className="px-6 py-5">
                     <div>
-                      <p className="text-[9px] font-black text-zinc-400 mb-1 tracking-widest">{article.id}</p>
                       <h3 
                         onClick={() => openDetails(article)}
                         className="text-sm font-bold text-black hover:text-blue-600 cursor-pointer transition-colors line-clamp-1"
@@ -501,13 +542,20 @@ const AdminArticles = () => {
                   <td className="px-6 py-5">
                     <div className="space-y-2">
                       {/* Workflow status chip */}
-                      <span className={cn(
-                        "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                        getStatusStyles(article.status)
-                      )}>
-                        {getStatusIcon(article.status)}
-                        {article.status}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={cn(
+                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+                          getStatusStyles(article.status)
+                        )}>
+                          {getStatusIcon(article.status)}
+                          {article.status}
+                        </span>
+                        {article.versions && article.versions.length > 1 && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                            Revised
+                          </span>
+                        )}
+                      </div>
 
                       {/* Assigned reviewers + deadline */}
                       {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
@@ -623,6 +671,22 @@ const AdminArticles = () => {
                         </span>
                       ) : ['Published', 'Ready to Publish', 'Rejected', 'Desk Rejected'].includes(article.status) ? (
                         <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider w-[135px] text-center whitespace-nowrap">No actions required</span>
+                      ) : (article.status === 'Revised Submitted' || (article.status === 'Submitted' && article.versions && article.versions.length > 1)) ? (
+                        <button 
+                          onClick={() => {
+                            setPreviewArticle(article);
+                            setIsPreviewOpen(true);
+                            setIsAssigningFromPreview(true);
+                            setIsRejectingFromPreview(false);
+                            setRejectionReasonText('');
+                            setRejectionError(null);
+                            setReviewerSearchTerm('');
+                            setSelectedReviewersForAssigning(article.assignedReviewers || []);
+                          }}
+                          className="px-1 py-2 bg-blue-600 text-white rounded-lg text-[9px] font-black tracking-wider hover:bg-blue-700 transition-all uppercase cursor-pointer w-[135px] text-center whitespace-nowrap font-sans font-bold"
+                        >
+                          Send back to Reviewer(s)
+                        </button>
                       ) : (!article.assignedReviewers || article.assignedReviewers.length === 0) ? (
                         // Stage 1: Before Reviewer Assignment
                         <button 
@@ -644,37 +708,21 @@ const AdminArticles = () => {
                         const diff = article.reviewDeadline ? getRemainingDays(article.reviewDeadline) : null;
                         const isOverdue = diff !== null && diff < 0;
 
-                        const totalAssigned = article.assignedReviewers ? article.assignedReviewers.length : 0;
                         const approvedReviews = reviewsList.filter((r: any) => ['Approved', 'Accepted'].includes(r.recommendation));
                         const rejectOrRevisionReviews = reviewsList.filter((r: any) => ['Rejected', 'Needs Improvement', 'Need Improvements'].includes(r.recommendation));
 
-                        const allApproved = reviewsList.length === totalAssigned && approvedReviews.length === totalAssigned && totalAssigned > 0;
-                        const allRejectOrRevision = reviewsList.length === totalAssigned && rejectOrRevisionReviews.length === totalAssigned && totalAssigned > 0;
+                        const hasFeedback = reviewsList.length > 0;
+                        const showPublish = approvedReviews.length > 0 || isOverdue;
+                        const showSendBack = rejectOrRevisionReviews.length > 0 || isOverdue;
 
-                        let showPublish = false;
-                        let showSendBack = false;
-
-                        if (isOverdue) {
-                          showPublish = true;
-                          showSendBack = true;
-                        } else {
-                          if (allApproved) {
-                            showPublish = true;
-                            showSendBack = false;
-                          } else if (allRejectOrRevision) {
-                            showPublish = false;
-                            showSendBack = true;
-                          } else {
-                            showPublish = true;
-                            showSendBack = true;
-                          }
+                        if (!hasFeedback && !isOverdue) {
+                          return (
+                            <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider w-[135px] text-center whitespace-nowrap bg-zinc-50 border border-zinc-200/50 px-1 py-2 rounded-xl">
+                              Waiting for Reviews
+                            </span>
+                          );
                         }
 
-                        // Adjust send back status
-                        if ((article.status as string) === 'Revision Requested') {
-                          showSendBack = false;
-                        }
-                        
                         return (
                           <>
                             {showSendBack && (
@@ -684,7 +732,7 @@ const AdminArticles = () => {
                                   setAdminNote('');
                                   setIsAdminNoteModalOpen(true);
                                 }}
-                                className="px-1 py-2 bg-amber-500 text-white rounded-lg text-[9px] font-black tracking-wider hover:bg-amber-600 transition-all uppercase cursor-pointer w-[135px] text-center whitespace-nowrap"
+                                className="px-1 py-2 bg-amber-500 text-white rounded-lg text-[9px] font-black tracking-wider hover:bg-amber-600 transition-all uppercase cursor-pointer w-[135px] text-center whitespace-nowrap font-sans font-bold"
                               >
                                 Send Back to Author
                               </button>
@@ -702,7 +750,7 @@ const AdminArticles = () => {
                                     }
                                   });
                                 }}
-                                className="px-1 py-2 bg-emerald-600 text-white rounded-lg text-[9px] font-black tracking-wider hover:bg-emerald-700 transition-all uppercase cursor-pointer w-[135px] text-center whitespace-nowrap"
+                                className="px-1 py-2 bg-emerald-600 text-white rounded-lg text-[9px] font-black tracking-wider hover:bg-emerald-700 transition-all uppercase cursor-pointer w-[135px] text-center whitespace-nowrap font-sans font-bold"
                               >
                                 Move to Publish List
                               </button>
@@ -735,7 +783,14 @@ const AdminArticles = () => {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-black tracking-tight">{selectedArticle.id}</h3>
-                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{selectedArticle.status}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{selectedArticle.status}</p>
+                    {selectedArticle.versions && selectedArticle.versions.length > 1 && (
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide bg-amber-500/10 text-amber-600 border border-amber-500/20 leading-none">
+                        Revised
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button 
@@ -765,14 +820,18 @@ const AdminArticles = () => {
                         <FileText size={18} />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-black">{selectedArticle.versions[0].fileName}</p>
-                        <p className="text-[9px] text-zinc-400 font-bold uppercase">Original Manuscript</p>
+                        <p className="text-xs font-bold text-black">
+                          {selectedArticle.versions[selectedArticle.versions.length - 1].fileName}
+                        </p>
+                        <p className="text-[9px] text-zinc-400 font-bold uppercase">
+                          {selectedArticle.versions.length > 1 ? 'Revised Manuscript' : 'Original Manuscript'}
+                        </p>
                       </div>
                     </div>
                     <button 
                       onClick={() => handleDownload(selectedArticle.id, selectedArticle.title)}
                       className="p-2 hover:bg-zinc-100 rounded-lg transition-all text-zinc-400 hover:text-black cursor-pointer"
-                      title="Download Original Manuscript"
+                      title={selectedArticle.versions.length > 1 ? 'Download Revised Manuscript' : 'Download Original Manuscript'}
                     >
                       <Download size={18} />
                     </button>
@@ -1005,9 +1064,8 @@ const AdminArticles = () => {
                   <RotateCcw size={14} />
                   Admin Actions
                 </div>
-
-                {/* Assignment UI (Restored) */}
-                {selectedArticle.status === 'Submitted' && (
+                      {/* Assignment UI (Restored) */}
+                {selectedArticle.status === 'Submitted' && (!selectedArticle.versions || selectedArticle.versions.length <= 1) && (
                   <div className="space-y-4">
                     <button 
                       onClick={() => {
@@ -1029,7 +1087,34 @@ const AdminArticles = () => {
                   </div>
                 )}
 
+                {(selectedArticle.status === 'Revised Submitted' || (selectedArticle.status === 'Submitted' && selectedArticle.versions && selectedArticle.versions.length > 1)) && (
+                  <div className="space-y-4">
+                    <button 
+                      onClick={() => {
+                        setIsDetailsOpen(false);
+                        setPreviewArticle(selectedArticle);
+                        setIsPreviewOpen(true);
+                        setIsAssigningFromPreview(true);
+                        setIsRejectingFromPreview(false);
+                        setRejectionReasonText('');
+                        setRejectionError(null);
+                        setReviewerSearchTerm('');
+                        setSelectedReviewersForAssigning(selectedArticle.assignedReviewers || []);
+                      }}
+                      className="w-full flex items-center justify-center gap-3 py-5 bg-blue-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                    >
+                      <UserCheck size={18} />
+                      SEND BACK TO REVIEWER(S)
+                    </button>
+                  </div>
+                )}
 
+                {selectedArticle.status === 'Revision Requested' && (
+                  <div className="w-full py-5 bg-amber-50/50 text-amber-600 rounded-2xl text-xs font-black tracking-widest border border-amber-100/50 flex items-center justify-center gap-3">
+                    <Clock size={18} />
+                    WAITING FOR AUTHOR REVISION
+                  </div>
+                )}
 
                 {selectedArticle.status === 'Ready to Publish' && (
                   <button 
@@ -1065,149 +1150,66 @@ const AdminArticles = () => {
                   </div>
                 )}
 
-                {(selectedArticle.status === 'Sent to Reviewer' || selectedArticle.status === 'Under Review') && (() => {
-                  const diff = selectedArticle.reviewDeadline ? getRemainingDays(selectedArticle.reviewDeadline) : null;
-                  const isOverdue = diff !== null && diff < 0;
-
-                  if (isOverdue) {
-                    return (
-                      <div className="space-y-4">
-                        <div className="w-full py-5 bg-violet-50 text-violet-600 rounded-2xl text-xs font-black tracking-widest border border-violet-100 flex items-center justify-center gap-3">
-                          <AlertCircle size={18} />
-                          DECISION REQUIRED: REVIEW DEADLINE EXPIRED
-                        </div>
-                        
-                        <button 
-                          onClick={() => {
-                            confirm({
-                              title: 'Move to Publish List',
-                              message: 'Move this article to the Ready to Publish list?',
-                              confirmText: 'Move',
-                              onConfirm: () => {
-                                updateStatus(selectedArticle.id, 'Ready to Publish', null, 'Article successfully moved to Ready to Publish list.');
-                                setIsDetailsOpen(false);
-                              }
-                            });
-                          }}
-                          className="w-full flex items-center justify-center gap-3 py-5 bg-emerald-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 active:scale-95 cursor-pointer font-sans"
-                        >
-                          <UploadCloud size={18} />
-                          MOVE TO PUBLISH LIST
-                        </button>
-
-                        <button 
-                          onClick={() => setIsAdminNoteModalOpen(true)}
-                          className="w-full flex items-center justify-center gap-3 py-5 bg-amber-500 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-amber-600 transition-all shadow-xl shadow-amber-500/20 active:scale-95 cursor-pointer font-sans"
-                        >
-                          <RotateCcw size={18} />
-                          SEND BACK TO AUTHOR
-                        </button>
-
-                        <button 
-                          onClick={() => {
-                            confirm({
-                              title: 'Reject Article',
-                              message: 'Are you sure you want to REJECT this article? This action cannot be undone.',
-                              confirmText: 'Reject',
-                              onConfirm: () => {
-                                updateStatus(selectedArticle.id, 'Rejected');
-                                showToast('Article rejected successfully', 'error');
-                                setIsDetailsOpen(false);
-                              }
-                            });
-                          }}
-                          className="w-full flex items-center justify-center gap-3 py-5 bg-rose-600 text-white rounded-2xl text-xs font-black tracking-widest hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/20 active:scale-95 cursor-pointer font-sans"
-                        >
-                          <XCircle size={18} />
-                          REJECT ARTICLE
-                        </button>
-                      </div>
-                    );
-                  }
-
-                  // Default waiting UI
-                  return (
-                    <div className="space-y-3">
-                      <div className="w-full py-5 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-black tracking-widest border border-indigo-100 flex items-center justify-center gap-3">
-                        <Send size={18} />
-                        WAITING FOR REVIEWER FEEDBACK
-                      </div>
-                      {selectedArticle.reviewDeadline && (
-                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl space-y-2 text-xs">
-                          <div className="flex justify-between items-center text-zinc-500">
-                            <span>📅 Review Deadline:</span>
-                            <span className="font-bold text-black">
-                              {new Date(selectedArticle.reviewDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span>⏳ Days Remaining:</span>
-                            {(() => {
-                              const diffVal = getRemainingDays(selectedArticle.reviewDeadline);
-                              if (diffVal === null) return <span className="font-bold text-zinc-500">N/A</span>;
-                              return (
-                                <span className={cn(
-                                  "px-2 py-0.5 rounded font-bold uppercase text-[10px] border",
-                                  diffVal <= 3 ? "bg-amber-50 border-amber-100 text-amber-600" : "bg-emerald-50 border-emerald-100 text-emerald-600"
-                                )}>
-                                  {diffVal === 0 ? '⏰ Due Today' : `${diffVal} days left`}
-                                </span>
-                              );
-                            })()}
-                          </div>
-                          {selectedArticle.reviewerNote && (
-                            <div className="pt-2 border-t border-zinc-200 text-zinc-400 italic">
-                              <strong>Note to Reviewer:</strong> "{selectedArticle.reviewerNote}"
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {selectedArticle.status === 'Awaiting Decision' && (() => {
+                {(selectedArticle.status === 'Sent to Reviewer' || selectedArticle.status === 'Under Review' || selectedArticle.status === 'Awaiting Decision') && (() => {
                   const reviewsList = selectedArticle.reviews ? Object.values(selectedArticle.reviews) : (selectedArticle.reviewerFeedback ? [selectedArticle.reviewerFeedback] : []);
                   const diff = selectedArticle.reviewDeadline ? getRemainingDays(selectedArticle.reviewDeadline) : null;
                   const isOverdue = diff !== null && diff < 0;
 
-                  const totalAssigned = selectedArticle.assignedReviewers ? selectedArticle.assignedReviewers.length : 0;
                   const approvedReviews = reviewsList.filter((r: any) => ['Approved', 'Accepted'].includes(r.recommendation));
                   const rejectOrRevisionReviews = reviewsList.filter((r: any) => ['Rejected', 'Needs Improvement', 'Need Improvements'].includes(r.recommendation));
 
-                  const allApproved = reviewsList.length === totalAssigned && approvedReviews.length === totalAssigned && totalAssigned > 0;
-                  const allRejectOrRevision = reviewsList.length === totalAssigned && rejectOrRevisionReviews.length === totalAssigned && totalAssigned > 0;
-                  const hasReject = reviewsList.some((r: any) => r.recommendation === 'Rejected');
+                  const hasFeedback = reviewsList.length > 0;
+                  const showPublish = approvedReviews.length > 0 || isOverdue;
+                  const showSendBack = rejectOrRevisionReviews.length > 0 || isOverdue;
+                  const showReject = reviewsList.some((r: any) => r.recommendation === 'Rejected') || isOverdue;
 
-                  let showPublish = false;
-                  let showSendBack = false;
-                  let showReject = false;
-
-                  if (isOverdue) {
-                    showPublish = true;
-                    showSendBack = true;
-                    showReject = true;
-                  } else {
-                    if (allApproved) {
-                      showPublish = true;
-                      showSendBack = false;
-                      showReject = false;
-                    } else if (allRejectOrRevision) {
-                      showPublish = false;
-                      showSendBack = true;
-                      showReject = hasReject;
-                    } else {
-                      showPublish = true;
-                      showSendBack = true;
-                      showReject = hasReject;
-                    }
+                  if (!hasFeedback && !isOverdue) {
+                    // Default waiting UI
+                    return (
+                      <div className="space-y-3">
+                        <div className="w-full py-5 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-black tracking-widest border border-indigo-100 flex items-center justify-center gap-3 font-sans">
+                          <Send size={18} />
+                          WAITING FOR REVIEWER FEEDBACK
+                        </div>
+                        {selectedArticle.reviewDeadline && (
+                          <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl space-y-2 text-xs text-black font-sans">
+                            <div className="flex justify-between items-center text-zinc-500">
+                              <span>📅 Review Deadline:</span>
+                              <span className="font-bold text-black">
+                                {new Date(selectedArticle.reviewDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span>⏳ Days Remaining:</span>
+                              {(() => {
+                                const diffVal = getRemainingDays(selectedArticle.reviewDeadline);
+                                if (diffVal === null) return <span className="font-bold text-zinc-500">N/A</span>;
+                                return (
+                                  <span className={cn(
+                                    "px-2 py-0.5 rounded font-bold uppercase text-[10px] border",
+                                    diffVal <= 3 ? "bg-amber-50 border-amber-100 text-amber-600" : "bg-emerald-50 border-emerald-100 text-emerald-600"
+                                  )}>
+                                    {diffVal === 0 ? '⏰ Due Today' : `${diffVal} days left`}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                            {selectedArticle.reviewerNote && (
+                              <div className="pt-2 border-t border-zinc-200 text-zinc-400 italic">
+                                <strong>Note to Reviewer:</strong> "{selectedArticle.reviewerNote}"
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
                   }
 
                   return (
                     <div className="space-y-4">
-                      <div className="w-full py-5 bg-violet-50 text-violet-600 rounded-2xl text-xs font-black tracking-widest border border-violet-100 flex items-center justify-center gap-3">
+                      <div className="w-full py-5 bg-violet-50 text-violet-600 rounded-2xl text-xs font-black tracking-widest border border-violet-100 flex items-center justify-center gap-3 font-sans">
                         <AlertCircle size={18} />
-                        DECISION REQUIRED: {isOverdue ? 'REVIEW DEADLINE EXPIRED' : 'REVIEW SUBMITTED'}
+                        DECISION REQUIRED: {isOverdue ? 'REVIEW DEADLINE EXPIRED' : 'REVIEW FEEDBACK RECEIVED'}
                       </div>
                       
                       {showPublish && (
@@ -1409,14 +1411,14 @@ const AdminArticles = () => {
                   Document Viewer
                 </h4>
                 
-                {previewArticle.versions[0].fileName.endsWith('.pdf') ? (
+                {previewArticle.versions[previewArticle.versions.length - 1].fileName.endsWith('.pdf') ? (
                   /* Simulated Premium PDF Viewer */
                   <div className="bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
                     {/* PDF Toolbar */}
                     <div className="bg-zinc-950 px-4 py-3 border-b border-white/5 flex items-center justify-between text-xs text-zinc-400 select-none">
                       <div className="flex items-center gap-2 font-medium truncate max-w-[50%]">
                         <FileText size={14} className="text-red-400 shrink-0" />
-                        <span className="truncate">{previewArticle.versions[0].fileName}</span>
+                        <span className="truncate">{previewArticle.versions[previewArticle.versions.length - 1].fileName}</span>
                       </div>
                       <div className="flex items-center gap-4 shrink-0">
                         <span className="font-semibold tracking-wider">PAGE 1 OF 2</span>
@@ -1488,7 +1490,7 @@ const AdminArticles = () => {
                     <div className="p-6 sm:p-8 max-h-[350px] overflow-y-auto space-y-6 text-sm text-zinc-300 leading-relaxed font-serif custom-scrollbar">
                       <h4 className="font-bold font-sans uppercase text-[10px] tracking-wider text-zinc-400">Extracted Manuscript Text</h4>
                       <p className="font-bold text-base text-zinc-100 font-sans">{previewArticle.title}</p>
-                      <p className="italic text-zinc-400 font-sans text-xs">Author: {previewArticle.author} | File: {previewArticle.versions[0].fileName}</p>
+                      <p className="italic text-zinc-400 font-sans text-xs">Author: {previewArticle.author} | File: {previewArticle.versions[previewArticle.versions.length - 1].fileName}</p>
                       <p>
                         [EXTRACTED CONTENT] Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
                       </p>
@@ -1534,8 +1536,15 @@ const AdminArticles = () => {
                   {/* Overlay Header */}
                   <div className="px-6 py-5 border-b border-white/5 bg-zinc-950 flex items-center justify-between shrink-0">
                     <div>
-                      <h3 className="text-lg font-bold text-white uppercase tracking-tight">Select Reviewers</h3>
-                      <p className="text-xs text-zinc-500 mt-0.5">Select between 1 and 5 reviewers for this manuscript.</p>
+                      <h3 className="text-lg font-bold text-white uppercase tracking-tight">
+                        {previewArticle?.versions && previewArticle.versions.length > 1 ? 'Reassign / Select Reviewers' : 'Select Reviewers'}
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        {previewArticle?.versions && previewArticle.versions.length > 1
+                          ? 'Review previous recommendations and assign new or existing reviewers.'
+                          : 'Select between 1 and 5 reviewers for this manuscript.'
+                        }
+                      </p>
                     </div>
                     <button 
                       onClick={() => {
@@ -1596,7 +1605,24 @@ const AdminArticles = () => {
                                 className="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-blue-600 focus:ring-0 focus:ring-offset-0 cursor-pointer shrink-0"
                               />
                               <div className="min-w-0">
-                                <p className="text-xs font-bold truncate text-white">{reviewer.name}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-xs font-bold truncate text-white">{reviewer.name}</p>
+                                  {(() => {
+                                    const prevReview = previewArticle?.reviews ? Object.values(previewArticle.reviews).find((rev: any) => rev.reviewerName === reviewer.name) : null;
+                                    if (!prevReview) return null;
+                                    const rec = prevReview.recommendation;
+                                    return (
+                                      <span className={cn(
+                                        "px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider leading-none shrink-0 font-sans",
+                                        ['Approved', 'Accepted'].includes(rec) ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
+                                        ['Rejected'].includes(rec) ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
+                                        "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                      )}>
+                                        {rec === 'Needs Improvement' || rec === 'Need Improvements' ? 'REVISION' : rec.toUpperCase()}
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
                                 <p className="text-[10px] text-zinc-500 font-medium truncate mt-0.5">{reviewer.expertise}</p>
                               </div>
                             </div>

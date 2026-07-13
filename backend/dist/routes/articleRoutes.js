@@ -302,7 +302,7 @@ router.delete('/:id', authMiddleware_1.requireAuth, async (req, res) => {
         if (role !== 'admin' && article.authorId !== uid) {
             return res.status(403).json({ error: 'Unauthorized to delete this article' });
         }
-        if (role !== 'admin' && !['draft', 'submitted'].includes(article.status)) {
+        if (role !== 'admin' && !['draft', 'submitted', 'revised_submitted'].includes(article.status)) {
             return res.status(400).json({ error: 'Cannot delete article that is already under review or published' });
         }
         // Cleanup Cloudinary thumbnail if exists
@@ -682,9 +682,9 @@ router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRol
                 updateData.pdfUrl = objectKey;
                 updateData.pdfName = pdfFile.originalname;
             }
-            // Only resubmit to submitted when status is exactly submitted. Otherwise, keep it as revision_requested.
-            if (status === 'submitted') {
-                updateData.status = 'submitted';
+            // Only resubmit to revised_submitted when status is submitted or revised_submitted. Otherwise, keep it as revision_requested.
+            if (status === 'submitted' || status === 'revised_submitted') {
+                updateData.status = 'revised_submitted';
             }
             else {
                 updateData.status = 'revision_requested';
@@ -723,14 +723,15 @@ router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRol
             }
         }
         await articleRef.update(updateData);
-        if (updateData.status === 'submitted' && currentStatus !== 'submitted') {
+        if ((updateData.status === 'submitted' || updateData.status === 'revised_submitted') &&
+            (currentStatus !== 'submitted' && currentStatus !== 'revised_submitted')) {
             (0, notificationService_1.sendArticleSubmittedNotifications)(id).catch(err => {
                 console.error('Failed to trigger submission notifications on article update:', err);
             });
         }
         // Fetch latest data for summary if submitted
         let summary = null;
-        if (updateData.status === 'submitted') {
+        if (updateData.status === 'submitted' || updateData.status === 'revised_submitted') {
             const invitationsSnapshot = await articleRef.collection('invitations').get();
             const invitations = invitationsSnapshot.docs.map(doc => doc.data());
             const updatedArticle = (await articleRef.get()).data();
@@ -849,6 +850,17 @@ router.patch('/:id/assign', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
         if (!doc.exists) {
             return res.status(404).json({ error: 'Article not found' });
         }
+        const articleData = doc.data();
+        const pastReviews = articleData.pastReviews || [];
+        // Archive current reviews if they exist
+        if (articleData.reviews && Object.keys(articleData.reviews).length > 0) {
+            const roundNumber = (articleData.revisionHistory?.length || 0) + 1;
+            pastReviews.push({
+                round: roundNumber,
+                assignedAt: articleData.assignedAt || articleData.createdAt || new Date(),
+                reviews: articleData.reviews
+            });
+        }
         await articleRef.update({
             reviewerIds: reviewerIds,
             assignedReviewers: reviewerNames || [],
@@ -861,7 +873,10 @@ router.patch('/:id/assign', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
             assignedAt: new Date(),
             assignedBy: req.user?.name || req.user?.email || 'Admin',
             reviewerNote: reviewerNote || null,
-            sentReminders: [] // reset reminders for new assignment
+            sentReminders: [], // reset reminders for new assignment
+            // Clear current reviews for the new round
+            reviews: {},
+            pastReviews: pastReviews
         });
         (0, notificationService_1.sendReviewerAssignedNotifications)(id, reviewerIds).catch(err => {
             console.error('Failed to trigger reviewer assigned notifications:', err);
@@ -938,6 +953,28 @@ router.patch('/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
             }
         }
         else if (role === 'admin') {
+            const articleData = doc.data();
+            const reviewsList = articleData.reviews ? Object.values(articleData.reviews) : [];
+            const isOverdue = articleData.reviewDeadline ? new Date() > new Date(articleData.reviewDeadline) : false;
+            // Validate workflow transitions
+            if (status === 'accepted') {
+                const hasAccepted = reviewsList.some((r) => ['Approved', 'Accepted'].includes(r.recommendation));
+                if (!hasAccepted && !isOverdue) {
+                    return res.status(400).json({ error: 'Cannot move to publish list: At least one reviewer must accept the manuscript, or the review deadline must have expired.' });
+                }
+            }
+            if (status === 'revision_requested') {
+                const hasRevisionOrReject = reviewsList.some((r) => ['Rejected', 'Needs Improvement', 'Need Improvements'].includes(r.recommendation));
+                if (!hasRevisionOrReject && !isOverdue) {
+                    return res.status(400).json({ error: 'Cannot send back to author: At least one reviewer must recommend revision or rejection, or the review deadline must have expired.' });
+                }
+            }
+            if (status === 'rejected') {
+                const hasReject = reviewsList.some((r) => r.recommendation === 'Rejected');
+                if (!hasReject && !isOverdue) {
+                    return res.status(400).json({ error: 'Cannot reject article: At least one reviewer must recommend rejection, or the review deadline must have expired.' });
+                }
+            }
             // Admin updates article overall status/finalizes decision
             const updateData = {
                 status,
