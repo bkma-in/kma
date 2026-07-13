@@ -25,8 +25,9 @@ export const submitArticle = async (formData: FormData) => {
   return response.data;
 };
 
-export const getPdfUrl = async (articleId: string) => {
-  const response = await api.get(`/articles/${articleId}/pdf`);
+export const getPdfUrl = async (articleId: string, key?: string) => {
+  const url = key ? `/articles/${articleId}/pdf?key=${encodeURIComponent(key)}` : `/articles/${articleId}/pdf`;
+  const response = await api.get(url);
   return response.data;
 };
 

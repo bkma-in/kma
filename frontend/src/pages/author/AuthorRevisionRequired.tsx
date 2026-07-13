@@ -237,7 +237,7 @@ const AuthorRevisionRequired = () => {
     }
     try {
       showToast('Generating secure download link...', 'info');
-      const res = await getPdfUrl(`${articleId}?key=${encodeURIComponent(pdfUrl)}`);
+      const res = await getPdfUrl(articleId, pdfUrl);
       if (res.success && res.url) {
         window.open(res.url, '_blank');
       } else {
