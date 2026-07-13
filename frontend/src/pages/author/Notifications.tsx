@@ -238,7 +238,7 @@ const Notifications = () => {
               <div 
                 key={notif.notificationId}
                 className={cn(
-                  "group relative p-6 bg-white border rounded-[2rem] transition-all duration-300 hover:shadow-2xl hover:shadow-black/5 hover:-translate-y-1",
+                  "group relative p-6 bg-white border rounded-3xl transition-all duration-300 hover:shadow-2xl hover:shadow-black/5 hover:-translate-y-1",
                   notif.read ? "border-zinc-100 opacity-80" : "border-zinc-200 shadow-xl shadow-black/[0.02]"
                 )}
               >
@@ -296,7 +296,7 @@ const Notifications = () => {
             );
           })
         ) : (
-          <div className="p-20 text-center flex flex-col items-center gap-6 bg-white rounded-[3rem] border border-zinc-100 shadow-xl shadow-black/[0.02]">
+          <div className="p-20 text-center flex flex-col items-center gap-6 bg-white rounded-3xl border border-zinc-200 shadow-sm">
             <div className="w-20 h-20 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-200">
               <Archive size={40} />
             </div>
