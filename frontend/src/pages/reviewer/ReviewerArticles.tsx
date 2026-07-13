@@ -287,7 +287,6 @@ const ReviewerArticles = () => {
 
                     <td className="px-8 py-8">
                       <div className="space-y-1">
-                        <p className="text-[9px] font-black text-zinc-400 tracking-[0.2em] uppercase">{article.articleId}</p>
                         <h3 className="text-sm font-bold text-black group-hover:text-zinc-700 transition-colors line-clamp-2 leading-tight font-['Outfit']">{article.title}</h3>
                       </div>
                     </td>
