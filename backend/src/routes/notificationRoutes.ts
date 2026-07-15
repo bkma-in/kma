@@ -1,10 +1,10 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { db } from '../config/firebase';
 import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
 
 const router = Router();
 
-router.get('/', requireAuth, async (req: AuthRequest, res) => {
+router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { uid, role } = req.user!;
     const { limit = '50' } = req.query;
@@ -63,7 +63,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Mark Notification as Read
-router.patch('/:id/read', requireAuth, async (req: AuthRequest, res) => {
+router.patch('/:id/read', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
     const { uid } = req.user!;
@@ -84,7 +84,7 @@ router.patch('/:id/read', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Mark All Notifications as Read for Current User (Firestore Batch Update)
-router.post('/read-all', requireAuth, async (req: AuthRequest, res) => {
+router.post('/read-all', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.user!;
 
@@ -99,7 +99,7 @@ router.post('/read-all', requireAuth, async (req: AuthRequest, res) => {
     }
 
     const batch = db.batch();
-    snapshot.docs.forEach(doc => {
+    snapshot.docs.forEach((doc: any) => {
       batch.update(doc.ref, { read: true, updatedAt: new Date() });
     });
     await batch.commit();
@@ -112,7 +112,7 @@ router.post('/read-all', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Delete a specific notification
-router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
+router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
     const { uid } = req.user!;
@@ -133,13 +133,13 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Clear All Notifications for Current User
-router.delete('/', requireAuth, async (req: AuthRequest, res) => {
+router.delete('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.user!;
     const snapshot = await db.collection('notifications').where('userId', '==', uid).get();
     
     const batch = db.batch();
-    snapshot.docs.forEach(doc => {
+    snapshot.docs.forEach((doc: any) => {
       batch.delete(doc.ref);
     });
     await batch.commit();

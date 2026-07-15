@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { db } from '../config/firebase';
 import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
 import Razorpay from 'razorpay';
@@ -12,7 +12,7 @@ const razorpay = new Razorpay({
 const router = Router();
 
 // List user's subscriptions
-router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res) => {
+router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.user!;
     const snapshot = await db.collection('subscriptions')
@@ -20,7 +20,7 @@ router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res) => {
       .orderBy('createdAt', 'desc')
       .get();
       
-    const subscriptions = snapshot.docs.map(doc => doc.data());
+    const subscriptions = snapshot.docs.map((doc: any) => doc.data());
     res.json({ success: true, subscriptions });
   } catch (error) {
     console.error('List subscriptions error:', error);
@@ -29,7 +29,7 @@ router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Create Razorpay Order
-router.post('/create-order', requireAuth, async (req: AuthRequest, res) => {
+router.post('/create-order', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { uid, email } = req.user!;
     const { issueId, type } = req.body; // type: "online" or "online_print"
