@@ -49,7 +49,7 @@ const AdminReadersList = () => {
           const userData = doc.data();
           const subData = activeSubscribes.get(doc.id);
           
-          const isSubscribed = !!subData || userData.isSubscribed === true || userData.subscribed === true;
+          const isSubscribed = true; // For now set all the readers as subscribed
           
           if (isSubscribed) {
             mappedReaders.push({
