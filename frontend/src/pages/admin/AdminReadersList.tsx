@@ -3,14 +3,10 @@ import {
   Search, 
   Users, 
   Calendar, 
-  Mail, 
-  Loader2,
-  CheckCircle2,
-  XCircle
+  Loader2
 } from 'lucide-react';
 import { useNotification } from '../../utils/NotificationContext';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { getReaders } from '../../services/user.service';
 
 interface Reader {
   id: string;
@@ -27,51 +23,21 @@ const AdminReadersList = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchReadersAndSubscriptions = async () => {
+    const fetchReaders = async () => {
       try {
-        // 1. Fetch users with role 'reader'
-        const usersQuery = query(collection(db, 'users'), where('role', '==', 'reader'));
-        const usersSnapshot = await getDocs(usersQuery);
-        
-        // 2. Fetch active subscriptions
-        const subsQuery = query(collection(db, 'subscriptions'), where('status', '==', 'active'));
-        const subsSnapshot = await getDocs(subsQuery);
-        
-        const activeSubscribes = new Map<string, any>();
-        subsSnapshot.docs.forEach(doc => {
-          const data = doc.data();
-          activeSubscribes.set(data.userId, data);
-        });
-
-        // 3. Map and filter only readers who have active subscriptions
-        const mappedReaders: Reader[] = [];
-        usersSnapshot.docs.forEach(doc => {
-          const userData = doc.data();
-          const subData = activeSubscribes.get(doc.id);
-          
-          const isSubscribed = true; // For now set all the readers as subscribed
-          
-          if (isSubscribed) {
-            mappedReaders.push({
-              id: doc.id,
-              name: userData.name || 'Anonymous Reader',
-              email: userData.email || '',
-              regDate: userData.createdAt || null,
-              isLifeMember: userData.lifeMember === true || userData.isLifeMember === true || subData?.type === 'lifetime' || subData?.type === 'life'
-            });
-          }
-        });
-
-        setReaders(mappedReaders);
+        const response = await getReaders();
+        if (response.success) {
+          setReaders(response.readers);
+        }
       } catch (error) {
-        console.error('Failed to load readers/subscriptions:', error);
+        console.error('Failed to load readers:', error);
         showToast('Failed to load readers list.', 'error');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchReadersAndSubscriptions();
+    fetchReaders();
   }, []);
 
   const filteredReaders = readers.filter(r => {
@@ -81,7 +47,7 @@ const AdminReadersList = () => {
 
   const formatDate = (regDate: any) => {
     if (!regDate) return 'N/A';
-    const dateObj = regDate.seconds ? new Date(regDate.seconds * 1000) : new Date(regDate);
+    const dateObj = new Date(regDate);
     return dateObj.toLocaleDateString('en-GB', { 
       day: '2-digit', 
       month: 'long', 
