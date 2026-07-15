@@ -611,6 +611,41 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
   }
 });
 
+// Admin: Get all readers
+router.get('/readers', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+  try {
+    const snapshot = await db.collection('users').where('role', '==', 'reader').get();
+    
+    // Also fetch all active subscriptions to check for life membership type
+    const subsSnapshot = await db.collection('subscriptions').where('status', '==', 'active').get();
+    const activeSubscribes = new Map();
+    subsSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      activeSubscribes.set(data.userId, data);
+    });
+
+    const readers = snapshot.docs.map(doc => {
+      const data = doc.data();
+      const subData = activeSubscribes.get(doc.id);
+      return {
+        id: doc.id,
+        name: data.name || 'Anonymous Reader',
+        email: data.email || '',
+        regDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
+        isLifeMember: data.lifeMember === true || data.isLifeMember === true || subData?.type === 'lifetime' || subData?.type === 'life'
+      };
+    });
+
+    // In-memory sort by regDate descending
+    readers.sort((a, b) => new Date(b.regDate).getTime() - new Date(a.regDate).getTime());
+
+    res.json({ success: true, readers });
+  } catch (error) {
+    console.error('Get readers error:', error);
+    res.status(500).json({ error: 'Failed to fetch readers' });
+  }
+});
+
 // Admin: Update reviewer status (Approve/Reject/Deactivate/Reactivate)
 router.patch('/reviewers/:id/status', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
   const adminId = req.user!.uid;
