@@ -22,7 +22,9 @@ import {
   Lock,
   FileUp,
   Send,
-  User
+  User,
+  Calendar,
+  UserPlus
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
@@ -660,159 +662,151 @@ const MyArticles = () => {
       </div>
 
       {/* Articles List */}
-      <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl overflow-hidden">
-        {isLoading ? (
-          <div className="p-20 text-center flex flex-col items-center gap-4">
-            <div className="w-10 h-10 border-4 border-zinc-100 border-t-black rounded-full animate-spin" />
-            <p className="text-zinc-500 font-medium text-sm">Synchronizing with BKMA Archive...</p>
-          </div>
-        ) : filteredArticles.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Manuscript Details</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Category</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date Submitted</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-50">
-                {filteredArticles.map((article) => (
-                  <tr 
-                    key={article.id} 
-                    id={`article-${article.id}`}
+      {/* Articles List */}
+      {isLoading ? (
+        <div className="p-20 text-center flex flex-col items-center gap-4 bg-white rounded-3xl border border-zinc-200 shadow-sm">
+          <div className="w-10 h-10 border-4 border-zinc-100 border-t-black rounded-full animate-spin" />
+          <p className="text-zinc-500 font-medium text-sm">Synchronizing with BKMA Archive...</p>
+        </div>
+      ) : filteredArticles.length > 0 ? (
+        <div className="space-y-5">
+          {filteredArticles.map((article) => {
+            return (
+              <div 
+                key={article.id} 
+                className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-5 sm:p-6 space-y-4 hover:shadow-md transition-all duration-300 relative overflow-hidden text-left"
+              >
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <h2 
+                      onClick={() => openDetails(article)}
+                      className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 cursor-pointer hover:text-blue-600 transition-colors"
+                    >
+                      {article.title}
+                    </h2>
+                    <p className="text-xs text-zinc-500 font-semibold font-sans mt-1">
+                      Author: <span className="uppercase text-zinc-700">{article.authors?.find((au: any) => au.role === 'submitter')?.name || 'Author'}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2 shrink-0">
+                    {article.versions && article.versions.length > 1 && (
+                      <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border border-amber-500/20 leading-none font-sans">
+                        Revised
+                      </span>
+                    )}
+                    <span className={cn(
+                      "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border leading-none font-sans",
+                      getStatusStyles(article.status)
+                    )}>
+                      {getStatusIcon(article.status)}
+                      {article.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Information Panel */}
+                <div className="bg-indigo-50/50 rounded-2xl py-2 px-4 sm:py-2.5 sm:px-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-indigo-100/30">
+                  <div className="flex flex-wrap items-center gap-6 sm:gap-8">
+                    {/* Calendar Icon */}
+                    <div className="w-10 h-10 rounded-xl bg-indigo-100/70 border border-indigo-200/20 flex items-center justify-center text-indigo-600 shrink-0">
+                      <Calendar size={18} />
+                    </div>
+                    
+                    {/* Date Submitted */}
+                    <div className="space-y-0.5">
+                      <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block font-sans">Date Submitted</span>
+                      <span className="text-xs font-bold text-zinc-700 font-sans">
+                        {new Date(article.dateSubmitted).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </span>
+                    </div>
+
+                    {/* Category */}
+                    <div className="space-y-0.5 border-l border-indigo-100/50 pl-6 sm:pl-8">
+                      <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block font-sans">Category</span>
+                      <span className="text-xs font-bold text-zinc-700 font-sans">{article.category}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions Section */}
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+                  {/* Invitation Action for Co-authors */}
+                  {article.status === 'Draft' && article.authors.find((a: any) => a.userId === currentUser?.uid && !a.accepted && a.status !== 'rejected') && (
+                    <button 
+                      onClick={() => handleOpenInvite(article)}
+                      className="px-6 py-3 bg-amber-500 text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all uppercase cursor-pointer shadow-md hover:shadow-lg font-sans h-11 flex items-center justify-center font-bold"
+                    >
+                      <UserPlus size={14} className="mr-2" />
+                      Decide on Invite
+                    </button>
+                  )}
+
+                  {article.status !== 'Draft' && article.authors.find((a: any) => a.userId === currentUser?.uid && !a.accepted && a.status !== 'rejected') && (
+                    <span className="text-[9px] font-bold text-rose-500 italic px-2">
+                      Main author is no longer waiting for your response
+                    </span>
+                  )}
+
+                  <button 
+                    onClick={() => openDetails(article)}
+                    className="px-6 py-3 bg-black text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase cursor-pointer shadow-md hover:shadow-lg font-sans h-11 flex items-center justify-center font-bold"
+                  >
+                    View Details
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const res = await getPdfUrl(article.id);
+                        if (res.success) window.open(res.url, '_blank');
+                      } catch (err) {
+                        showToast('Failed to download manuscript', 'error');
+                      }
+                    }}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-blue-700 transition-all uppercase cursor-pointer shadow-md hover:shadow-lg font-sans h-11 flex items-center justify-center font-bold"
+                  >
+                    Download PDF
+                  </button>
+
+                  <button 
+                    onClick={() => handleEdit(article)}
+                    disabled={article.status !== 'Revision Required'}
                     className={cn(
-                      "group hover:bg-zinc-50/50 transition-colors relative",
-                      highlightId === article.id && "bg-black/[0.03] animate-pulse border-l-4 border-black"
+                      "px-6 py-3 rounded-xl text-[10px] font-black tracking-widest uppercase cursor-pointer shadow-md hover:shadow-lg font-sans h-11 flex items-center justify-center font-bold transition-all",
+                      article.status === 'Revision Required' 
+                        ? "bg-amber-500 text-white hover:bg-amber-600" 
+                        : "bg-zinc-100 text-zinc-300 shadow-none cursor-not-allowed"
                     )}
                   >
-                    <td className="px-6 py-5">
-                      <div>
-                        <h3 className="text-sm font-bold text-black group-hover:text-zinc-700 transition-colors line-clamp-1">{article.title}</h3>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                      <span className="text-[10px] font-bold text-zinc-500 tracking-wider bg-zinc-100/50 px-2.5 py-1 rounded-lg uppercase">
-                        {article.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 text-xs text-zinc-500 font-medium">
-                      {new Date(article.dateSubmitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className={cn(
-                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                          getStatusStyles(article.status)
-                        )}>
-                          {getStatusIcon(article.status)}
-                          {article.status}
-                        </div>
-                        {article.versions && article.versions.length > 1 && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                            Revised
-                          </span>
-                        )}
-                        {(article.status === 'Rejected' || article.status === 'Published') && formatStatusDate(article) && (
-                          <div className={cn(
-                            "flex items-center gap-1 text-[9px] font-semibold tracking-tight",
-                            article.status === 'Rejected' ? 'text-red-400' : 'text-purple-400'
-                          )}>
-                            <Clock size={8} />
-                            on {formatStatusDate(article)}
-                          </div>
-                        )}
-                        {article.status === 'Draft' && article.authors.some((a: any) => !a.accepted) && (
-                          <div className="flex items-center gap-1 text-[8px] font-black text-amber-500 uppercase tracking-tighter animate-pulse">
-                            <Clock size={8} />
-                            Awaiting Co-authors
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* Invitation Action for Co-authors */}
-                        {article.status === 'Draft' && article.authors.find((a: any) => a.userId === currentUser?.uid && !a.accepted && a.status !== 'rejected') && (
-                          <button 
-                            onClick={() => handleOpenInvite(article)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 active:scale-95 animate-pulse"
-                          >
-                            <User size={14} />
-                            DECIDE ON INVITE
-                          </button>
-                        )}
-                        {article.status !== 'Draft' && article.authors.find((a: any) => a.userId === currentUser?.uid && !a.accepted && a.status !== 'rejected') && (
-                          <span className="text-[9px] font-bold text-rose-500 italic px-2">
-                            Main author is no longer waiting for your response
-                          </span>
-                        )}
+                    Submit Revision
+                  </button>
 
-                        <button 
-                          onClick={() => openDetails(article)}
-                          className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-black transition-all"
-                          title="View Details"
-                        >
-                          <Eye size={18} />
-                        </button>
-                        <button 
-                          onClick={async () => {
-                            try {
-                              const res = await getPdfUrl(article.id);
-                              if (res.success) window.open(res.url, '_blank');
-                            } catch (err) {
-                              showToast('Failed to download manuscript', 'error');
-                            }
-                          }}
-                          className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-black transition-all" 
-                          title="Download"
-                        >
-                          <Download size={18} />
-                        </button>
-                        <button 
-                          onClick={() => handleEdit(article)}
-                          disabled={article.status !== 'Revision Required'}
-                          className={cn(
-                            "p-2 rounded-lg transition-all",
-                            article.status === 'Revision Required' 
-                              ? "text-amber-500 hover:text-amber-700 hover:bg-amber-50 animate-pulse" 
-                              : "text-zinc-200 cursor-not-allowed"
-                          )}
-                          title={article.status === 'Revision Required' ? 'Submit Revision' : `Editing locked (${article.status})`}
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        {/* Only primary author can delete draft */}
-                        {article.authorId === currentUser?.uid && article.status === 'Draft' && (
-                          <button 
-                            onClick={() => handleDelete(article)}
-                            className="p-2 rounded-lg transition-all text-zinc-400 hover:text-rose-600 hover:bg-rose-50"
-                            title="Delete Draft"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  {article.authorId === currentUser?.uid && article.status === 'Draft' && (
+                    <button 
+                      onClick={() => handleDelete(article)}
+                      className="px-6 py-3 bg-rose-600 text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-rose-700 transition-all uppercase cursor-pointer shadow-md hover:shadow-lg font-sans h-11 flex items-center justify-center font-bold"
+                    >
+                      Delete Draft
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="p-20 text-center flex flex-col items-center gap-4 bg-white rounded-3xl border border-zinc-200 shadow-sm">
+          <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300">
+            <FileText size={32} />
           </div>
-        ) : (
-          <div className="p-20 text-center flex flex-col items-center gap-4">
-            <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300">
-              <FileText size={32} />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-black">No Articles Found</h3>
-              <p className="text-zinc-500 text-sm">You haven't submitted any manuscripts yet.</p>
-            </div>
+          <div>
+            <h3 className="text-lg font-bold text-black">No Articles Found</h3>
+            <p className="text-zinc-500 text-sm">You haven't submitted any manuscripts yet.</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Article Details Modal */}
       {isModalOpen && selectedArticle && (

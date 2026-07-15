@@ -152,7 +152,7 @@ const Dashboard = () => {
           <h1 className="text-4xl font-bold tracking-tighter text-black">Author Overview</h1>
           <p className="text-zinc-500 mt-2 text-sm max-w-md">Welcome back, <span className="font-bold text-black">{profile?.name || localStorage.getItem('userName') || 'Author User'}</span>. Here is the latest activity across your research portfolio.</p>
         </div>
-        <div className="flex items-center gap-3 bg-white/70 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 shadow-sm">
+        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-zinc-200 shadow-sm">
           <Clock size={16} className="text-zinc-400" />
           <span className="text-[10px] font-black text-black tracking-widest uppercase">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
         </div>
@@ -161,7 +161,7 @@ const Dashboard = () => {
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg animate-pulse">
+            <div key={i} className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm animate-pulse">
               <div className="w-10 h-10 rounded-xl bg-zinc-100 mb-4" />
               <div className="h-8 w-12 bg-zinc-100 rounded-lg mb-2" />
               <div className="h-3 w-16 bg-zinc-50 rounded" />
@@ -214,7 +214,7 @@ const Dashboard = () => {
           {/* Stats Cards Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
             {stats.map((stat, i) => (
-              <div key={i} className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg group hover:border-black transition-all cursor-default">
+              <div key={i} className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm group hover:border-black transition-all cursor-default">
                 <div className="flex justify-between items-start mb-4">
                   <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", stat.bg, stat.color)}>
                     <stat.icon size={20} />
@@ -237,20 +237,20 @@ const Dashboard = () => {
           <div>
             <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-               <NavLink to="/author/submit" className="flex items-center gap-4 p-4 bg-zinc-900/90 backdrop-blur-lg text-white rounded-2xl shadow-xl hover:bg-black transition-all active:scale-95 group border border-white/10 relative overflow-hidden">
+               <NavLink to="/author/submit" className="flex items-center gap-4 p-4 bg-zinc-900 text-white rounded-2xl shadow-xl hover:bg-black transition-all active:scale-95 group border border-white/10 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full blur-xl -mr-10 -mt-10" />
                 <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center relative z-10">
                   <Plus size={20} />
                 </div>
                 <span className="text-xs font-bold tracking-widest relative z-10">SUBMIT NEW</span>
               </NavLink>
-              <NavLink to="/author/articles" className="flex items-center gap-4 p-4 bg-white/70 backdrop-blur-md border border-white/20 rounded-2xl shadow-lg hover:border-black transition-all active:scale-95 group">
+              <NavLink to="/author/articles" className="flex items-center gap-4 p-4 bg-white border border-zinc-200 rounded-2xl shadow-lg hover:border-black transition-all active:scale-95 group">
                 <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:text-black transition-all shadow-sm">
                   <BookOpen size={20} />
                 </div>
                 <span className="text-xs font-bold tracking-widest text-black">MY ARTICLES</span>
               </NavLink>
-              <NavLink to="/author/drafts" className="flex items-center gap-4 p-4 bg-white/70 backdrop-blur-md border border-white/20 rounded-2xl shadow-lg hover:border-black transition-all active:scale-95 group">
+              <NavLink to="/author/drafts" className="flex items-center gap-4 p-4 bg-white border border-zinc-200 rounded-2xl shadow-lg hover:border-black transition-all active:scale-95 group">
                 <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:text-black transition-all shadow-sm">
                   <Inbox size={20} />
                 </div>
@@ -260,7 +260,7 @@ const Dashboard = () => {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white/70 backdrop-blur-md rounded-3xl border border-white/20 shadow-xl p-8">
+          <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-8">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
                 <History size={18} className="text-zinc-400" />
@@ -295,8 +295,39 @@ const Dashboard = () => {
 
         {/* Right Column: Archive Focus */}
         <div className="space-y-8">
+          {/* Notifications Preview */}
+          <div className="bg-zinc-900 text-white rounded-3xl p-8 shadow-xl border border-zinc-800 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32" />
+            <div className="flex items-center justify-between mb-8 relative z-10">
+              <div className="flex items-center gap-2">
+                <Bell size={18} className="text-zinc-500" />
+                <h3 className="text-xs font-bold uppercase tracking-widest">Notifications</h3>
+              </div>
+              <span className="bg-white/10 text-white text-[8px] font-black px-2 py-1 rounded">2 NEW</span>
+            </div>
+
+            <div className="space-y-6 mb-8">
+              {notifications.map((notif, i) => (
+                <div key={i} className="group cursor-pointer">
+                  <p className="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors leading-relaxed mb-1 italic">
+                    "{notif.message}"
+                  </p>
+                  <span className="text-[10px] text-zinc-600 font-bold tracking-widest">{notif.time}</span>
+                </div>
+              ))}
+            </div>
+
+            <NavLink 
+              to="/author/notifications"
+              className="w-full py-3 bg-white/10 hover:bg-white text-zinc-300 hover:text-black rounded-xl text-[10px] font-black tracking-widest transition-all uppercase flex items-center justify-center gap-2 group"
+            >
+              View All Notifications
+              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            </NavLink>
+          </div>
+
           {/* Categories / Helpful Info */}
-          <div className="bg-white/70 backdrop-blur-md rounded-3xl border border-white/20 shadow-xl p-8">
+          <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-8">
             <h3 className="text-xs font-bold text-black uppercase tracking-widest mb-6">Archive Focus</h3>
             <div className="space-y-4">
               <div className="p-4 bg-white/40 backdrop-blur-sm rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-white/60 transition-all border border-white/10 shadow-sm">

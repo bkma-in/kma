@@ -7,7 +7,8 @@ import {
   Trash2, 
   Send, 
   Plus, 
-  Inbox
+  Inbox,
+  Calendar
 } from 'lucide-react';
 import { useNotification } from '../../utils/NotificationContext';
 import { getArticles, deleteArticle } from '../../services/article.service';
@@ -119,64 +120,75 @@ const Drafts = () => {
           <p className="text-zinc-500 font-medium text-sm">Syncing workspace...</p>
         </div>
       ) : drafts.length > 0 ? (
-        <div className="bg-white rounded-3xl border border-zinc-100 shadow-xl shadow-black/[0.02] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Draft Title</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Last Modified</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-50">
-                {drafts.map((draft) => (
-                  <tr key={draft.id} className="group hover:bg-zinc-50/30 transition-all duration-300">
-                    <td className="px-6 py-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-300 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
-                          <FileText size={20} />
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-bold text-black group-hover:text-zinc-700 transition-colors line-clamp-1 font-['Outfit']">{draft.title}</h3>
-                          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{draft.category}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-6 text-xs text-zinc-500 font-bold text-center uppercase tracking-wider">
-                      {new Date(draft.lastEdited).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </td>
-                    <td className="px-6 py-6 text-center">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-zinc-100 text-zinc-500 border border-zinc-200 shadow-sm">
-                        <Edit3 size={10} />
-                        Draft
+        <div className="space-y-5">
+          {drafts.map((draft) => {
+            return (
+              <div 
+                key={draft.id} 
+                className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-5 sm:p-6 space-y-4 hover:shadow-md transition-all duration-300 relative overflow-hidden text-left"
+              >
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <h2 
+                      onClick={() => handleDraftSubmit(draft)}
+                      className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 cursor-pointer hover:text-blue-600 transition-colors font-['Outfit']"
+                    >
+                      {draft.title}
+                    </h2>
+                    <p className="text-xs text-zinc-500 font-semibold font-sans mt-1">
+                      Category: <span className="uppercase text-zinc-700">{draft.category}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-2 shrink-0">
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-zinc-100 text-zinc-500 border border-zinc-200 leading-none font-sans">
+                      <Edit3 size={10} className="mr-1" />
+                      Draft
+                    </span>
+                  </div>
+                </div>
+
+                {/* Information Panel */}
+                <div className="bg-indigo-50/50 rounded-2xl py-2 px-4 sm:py-2.5 sm:px-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-indigo-100/30">
+                  <div className="flex flex-wrap items-center gap-6 sm:gap-8">
+                    {/* Calendar Icon */}
+                    <div className="w-10 h-10 rounded-xl bg-indigo-100/70 border border-indigo-200/20 flex items-center justify-center text-indigo-600 shrink-0">
+                      <Calendar size={18} />
+                    </div>
+                    
+                    {/* Last Modified */}
+                    <div className="space-y-0.5">
+                      <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block font-sans">Last Modified</span>
+                      <span className="text-xs font-bold text-zinc-700 font-sans">
+                        {new Date(draft.lastEdited).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </span>
-                    </td>
-                    <td className="px-6 py-6">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                        <button 
-                          onClick={() => handleDraftSubmit(draft)}
-                          disabled={isSubmitting}
-                          className="p-2.5 bg-black text-white rounded-xl shadow-lg shadow-black/10 hover:bg-zinc-800 transition-all active:scale-95 flex items-center justify-center disabled:bg-zinc-300 disabled:cursor-not-allowed"
-                          title="Submit Final"
-                        >
-                          <Send size={18} />
-                        </button>
-                        <button 
-                          onClick={() => deleteDraft(draft.id)}
-                          className="p-2.5 bg-rose-50 border border-rose-100 rounded-xl text-rose-400 hover:bg-rose-600 hover:text-white transition-all"
-                          title="Discard Draft"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions Section */}
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+                  <button 
+                    onClick={() => handleDraftSubmit(draft)}
+                    disabled={isSubmitting}
+                    className="px-6 py-3 bg-black text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase cursor-pointer shadow-md hover:shadow-lg font-sans h-11 flex items-center justify-center font-bold disabled:bg-zinc-300 disabled:cursor-not-allowed"
+                  >
+                    <Send size={14} className="mr-2" />
+                    Submit Final
+                  </button>
+
+                  <button 
+                    onClick={() => deleteDraft(draft.id)}
+                    className="px-6 py-3 bg-rose-600 text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-rose-700 transition-all uppercase cursor-pointer shadow-md hover:shadow-lg font-sans h-11 flex items-center justify-center font-bold"
+                  >
+                    <Trash2 size={14} className="mr-2" />
+                    Discard Draft
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="bg-white rounded-[3rem] p-32 border border-zinc-100 shadow-xl shadow-black/[0.02] text-center flex flex-col items-center animate-in fade-in zoom-in duration-700">
