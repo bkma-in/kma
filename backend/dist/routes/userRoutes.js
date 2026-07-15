@@ -387,7 +387,7 @@ router.post('/report-issue', authMiddleware_1.requireAuth, uploadMiddleware_1.up
 router.get('/reported-issues', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin', 'dev']), async (req, res) => {
     try {
         const snapshot = await firebase_1.db.collection('reported_issues').orderBy('createdAt', 'desc').get();
-        const issues = snapshot.docs.map(doc => {
+        const issues = snapshot.docs.map((doc) => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -449,7 +449,7 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
             .get();
         const [nameSnap, emailSnap] = await Promise.all([nameQuery, emailQuery]);
         const userMap = new Map();
-        nameSnap.docs.forEach(doc => {
+        nameSnap.docs.forEach((doc) => {
             const data = doc.data();
             userMap.set(doc.id, {
                 id: doc.id,
@@ -458,7 +458,7 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
                 affiliation: data.affiliation || ''
             });
         });
-        emailSnap.docs.forEach(doc => {
+        emailSnap.docs.forEach((doc) => {
             const data = doc.data();
             if (!userMap.has(doc.id)) {
                 userMap.set(doc.id, {
@@ -485,7 +485,7 @@ const generateTempPassword = () => {
 router.get('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
     try {
         const snapshot = await firebase_1.db.collection('users').where('role', '==', 'reviewer').get();
-        const reviewers = snapshot.docs.map(doc => {
+        const reviewers = snapshot.docs.map((doc) => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -517,7 +517,7 @@ router.get('/authors', authMiddleware_1.requireAuth, (0, authMiddleware_1.requir
         const limitNum = parseInt(pageSize) || 50;
         // Fetch all authors from database using simple query (no composite index required)
         const snapshot = await firebase_1.db.collection('users').where('role', '==', 'author').get();
-        let allAuthors = snapshot.docs.map(doc => {
+        let allAuthors = snapshot.docs.map((doc) => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -539,7 +539,7 @@ router.get('/authors', authMiddleware_1.requireAuth, (0, authMiddleware_1.requir
             // Expected format: "<timestamp>|<docId>"
             const [ts, docId] = cursor.split('|');
             const cursorTime = new Date(ts).getTime();
-            const foundIndex = allAuthors.findIndex(a => {
+            const foundIndex = allAuthors.findIndex((a) => {
                 const aTime = new Date(a.regDate).getTime();
                 return aTime === cursorTime && a.id === docId;
             });
@@ -567,11 +567,11 @@ router.get('/readers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requir
         // Also fetch all active subscriptions to check for life membership type
         const subsSnapshot = await firebase_1.db.collection('subscriptions').where('status', '==', 'active').get();
         const activeSubscribes = new Map();
-        subsSnapshot.docs.forEach(doc => {
+        subsSnapshot.docs.forEach((doc) => {
             const data = doc.data();
             activeSubscribes.set(data.userId, data);
         });
-        const readers = snapshot.docs.map(doc => {
+        const readers = snapshot.docs.map((doc) => {
             const data = doc.data();
             const subData = activeSubscribes.get(doc.id);
             return {
@@ -674,7 +674,7 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
         }
         catch (err) {
             // Rollback: Delete the auth user if database write or claims config fails
-            await firebase_1.auth.deleteUser(userRecord.uid).catch(authErr => console.error('Failed to delete Auth user on rollback:', authErr));
+            await firebase_1.auth.deleteUser(userRecord.uid).catch((authErr) => console.error('Failed to delete Auth user on rollback:', authErr));
             throw err;
         }
         // Record Reviewer Created in audit log

@@ -22,7 +22,7 @@ export const uploadImage = (
         folder: `kma/${folder}`,
         resource_type: 'auto',
       },
-      (error, result) => {
+      (error: any, result: any) => {
         if (error) return reject(error);
         if (!result) return reject(new Error('Cloudinary upload failed with no result'));
         resolve({

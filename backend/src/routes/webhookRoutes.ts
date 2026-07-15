@@ -1,11 +1,11 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { db } from '../config/firebase';
 import crypto from 'crypto';
 import { config } from '../config/env';
 
 const router = Router();
 
-router.post('/razorpay', async (req, res) => {
+router.post('/razorpay', async (req: Request, res: Response) => {
   try {
     const signature = req.headers["x-razorpay-signature"] as string;
     const webhookSecret = config.payments.razorpay.webhookSecret;
