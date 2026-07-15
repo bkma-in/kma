@@ -5,7 +5,8 @@ import {
   Search, 
   ExternalLink, 
   Trash2, 
-  Users
+  Users,
+  Filter
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
@@ -95,15 +96,20 @@ const ReaderSavedArticles = () => {
           <p className="text-zinc-500 mt-1">Access your bookmarked research papers and scholarly work.</p>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-          <input 
-            type="text"
-            placeholder="Search saved work..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black w-64 focus:ring-1 focus:ring-black outline-none transition-all shadow-sm"
-          />
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+            <input 
+              type="text"
+              placeholder="Search saved work..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black w-64 focus:ring-1 focus:ring-black outline-none transition-all shadow-sm"
+            />
+          </div>
+          <button className="p-2.5 bg-white border border-zinc-200 rounded-xl hover:bg-zinc-50 transition-colors flex items-center justify-center shadow-sm">
+            <Filter size={18} className="text-zinc-600" />
+          </button>
         </div>
       </div>
 
