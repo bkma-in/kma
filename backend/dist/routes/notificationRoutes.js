@@ -88,7 +88,7 @@ router.post('/read-all', authMiddleware_1.requireAuth, async (req, res) => {
             return res.json({ success: true, count: 0 });
         }
         const batch = firebase_1.db.batch();
-        snapshot.docs.forEach(doc => {
+        snapshot.docs.forEach((doc) => {
             batch.update(doc.ref, { read: true, updatedAt: new Date() });
         });
         await batch.commit();
@@ -124,7 +124,7 @@ router.delete('/', authMiddleware_1.requireAuth, async (req, res) => {
         const { uid } = req.user;
         const snapshot = await firebase_1.db.collection('notifications').where('userId', '==', uid).get();
         const batch = firebase_1.db.batch();
-        snapshot.docs.forEach(doc => {
+        snapshot.docs.forEach((doc) => {
             batch.delete(doc.ref);
         });
         await batch.commit();

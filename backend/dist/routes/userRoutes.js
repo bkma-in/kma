@@ -330,7 +330,7 @@ router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.s
             }
             else {
                 console.log(`[AUTH-DIAGNOSTIC] Syncing custom claims for UID: ${uid}, Role: "${userData.role}", Name: "${sanitizedName}"`);
-                firebase_1.auth.setCustomUserClaims(uid, { role: userData.role, name: sanitizedName }).catch(err => console.error('[AUTH-DIAGNOSTIC] Background custom claims sync error:', err));
+                firebase_1.auth.setCustomUserClaims(uid, { role: userData.role, name: sanitizedName }).catch((err) => console.error('[AUTH-DIAGNOSTIC] Background custom claims sync error:', err));
             }
         }
         // Performance: Avoid second read by merging locally

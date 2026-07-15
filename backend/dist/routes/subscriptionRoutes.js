@@ -21,7 +21,7 @@ router.get('/my-subscriptions', authMiddleware_1.requireAuth, async (req, res) =
             .where('userId', '==', uid)
             .orderBy('createdAt', 'desc')
             .get();
-        const subscriptions = snapshot.docs.map(doc => doc.data());
+        const subscriptions = snapshot.docs.map((doc) => doc.data());
         res.json({ success: true, subscriptions });
     }
     catch (error) {

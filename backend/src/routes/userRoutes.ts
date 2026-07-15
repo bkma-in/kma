@@ -262,7 +262,7 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
 const router = Router();
 
 // Get Current User Profile
-router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
+router.get('/profile', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.user!;
     const userDoc = await db.collection('users').doc(uid).get();
@@ -279,7 +279,7 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Update Profile (Optimized: 1 Read, 1 Write, Non-blocking Cleanup)
-router.put('/profile', requireAuth, upload.single('profileImage'), async (req: AuthRequest, res) => {
+router.put('/profile', requireAuth, upload.single('profileImage'), async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.user!;
     const { name, phone, designation, bio } = req.body;
@@ -346,7 +346,7 @@ router.put('/profile', requireAuth, upload.single('profileImage'), async (req: A
         console.error(`[AUTH-DIAGNOSTIC] ❌ Cannot sync custom claims: User ${uid} has no role in Firestore`);
       } else {
         console.log(`[AUTH-DIAGNOSTIC] Syncing custom claims for UID: ${uid}, Role: "${userData.role}", Name: "${sanitizedName}"`);
-        auth.setCustomUserClaims(uid, { role: userData.role, name: sanitizedName }).catch(err => 
+        auth.setCustomUserClaims(uid, { role: userData.role, name: sanitizedName }).catch((err: any) => 
           console.error('[AUTH-DIAGNOSTIC] Background custom claims sync error:', err)
         );
       }
@@ -372,7 +372,7 @@ router.put('/profile', requireAuth, upload.single('profileImage'), async (req: A
 });
 
 // Report an Issue (Bug/UI)
-router.post('/report-issue', requireAuth, upload.single('screenshot'), async (req: AuthRequest, res) => {
+router.post('/report-issue', requireAuth, upload.single('screenshot'), async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.user!;
     const { type, description, metadata } = req.body;
