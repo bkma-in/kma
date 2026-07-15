@@ -278,6 +278,35 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// Get Public Profile of any user
+router.get('/:id/public-profile', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const userDoc = await db.collection('users').doc(id).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    const data = userDoc.data()!;
+    res.json({
+      success: true,
+      profile: {
+        name: data.name,
+        designation: data.designation || '',
+        affiliation: data.affiliation || '',
+        email: data.email,
+        bio: data.bio || '',
+        profileImage: data.profileImage || null,
+        role: data.role
+      }
+    });
+  } catch (error) {
+    console.error('Get public profile error:', error);
+    res.status(500).json({ error: 'Failed to fetch public profile' });
+  }
+});
+
 // Update Profile (Optimized: 1 Read, 1 Write, Non-blocking Cleanup)
 router.put('/profile', requireAuth, upload.single('profileImage'), async (req: AuthRequest, res) => {
   try {
