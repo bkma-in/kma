@@ -5,11 +5,11 @@ import {
   Search, 
   ExternalLink, 
   Trash2, 
-  Clock, 
   Users
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
+import AuthorProfileModal from '../../components/AuthorProfileModal';
 
 interface SavedArticle {
   id: string;
@@ -18,12 +18,21 @@ interface SavedArticle {
   author: string;
   date: string;
   abstract: string;
-  readTime: string;
+  authorId?: string | null;
 }
 
 const ReaderSavedArticles = () => {
-  const { showToast } = useNotification();
+  const { showToast, confirm } = useNotification();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
+  const [selectedAuthorId, setSelectedAuthorId] = useState<string | null>(null);
+  const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
+
+  const handleOpenAuthorProfile = (name: string, id?: string | null) => {
+    setSelectedAuthor(name);
+    setSelectedAuthorId(id || null);
+    setIsAuthorModalOpen(true);
+  };
 
   const [savedArticles, setSavedArticles] = useState<SavedArticle[]>([
     {
@@ -32,7 +41,6 @@ const ReaderSavedArticles = () => {
       title: 'On the Homotopy Type of Certain Spaces',
       author: 'Dr. S. Raman',
       date: 'OCT 2023',
-      readTime: '12 min read',
       abstract: 'An exploration of the properties of spaces derived from complex algebraic varieties and their fundamental groups.'
     },
     {
@@ -41,7 +49,6 @@ const ReaderSavedArticles = () => {
       title: 'Prime Distribution in Arithmetic Progressions',
       author: 'M. Nair',
       date: 'SEP 2023',
-      readTime: '15 min read',
       abstract: 'A deep dive into the distribution patterns of prime numbers within specific arithmetic progression sequences.'
     },
     {
@@ -50,7 +57,6 @@ const ReaderSavedArticles = () => {
       title: 'Fluid Dynamics in Porous Media',
       author: 'A. K. Menon',
       date: 'JUN 2023',
-      readTime: '20 min read',
       abstract: 'Investigating the flow of viscous fluids through porous materials using non-linear differential equations.'
     },
     {
@@ -59,14 +65,20 @@ const ReaderSavedArticles = () => {
       title: 'Neural Networks in Modern Diagnostic Medicine',
       author: 'Dr. Sarah Jenkins',
       date: 'MAR 2023',
-      readTime: '18 min read',
       abstract: 'A longitudinal study on the efficacy of CNNs in detecting early-stage retinal deterioration.'
     }
   ]);
 
   const removeArticle = (id: string) => {
-    setSavedArticles(prev => prev.filter(art => art.id !== id));
-    showToast('Article removed from saved', 'info');
+    confirm({
+      title: 'Remove Saved Article',
+      message: 'Are you sure you want to remove this article from your saved collection?',
+      confirmText: 'Remove',
+      onConfirm: () => {
+        setSavedArticles(prev => prev.filter(art => art.id !== id));
+        showToast('Article removed from saved', 'info');
+      }
+    });
   };
 
   const filteredArticles = savedArticles.filter(art => 
@@ -103,9 +115,6 @@ const ReaderSavedArticles = () => {
               <span className="px-3 py-1 bg-zinc-100 text-black rounded-full text-[10px] font-black uppercase tracking-widest border border-zinc-200">
                 {art.tag}
               </span>
-              <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
-                <Clock size={12} /> {art.readTime}
-              </div>
             </div>
 
             <h3 className="text-xl font-bold text-black mb-4 group-hover:text-blue-600 transition-colors leading-tight font-['Outfit']">
@@ -123,7 +132,14 @@ const ReaderSavedArticles = () => {
                     <Users size={14} />
                   </div>
                   <div className="text-[10px]">
-                    <p className="font-bold text-black uppercase tracking-tight">{art.author}</p>
+                    <button 
+                      type="button"
+                      onClick={() => handleOpenAuthorProfile(art.author, art.authorId)}
+                      className="font-bold text-black uppercase tracking-tight hover:text-blue-600 transition-colors text-left focus:outline-none cursor-pointer"
+                      title="View Author Profile"
+                    >
+                      {art.author}
+                    </button>
                     <p className="text-zinc-400">{art.date}</p>
                   </div>
                 </div>
@@ -153,6 +169,13 @@ const ReaderSavedArticles = () => {
           </div>
         )}
       </div>
+
+      <AuthorProfileModal 
+        isOpen={isAuthorModalOpen} 
+        onClose={() => setIsAuthorModalOpen(false)} 
+        authorName={selectedAuthor || ''}
+        authorId={selectedAuthorId}
+      />
     </div>
   );
 };
