@@ -6,7 +6,8 @@ import {
   CheckCircle2,
   X,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Calendar
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
@@ -256,117 +257,131 @@ const ReviewerArticles = () => {
       )}
 
       {/* Main Table Container */}
-      <div className="bg-white/70 backdrop-blur-md rounded-[2.5rem] border border-white/20 shadow-xl overflow-hidden mx-4">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px] table-fixed">
-            <thead>
-              <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%]">Manuscript Details</th>
-                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Reference</th>
-                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] whitespace-nowrap">Time and Date</th>
-                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Decision</th>
-                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Upload Result</th>
-                <th className="px-6 py-6 text-[10px] font-black text-zinc-400 uppercase tracking-widest w-[16.66%] text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-50">
-              {articles.map((article) => {
-                const isReviewed = !!article.reviewerFeedback;
-                const isHighlighted = highlightId === article.articleId;
-                return (
+        <div className="space-y-6 mx-4">
+          {articles.map((article) => {
+            const isReviewed = !!article.reviewerFeedback;
+            const isHighlighted = highlightId === article.articleId;
 
-                  <tr
-                    key={article.articleId}
-                    id={`reviewer-article-${article.articleId}`}
-                    className={cn(
-                      "group transition-all duration-300",
-                      isReviewed ? "opacity-60 bg-zinc-50/50" : "hover:bg-zinc-50/50",
-                      isHighlighted && "bg-black/[0.03] border-l-4 border-black animate-pulse"
-                    )}
-                  >
+            // Determine status text & recommendation style
+            let statusText = 'PENDING REVIEW';
+            let statusStyle = 'bg-indigo-50 text-indigo-600 border-indigo-100';
 
-                    <td className="px-8 py-8">
-                      <div className="space-y-1">
-                        <h3 className="text-sm font-bold text-black group-hover:text-zinc-700 transition-colors line-clamp-2 leading-tight font-['Outfit']">{article.title}</h3>
+            if (isReviewed) {
+              if (['Approved', 'Accepted'].includes(article.selectedStatus)) {
+                statusText = 'APPROVED';
+                statusStyle = 'bg-emerald-50 text-emerald-600 border-emerald-100';
+              } else if (['Rejected'].includes(article.selectedStatus)) {
+                statusText = 'REJECTED';
+                statusStyle = 'bg-rose-50 text-rose-600 border-rose-100';
+              } else {
+                statusText = 'REVISION';
+                statusStyle = 'bg-amber-50 text-amber-600 border-amber-200';
+              }
+            }
+
+            return (
+              <div 
+                key={article.articleId} 
+                id={`reviewer-article-${article.articleId}`}
+                className={cn(
+                  "bg-white rounded-3xl border border-zinc-200 shadow-sm p-5 sm:p-6 space-y-4 hover:shadow-md transition-all duration-300 relative overflow-hidden text-left",
+                  isReviewed && "opacity-85",
+                  isHighlighted && "bg-black/[0.01] border-l-4 border-black animate-pulse-slow"
+                )}
+              >
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <h2 
+                      className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 font-['Outfit'] leading-tight"
+                    >
+                      {article.title}
+                    </h2>
+                  </div>
+
+                  <div className="flex items-start gap-2 shrink-0">
+                    <span className={cn(
+                      "inline-flex items-center px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border leading-none font-sans",
+                      statusStyle
+                    )}>
+                      {statusText}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Information Panel */}
+                <div className="bg-indigo-50/50 rounded-2xl py-2 px-4 sm:py-2.5 sm:px-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-indigo-100/30">
+                  <div className="flex flex-wrap items-center gap-6 sm:gap-8">
+                    {/* Calendar Icon */}
+                    <div className="w-10 h-10 rounded-xl bg-indigo-100/70 border border-indigo-200/20 flex items-center justify-center text-indigo-600 shrink-0">
+                      <Calendar size={18} />
+                    </div>
+                    
+                    {/* Date / Deadline */}
+                    {isReviewed ? (
+                      <div className="space-y-0.5">
+                        <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block font-sans">Reviewed On</span>
+                        <span className="text-xs font-bold text-zinc-700 font-sans">
+                          {formatDateTimeline(article.reviewerFeedback?.updatedAt || article.updatedAt)}
+                        </span>
                       </div>
-                    </td>
-
-                    {/* Reference – Download Button */}
-                    <td className="px-8 py-8 text-center">
-                      <button
-                        onClick={() => handleDownload(article.articleId, article.title)}
-                        className="p-3 bg-white text-zinc-600 rounded-xl hover:bg-black hover:text-white transition-all shadow-sm border border-zinc-100 group/btn"
-                        title="Download Original Manuscript"
-                      >
-                        <Download size={18} className="group-hover/btn:scale-110 transition-transform" />
-                      </button>
-                    </td>
-
-                    {/* Time and Date column */}
-                    <td className="px-8 py-8">
-                      {isReviewed ? (
-                        <div className="space-y-1">
-                          <span className="font-black uppercase tracking-widest text-[8px] text-zinc-400 block mb-0.5">Reviewed On</span>
-                          <p className="text-xs font-bold text-emerald-600">
-                            {formatDateTimeline(article.reviewerFeedback?.updatedAt || article.updatedAt)}
-                          </p>
+                    ) : article.reviewDeadline ? (
+                      <>
+                        <div className="space-y-0.5">
+                          <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block font-sans">Review Deadline</span>
+                          <span className="text-xs font-bold text-zinc-700 font-sans">
+                            {new Date(article.reviewDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          </span>
                         </div>
-                      ) : article.reviewDeadline ? (
-                        <div className="space-y-2 min-w-[160px]">
-                          {/* Deadline date */}
-                          <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
-                            <span className="font-black uppercase tracking-widest text-[8px] text-zinc-400">Deadline</span>
+                        {article.reviewerNote && (
+                          <div className="space-y-0.5 border-l border-indigo-100/50 pl-6 sm:pl-8 max-w-sm">
+                            <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block font-sans">Editor Note</span>
+                            <span className="text-xs italic text-zinc-500 font-medium line-clamp-1 block">"{article.reviewerNote}"</span>
                           </div>
-                          <p className="text-xs font-bold text-black">
-                            {new Date(article.reviewDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <div className="space-y-0.5">
+                        <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block font-sans">Review Status</span>
+                        <span className="text-xs font-bold text-zinc-500 font-sans">No deadline set</span>
+                      </div>
+                    )}
+                  </div>
 
-                          {/* Countdown badge */}
-                          {(() => {
-                            const diff = getRemainingDays(article.reviewDeadline);
-                            if (diff === null) return null;
-                            if (diff < 0) {
-                              return (
-                                <div className="space-y-1.5">
-                                  <span className="inline-block px-2 py-0.5 bg-rose-50 border border-rose-100 text-rose-600 rounded font-bold uppercase text-[8px] tracking-wide">
-                                    🔴 Deadline Passed
-                                  </span>
-                                  <p className="text-[9px] text-rose-500 italic leading-snug">
-                                    You can still submit your review.
-                                  </p>
-                                </div>
-                              );
-                            }
-                            return (
-                              <span className={cn(
-                                "inline-block px-2 py-0.5 rounded border font-bold uppercase text-[8px] tracking-wide",
-                                diff === 0
-                                  ? "bg-rose-50 border-rose-100 text-rose-600"
-                                  : diff <= 3
-                                    ? "bg-amber-50 border-amber-100 text-amber-600"
-                                    : "bg-emerald-50 border-emerald-100 text-emerald-600"
-                              )}>
-                                {diff === 0 ? '⏰ Due Today' : diff <= 3 ? `🟠 ${diff} Days Left` : `🟢 ${diff} Days Left`}
-                              </span>
-                            );
-                          })()}
+                  {/* Countdown Badge on the right */}
+                  {!isReviewed && article.reviewDeadline && (() => {
+                    const diff = getRemainingDays(article.reviewDeadline);
+                    if (diff === null) return null;
+                    if (diff < 0) {
+                      return (
+                        <span className="px-3.5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-rose-100 text-rose-700 border-rose-200 font-sans">
+                          Deadline Passed
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className={cn(
+                        "px-3.5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border leading-none font-sans",
+                        diff === 0 ? "bg-rose-100 text-rose-700 border-rose-200" :
+                        diff <= 3 ? "bg-amber-100 text-amber-700 border-amber-200" :
+                        "bg-emerald-100 text-emerald-700 border-emerald-200"
+                      )}>
+                        {diff === 0 ? 'Due Today' : `${diff} Days Left`}
+                      </span>
+                    );
+                  })()}
+                </div>
 
-                          {/* Editor note */}
-                          {article.reviewerNote && (
-                            <div className="pt-1.5 border-t border-zinc-100 text-[9px] text-zinc-400 italic leading-relaxed">
-                              <strong className="not-italic text-zinc-500">Note:</strong> "{article.reviewerNote}"
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-[9px] text-zinc-300 font-bold uppercase tracking-widest">—</span>
-                      )}
-                    </td>
-
-                    {/* Decision */}
-                    <td className="px-8 py-8 text-center">
-                      {!isReviewed ? (
-                        <div className="relative space-y-2 max-w-[180px] mx-auto text-left">
+                {/* Form Assessment or Feedback Details */}
+                <div className="pt-2 border-t border-zinc-100 space-y-4">
+                  {!isReviewed ? (
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-bold text-zinc-800 uppercase tracking-wider font-sans">Submit Peer Assessment</h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Recommendation */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Recommendation Decision</label>
                           <select
                             value={article.selectedStatus}
                             onChange={(e) => handleStatusChange(article.articleId, e.target.value as ReviewStatus)}
@@ -377,190 +392,174 @@ const ReviewerArticles = () => {
                             <option value="Rejected">Rejected</option>
                             <option value="Needs Improvement">Need Revision</option>
                           </select>
+                        </div>
+
+                        {/* Remarks */}
+                        <div className="space-y-1 md:col-span-2">
+                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">Reviewer Remarks / Feedback</label>
                           <textarea
                             placeholder="Add remarks..."
                             value={article.remarks || ''}
                             onChange={(e) => handleRemarksChange(article.articleId, e.target.value)}
-                            className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-[10px] font-medium focus:ring-2 focus:ring-black outline-none resize-none h-12 shadow-sm focus:bg-white transition-all font-sans"
+                            className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-black outline-none resize-none h-12 shadow-sm focus:bg-white transition-all font-sans"
                           />
                         </div>
-                      ) : (
-                        <div className={cn(
-                          "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
-                          (article.selectedStatus === 'Accepted' || article.selectedStatus === 'Approved') ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                            article.selectedStatus === 'Rejected' ? "bg-rose-50 text-rose-700 border-rose-200" :
-                              "bg-amber-50 text-amber-700 border-amber-200"
-                        )}>
-                          {article.selectedStatus}
-                        </div>
-                      )}
-                    </td>
+                      </div>
 
-                    {/* Upload Result */}
-                    <td className="px-8 py-8 text-center">
-                      {!isReviewed ? (
-                        <div className="flex flex-col items-center gap-2">
-                          <button
-                            onClick={() => fileInputRefs.current[article.articleId]?.click()}
-                            className={cn(
-                              "px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 border shadow-sm",
-                              article.uploadedFile
-                                ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                                : article.selectedStatus === 'Needs Improvement'
-                                  ? "bg-rose-50 text-rose-600 border-rose-200 animate-pulse"
-                                  : "bg-white text-zinc-500 hover:border-black border-zinc-200"
+                      {/* File upload + Actions — 2-column row */}
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-start gap-3 w-full">
+                        {/* Column 1: Upload zone */}
+                        <div className="flex items-center gap-3 p-3 bg-zinc-50/50 rounded-2xl border border-dashed border-zinc-200 w-full lg:w-auto min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-400 shrink-0">
+                            <Upload size={18} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-zinc-700">Annotated Manuscript File</p>
+                            <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-wider">Supports PDF, DOC, DOCX</p>
+                          </div>
+                          <div className="flex items-center gap-2 ml-auto shrink-0">
+                            {article.uploadedFile ? (
+                              <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
+                                {article.uploadedFile.name}
+                              </span>
+                            ) : article.selectedStatus === 'Needs Improvement' ? (
+                              <span className="text-[10px] text-rose-500 font-black uppercase tracking-wider animate-pulse">
+                                ⚠️ Required
+                              </span>
+                            ) : (
+                              <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest">
+                                Optional
+                              </span>
                             )}
+                            <button
+                              onClick={() => fileInputRefs.current[article.articleId]?.click()}
+                              className={cn(
+                                "px-4 py-2.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 border shadow-sm cursor-pointer",
+                                article.uploadedFile
+                                  ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                                  : "bg-white text-zinc-700 hover:border-black border-zinc-200"
+                              )}
+                            >
+                              {article.uploadedFile ? 'Change File' : 'Browse File'}
+                            </button>
+                            <input
+                              type="file"
+                              ref={el => { fileInputRefs.current[article.articleId] = el; }}
+                              onChange={(e) => handleFileChange(article.articleId, e)}
+                              accept=".pdf,.doc,.docx"
+                              className="hidden"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Column 2: Action buttons */}
+                        <div className="flex items-center gap-3 shrink-0 lg:ml-auto w-full lg:w-auto justify-end">
+                          <button 
+                            onClick={() => handleDownload(article.articleId, article.title)}
+                            className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-blue-700 transition-all uppercase cursor-pointer shadow-sm font-sans flex items-center justify-center h-11"
                           >
-                            <Upload size={14} />
-                            {article.uploadedFile 
-                              ? 'Change File' 
-                              : article.selectedStatus === 'Needs Improvement'
-                                ? 'Upload Document *'
-                                : 'Upload Review (Optional)'}
+                            <Download size={14} className="mr-2" />
+                            Download Manuscript
                           </button>
-                          {article.uploadedFile ? (
-                            <span className="text-[8px] text-emerald-600 font-bold truncate max-w-[120px] uppercase tracking-tighter">
-                              {article.uploadedFile.name}
-                            </span>
-                          ) : article.selectedStatus === 'Needs Improvement' ? (
-                            <span className="text-[8px] text-rose-500 font-black uppercase tracking-widest animate-pulse">
-                              ⚠️ Document Required
-                            </span>
-                          ) : (
-                            <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-widest">
-                              Optional
-                            </span>
-                          )}
+
+                          <button
+                            onClick={() => handleSubmit(article.articleId)}
+                            disabled={submittingId === article.articleId}
+                            className="px-5 py-2.5 bg-black text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase cursor-pointer shadow-sm font-sans flex items-center justify-center h-11 disabled:bg-zinc-200 disabled:cursor-not-allowed"
+                          >
+                            {submittingId === article.articleId ? (
+                              <>
+                                <Loader2 size={14} className="animate-spin mr-2" />
+                                Processing...
+                              </>
+                            ) : (
+                              'Submit Assessment'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Already reviewed — show remarks + completed row */
+                    <div className="space-y-3">
+                      <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                        <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Remarks</span>
+                        <p className="text-xs text-zinc-700 font-medium italic font-sans">
+                          "{article.reviewerFeedback?.remarks || article.remarks || 'Reviewed via peer assessment portal.'}"
+                        </p>
+                      </div>
+
+                      {/* Completed row — file status + download in one row */}
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-zinc-50/50 rounded-2xl border border-zinc-100">
+                        <div className="flex items-center gap-2 text-emerald-600 font-sans">
+                          <CheckCircle2 size={16} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Assessment Completed</span>
+                        </div>
+
+                        <div className="flex items-center gap-3 flex-wrap justify-end">
+                          {article.reviewerFeedback?.recommendation === 'Needs Improvement' ? (
+                            article.reviewerFeedback?.reviewedFile ? (
+                              <>
+                                <button
+                                  onClick={() => handleDownload(article.articleId, article.title)}
+                                  className="px-4 py-2 bg-zinc-900 text-white hover:bg-zinc-800 transition-colors rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 cursor-pointer shadow-sm"
+                                >
+                                  <Download size={12} /> View Upload
+                                </button>
+                                <button
+                                  onClick={() => fileInputRefs.current[article.articleId]?.click()}
+                                  className="px-4 py-2 bg-white text-zinc-500 hover:text-black border border-zinc-200 transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  Change Document
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-[9px] text-rose-500 font-black uppercase tracking-widest animate-pulse">⚠️ Document Required</span>
+                                <button
+                                  onClick={() => fileInputRefs.current[article.articleId]?.click()}
+                                  className="px-4 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition-all rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 cursor-pointer animate-pulse"
+                                >
+                                  <Upload size={12} /> Upload
+                                </button>
+                              </>
+                            )
+                          ) : article.reviewerFeedback?.reviewedFile ? (
+                            <button
+                              onClick={() => handleDownload(article.articleId, article.title)}
+                              className="px-4 py-2 bg-zinc-900 text-white hover:bg-zinc-800 transition-colors rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 cursor-pointer shadow-sm"
+                            >
+                              <Download size={12} /> View Upload
+                            </button>
+                          ) : null}
+
+                          <button 
+                            onClick={() => handleDownload(article.articleId, article.title)}
+                            className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-blue-700 transition-all uppercase cursor-pointer shadow-sm font-sans flex items-center justify-center"
+                          >
+                            <Download size={14} className="mr-2" />
+                            Download Manuscript
+                          </button>
+
                           <input
                             type="file"
                             ref={el => { fileInputRefs.current[article.articleId] = el; }}
-                            onChange={(e) => handleFileChange(article.articleId, e)}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImmediateUpload(article.articleId, file);
+                            }}
                             accept=".pdf,.doc,.docx"
                             className="hidden"
                           />
                         </div>
-                      ) : (
-                        // Already reviewed
-                        article.reviewerFeedback?.recommendation === 'Needs Improvement' ? (
-                          // Needs Improvement case - show file or upload button if missing
-                          article.reviewerFeedback?.reviewedFile ? (
-                            <div className="flex flex-col items-center gap-2">
-                              <span className="text-[8px] text-emerald-600 font-black uppercase tracking-widest">
-                                Document Logged
-                              </span>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleDownload(article.articleId, article.title)}
-                                  className="px-3 py-1.5 bg-zinc-900 text-white hover:bg-zinc-800 transition-colors rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1 cursor-pointer"
-                                  title="Download Submitted Review Document"
-                                >
-                                  <Download size={10} /> View
-                                </button>
-                                <button
-                                  onClick={() => fileInputRefs.current[article.articleId]?.click()}
-                                  className="px-3 py-1.5 bg-white text-zinc-500 hover:text-black border border-zinc-200 transition-all rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1 cursor-pointer"
-                                >
-                                  Change
-                                </button>
-                              </div>
-                              <input
-                                type="file"
-                                ref={el => { fileInputRefs.current[article.articleId] = el; }}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) handleImmediateUpload(article.articleId, file);
-                                }}
-                                accept=".pdf,.doc,.docx"
-                                className="hidden"
-                              />
-                            </div>
-                          ) : (
-                            // Legacy: needs improvement but no file uploaded - show upload button
-                            <div className="flex flex-col items-center gap-2">
-                              <button
-                                onClick={() => fileInputRefs.current[article.articleId]?.click()}
-                                className="px-4 py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 border shadow-sm bg-rose-50 text-rose-600 border-rose-200 animate-pulse"
-                              >
-                                <Upload size={14} />
-                                Upload Document *
-                              </button>
-                              <span className="text-[8px] text-rose-500 font-black uppercase tracking-widest animate-pulse">
-                                ⚠️ Document Required
-                              </span>
-                              <input
-                                type="file"
-                                ref={el => { fileInputRefs.current[article.articleId] = el; }}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) handleImmediateUpload(article.articleId, file);
-                                }}
-                                accept=".pdf,.doc,.docx"
-                                className="hidden"
-                              />
-                            </div>
-                          )
-                        ) : (
-                          // Approved / Rejected case
-                          article.reviewerFeedback?.reviewedFile ? (
-                            <div className="flex flex-col items-center gap-2">
-                              <span className="text-[8px] text-emerald-600 font-black uppercase tracking-widest">
-                                Document Logged
-                              </span>
-                              <button
-                                onClick={() => handleDownload(article.articleId, article.title)}
-                                className="px-3 py-1.5 bg-zinc-900 text-white hover:bg-zinc-800 transition-colors rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1 cursor-pointer"
-                              >
-                                <Download size={10} /> View
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col items-center gap-1 text-emerald-600">
-                              <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center">
-                                <CheckCircle2 size={16} />
-                              </div>
-                              <span className="text-[9px] font-black uppercase tracking-widest">Logged</span>
-                            </div>
-                          )
-                        )
-                      )}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-6 py-8 text-center">
-                      {!isReviewed ? (
-                        <button
-                          onClick={() => handleSubmit(article.articleId)}
-                          disabled={submittingId === article.articleId}
-                          className="px-6 py-3 bg-black text-white rounded-xl font-bold text-[10px] tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 active:scale-95 inline-flex items-center justify-center gap-2 disabled:bg-zinc-200 disabled:cursor-not-allowed"
-                        >
-                          {submittingId === article.articleId ? (
-                            <>
-                              <Loader2 size={14} className="animate-spin" />
-                              PROCESSING...
-                            </>
-                          ) : (
-                            'SUBMIT ASSESSMENT'
-                          )}
-                        </button>
-                      ) : (
-                        // Follows reviewer workflow only: if revision decision, requires file upload to be Completed
-                        (article.reviewerFeedback?.recommendation === 'Needs Improvement' && !article.reviewerFeedback?.reviewedFile) ? (
-                          <span className="text-[10px] text-zinc-300 font-bold">—</span>
-                        ) : (
-                          <div className="flex items-center justify-center gap-2 text-zinc-500 font-bold">
-                            <span className="text-[10px] font-black uppercase tracking-widest">Completed</span>
-                            <CheckCircle2 size={16} className="text-emerald-600" />
-                          </div>
-                        )
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
 
       {/* Empty State Footer */}
       <div className="flex items-center justify-center py-20 opacity-20">

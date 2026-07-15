@@ -242,7 +242,7 @@ const ReviewerNotifications = () => {
                 }
               }}
               className={cn(
-                "group relative bg-white rounded-[2rem] border p-6 flex gap-6 transition-all duration-500",
+                "group relative bg-white rounded-3xl border p-6 flex gap-6 transition-all duration-500",
                 notification.articleId ? "cursor-pointer hover:border-zinc-400 hover:shadow-xl hover:shadow-black/[0.02]" : "",
                 !notification.read 
                   ? "border-black/5 shadow-2xl shadow-black/[0.03] ring-1 ring-black/[0.02]" 
@@ -321,7 +321,7 @@ const ReviewerNotifications = () => {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-[3rem] p-32 border border-zinc-100 shadow-sm text-center flex flex-col items-center animate-in fade-in zoom-in duration-700">
+        <div className="bg-white rounded-3xl p-32 border border-zinc-200 shadow-sm text-center flex flex-col items-center animate-in fade-in zoom-in duration-700">
           <div className="w-24 h-24 bg-zinc-50 rounded-full flex items-center justify-center mb-10 border-4 border-white shadow-inner">
             <Inbox size={48} className="text-zinc-200" />
           </div>

@@ -75,7 +75,7 @@ const ReviewerDashboard = () => {
           <h1 className="text-4xl font-bold tracking-tighter text-black">Reviewer Overview</h1>
           <p className="text-zinc-500 mt-2 text-sm max-w-md">Welcome back, <span className="font-bold text-black">{profile?.name || localStorage.getItem('userName') || "Portal User"}</span>. You have <span className="font-bold text-amber-600">{pendingReviewsCount} pending reviews</span> that require your expertise.</p>
         </div>
-        <div className="flex items-center gap-3 bg-white/70 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 shadow-sm">
+        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-zinc-200 shadow-sm">
           <Star size={16} className="text-zinc-400" />
           <span className="text-[10px] font-black text-black tracking-widest uppercase">Senior Expert Reviewer</span>
         </div>
@@ -102,7 +102,7 @@ const ReviewerDashboard = () => {
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         {stats.map((stat, i) => (
-          <div key={i} className="bg-white/70 backdrop-blur-md p-8 rounded-3xl border border-white/20 shadow-lg group hover:border-black transition-all cursor-default">
+          <div key={i} className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm group hover:border-black transition-all cursor-default">
             <div className="flex justify-between items-start mb-6">
               <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", stat.bg, stat.color)}>
                 <stat.icon size={24} />
@@ -119,7 +119,7 @@ const ReviewerDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Recent Activity */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white/70 backdrop-blur-md rounded-3xl border border-white/20 shadow-xl p-8">
+          <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-8">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-zinc-900 flex items-center justify-center text-white shadow-lg">
@@ -157,7 +157,7 @@ const ReviewerDashboard = () => {
         {/* Right Column: Quick Actions & Helpful Info */}
         <div className="space-y-8">
           {/* Quick Actions */}
-          <div className="bg-zinc-900/90 backdrop-blur-lg text-white rounded-[2.5rem] p-8 shadow-2xl shadow-black/10 border border-white/10 relative overflow-hidden">
+          <div className="bg-zinc-900 text-white rounded-3xl p-8 shadow-xl border border-zinc-800 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32" />
             <h3 className="text-xs font-bold uppercase tracking-widest mb-6 text-zinc-500 relative z-10">Navigation</h3>
             <div className="space-y-3 relative z-10">
@@ -179,10 +179,10 @@ const ReviewerDashboard = () => {
           </div>
 
           {/* Peer Review Guidelines */}
-          <div className="bg-white/70 backdrop-blur-md rounded-3xl border border-white/20 shadow-xl p-8">
+          <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-8">
             <h3 className="text-xs font-bold text-black uppercase tracking-widest mb-6">Expert Resources</h3>
             <div className="space-y-4">
-              <div className="p-4 bg-white/40 backdrop-blur-sm rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-white/60 transition-all border border-white/10 shadow-sm">
+              <div className="p-4 bg-zinc-50 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-white/60 transition-all border border-zinc-100 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-zinc-400 group-hover:text-black border border-white/50">
                     <Star size={16} />
@@ -191,7 +191,7 @@ const ReviewerDashboard = () => {
                 </div>
                 <ArrowRight size={14} className="text-zinc-300 group-hover:text-black" />
               </div>
-              <div className="p-4 bg-white/40 backdrop-blur-sm rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-white/60 transition-all border border-white/10 shadow-sm">
+              <div className="p-4 bg-zinc-50 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-white/60 transition-all border border-zinc-100 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-zinc-400 group-hover:text-black border border-white/50">
                     <CheckCircle2 size={16} />
