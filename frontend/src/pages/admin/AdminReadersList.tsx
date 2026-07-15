@@ -27,7 +27,11 @@ const AdminReadersList = () => {
       try {
         const response = await getReaders();
         if (response.success) {
-          setReaders(response.readers);
+          const mapped = response.readers.map((r: any) => ({
+            ...r,
+            isSubscribed: false // For now set all readers status to notsubscribed
+          })).filter((r: any) => r.isSubscribed);
+          setReaders(mapped);
         }
       } catch (error) {
         console.error('Failed to load readers:', error);
