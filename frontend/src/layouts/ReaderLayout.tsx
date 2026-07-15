@@ -79,7 +79,6 @@ const ReaderLayout = () => {
     { name: 'Payments', path: '/reader/payments', icon: CreditCard, locked: !isSubscribed },
     { name: 'Notifications', path: '/reader/notifications', icon: Bell, locked: !isSubscribed, badge: formatBadgeCount(unreadCount) },
     { name: 'Saved Articles', path: '/reader/saved', icon: Bookmark, locked: !isSubscribed },
-    { name: 'Profile', path: '/reader/profile', icon: User, locked: false },
   ];
 
   const handleLockedClick = (e: React.MouseEvent, item: typeof navItems[0]) => {

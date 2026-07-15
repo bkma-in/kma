@@ -299,37 +299,6 @@ const Dashboard = () => {
 
         {/* Right Column: Archive Focus */}
         <div className="space-y-8">
-          {/* Notifications Preview */}
-          <div className="bg-zinc-900 text-white rounded-3xl p-8 shadow-xl border border-zinc-800 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32" />
-            <div className="flex items-center justify-between mb-8 relative z-10">
-              <div className="flex items-center gap-2">
-                <Bell size={18} className="text-zinc-500" />
-                <h3 className="text-xs font-bold uppercase tracking-widest">Notifications</h3>
-              </div>
-              <span className="bg-white/10 text-white text-[8px] font-black px-2 py-1 rounded">2 NEW</span>
-            </div>
-
-            <div className="space-y-6 mb-8">
-              {notifications.map((notif, i) => (
-                <div key={i} className="group cursor-pointer">
-                  <p className="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors leading-relaxed mb-1 italic">
-                    "{notif.message}"
-                  </p>
-                  <span className="text-[10px] text-zinc-600 font-bold tracking-widest">{notif.time}</span>
-                </div>
-              ))}
-            </div>
-
-            <NavLink 
-              to="/author/notifications"
-              className="w-full py-3 bg-white/10 hover:bg-white text-zinc-300 hover:text-black rounded-xl text-[10px] font-black tracking-widest transition-all uppercase flex items-center justify-center gap-2 group"
-            >
-              View All Notifications
-              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-            </NavLink>
-          </div>
-
           {/* Categories / Helpful Info */}
           <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-8">
             <h3 className="text-xs font-bold text-black uppercase tracking-widest mb-6">Archive Focus</h3>
