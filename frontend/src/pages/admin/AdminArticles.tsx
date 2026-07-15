@@ -506,265 +506,271 @@ const AdminArticles = () => {
         </div>
       </div>
 
-      {/* Table Section */}
-      <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/20 shadow-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Manuscript Details</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Author</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Reviewer Status</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Reviewer Comments</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-50">
-              {filteredArticles.map((article) => (
-                <tr key={article.id} className={cn(
-                  "group hover:bg-zinc-50/50 transition-colors",
-                  ['Submitted', 'Approved'].includes(article.status) && "bg-zinc-50/30"
-                )}>
-                  <td className="px-6 py-5">
-                    <div>
-                      <h3 
-                        onClick={() => openDetails(article)}
-                        className="text-sm font-bold text-black hover:text-blue-600 cursor-pointer transition-colors line-clamp-1"
-                      >
-                        {article.title}
-                      </h3>
-                      <p className="text-[10px] text-zinc-400 font-medium uppercase mt-1">Updated {article.lastUpdated}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-5 text-xs text-zinc-600 font-bold uppercase tracking-wider">
-                    {article.author}
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="space-y-2">
-                      {/* Workflow status chip */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={cn(
-                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                          getStatusStyles(article.status)
-                        )}>
-                          {getStatusIcon(article.status)}
-                          {article.status}
-                        </span>
-                        {article.versions && article.versions.length > 1 && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                            Revised
-                          </span>
-                        )}
-                      </div>
+      {/* Cards Queue Section */}
+      <div className="space-y-5">
+        {filteredArticles.map((article) => {
+          return (
+            <div 
+              key={article.id} 
+              className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-5 sm:p-6 space-y-4 hover:shadow-md transition-all duration-300 relative overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <h2 
+                    onClick={() => openDetails(article)}
+                    className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 cursor-pointer hover:text-blue-600 transition-colors"
+                  >
+                    {article.title}
+                  </h2>
+                  <p className="text-xs text-zinc-500 font-semibold font-sans mt-1">
+                    Author: <span className="uppercase text-zinc-700">{article.author}</span>
+                  </p>
+                </div>
 
-                      {/* Assigned reviewers + deadline */}
-                      {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
-                        <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider space-y-1.5 pl-1">
-                          <div className="space-y-0.5">
-                            <span className="text-[8px] text-zinc-400 font-black tracking-widest block uppercase mb-1">Assigned:</span>
-                            {article.assignedReviewers.map(r => {
-                              const review = article.reviews ? Object.values(article.reviews).find(
-                                (rev: any) => rev.reviewerName?.toLowerCase() === r.toLowerCase()
-                              ) : null;
-                              
-                              let recommendationBadge = null;
-                              if (review && review.recommendation) {
-                                if (['Approved', 'Accepted'].includes(review.recommendation)) {
-                                  recommendationBadge = (
-                                    <span className="ml-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-emerald-700 bg-emerald-50 border border-emerald-100 rounded">
-                                      Approved
-                                    </span>
-                                  );
-                                } else if (['Rejected'].includes(review.recommendation)) {
-                                  recommendationBadge = (
-                                    <span className="ml-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-rose-700 bg-rose-50 border border-rose-100 rounded">
-                                      Rejected
-                                    </span>
-                                  );
-                                } else if (['Needs Improvement', 'Need Improvements'].includes(review.recommendation)) {
-                                  recommendationBadge = (
-                                    <span className="ml-1.5 px-1.5 py-0.5 text-[8px] font-black tracking-wider uppercase text-amber-700 bg-amber-50 border border-amber-200 rounded">
-                                      Revision
-                                    </span>
-                                  );
-                                }
-                              }
+                <div className="flex items-start gap-2 shrink-0">
+                  {article.versions && article.versions.length > 1 && (
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-600 border border-amber-500/20 leading-none font-sans">
+                      Revised
+                    </span>
+                  )}
+                  <span className={cn(
+                    "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border leading-none font-sans",
+                    article.status === 'Submitted' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                    (article.status === 'Under Review' || article.status === 'Awaiting Decision') ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                    article.status === 'Revision Requested' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                    ['Ready to Publish', 'Approved'].includes(article.status) ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                    article.status === 'Published' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+                    'bg-zinc-50 text-zinc-500 border-zinc-200'
+                  )}>
+                    {getStatusIcon(article.status)}
+                    {article.status}
+                  </span>
+                </div>
+              </div>
 
-                              return (
-                                <div key={r} className="h-5 flex items-center truncate max-w-[200px] font-sans">
-                                  <span>{r}</span>
-                                  {recommendationBadge}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {article.reviewDeadline && (
-                            <div className="pt-1.5 border-t border-zinc-100 space-y-1">
-                              <span className="text-[8px] text-zinc-400 font-black tracking-widest block uppercase">Deadline:</span>
-                              <div className="text-[9px] text-zinc-500 font-bold">
-                                {new Date(article.reviewDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                              </div>
-                              {(() => {
-                                const diff = getRemainingDays(article.reviewDeadline);
-                                if (diff === null) return null;
-                                if (diff < 0) {
-                                  return (
-                                    <span className="inline-block px-2 py-0.5 bg-rose-50 border border-rose-100 text-rose-600 rounded text-[8px] font-bold uppercase tracking-wide">
-                                      ⚠️ Overdue by {Math.abs(diff)} days
-                                    </span>
-                                  );
-                                } else {
-                                  return (
-                                    <span className={cn(
-                                      "inline-block px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border",
-                                      diff <= 3 ? "bg-amber-50 border-amber-100 text-amber-600" : "bg-emerald-50 border-emerald-100 text-emerald-600"
-                                    )}>
-                                      ⏰ {diff === 0 ? 'Due Today' : `${diff} days left`}
-                                    </span>
-                                  );
-                                }
-                              })()}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-[8px] text-zinc-400 italic pl-1">No reviewers assigned</div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="space-y-2">
-                      {/* Invisible status spacer to match column 1 height */}
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] border border-transparent invisible select-none pointer-events-none">
-                        Spacer
+              {/* Information Panel */}
+              <div className="bg-indigo-50/50 rounded-2xl py-2 px-4 sm:py-2.5 sm:px-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-indigo-100/30">
+                <div className="flex flex-wrap items-center gap-6 sm:gap-8">
+                  {/* Calendar Icon */}
+                  <div className="w-10 h-10 rounded-xl bg-indigo-100/70 border border-indigo-200/20 flex items-center justify-center text-indigo-600 shrink-0">
+                    <Calendar size={18} />
+                  </div>
+                  
+                  {/* Last Updated */}
+                  <div className="space-y-0.5">
+                    <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block font-sans">Last Updated</span>
+                    <span className="text-xs font-bold text-zinc-700 font-sans">{article.lastUpdated}</span>
+                  </div>
+
+                  {/* Review Deadline */}
+                  {article.reviewDeadline && (
+                    <div className="space-y-0.5 border-l border-indigo-100/50 pl-6 sm:pl-8">
+                      <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block font-sans">Review Deadline</span>
+                      <span className="text-xs font-bold text-zinc-700 font-sans">
+                        {new Date(article.reviewDeadline).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </span>
-                      {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
-                        <div className="space-y-0.5 pl-1">
-                          <span className="text-[8px] text-zinc-400 font-black tracking-widest block uppercase mb-1">Remarks:</span>
-                          {article.assignedReviewers.map(r => {
-                            const review = article.reviews ? Object.values(article.reviews).find(
-                              (rev: any) => rev.reviewerName?.toLowerCase() === r.toLowerCase()
-                            ) : null;
-                            const displayRemarks = review?.remarks && 
-                              review.remarks.trim() !== 'Reviewed via peer assessment portal.' && 
-                              review.remarks.trim() !== 'Reviewed via peer assessment portal'
-                                ? `"${review.remarks}"`
-                                : '—';
-                            return (
-                              <div key={r} className="h-5 flex items-center text-[10px] text-zinc-600 font-medium italic max-w-[250px] truncate">
-                                {displayRemarks}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <span className="text-[10px] text-zinc-300 font-bold">—</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Deadline badge (right side) */}
+                {article.reviewDeadline && (() => {
+                  const diff = getRemainingDays(article.reviewDeadline);
+                  if (diff === null) return null;
+                  let label = '';
+                  let style = '';
+                  if (diff < 0) {
+                    label = 'Review Closed';
+                    style = 'bg-rose-100 text-rose-700 border-rose-200';
+                  } else if (diff === 0) {
+                    label = 'Due Today';
+                    style = 'bg-amber-100 text-amber-700 border-amber-200';
+                  } else if (diff <= 3) {
+                    label = 'Final Review';
+                    style = 'bg-zinc-100 text-zinc-600 border-zinc-200';
+                  } else {
+                    label = `${diff} Days Left`;
+                    style = 'bg-amber-100 text-amber-700 border-amber-200';
+                  }
+                  return (
+                    <span className={cn("px-3.5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border leading-none font-sans", style)}>
+                      {label}
+                    </span>
+                  );
+                })()}
+              </div>
+
+              {/* Reviewer Table */}
+              {article.assignedReviewers && article.assignedReviewers.length > 0 ? (
+                <div className="border border-zinc-100 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-indigo-50/20 border-b border-zinc-100">
+                          <th className="px-4 py-2 text-[9px] font-black text-zinc-500 uppercase tracking-widest font-sans w-1/4 align-middle">Reviewer</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-zinc-500 uppercase tracking-widest font-sans w-1/4 align-middle">Status</th>
+                          <th className="px-4 py-2 text-[9px] font-black text-zinc-500 uppercase tracking-widest font-sans w-2/4 align-middle">Remarks</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-50">
+                        {article.assignedReviewers.map(r => {
+                          const review = article.reviews ? Object.values(article.reviews).find(
+                            (rev: any) => rev.reviewerName?.toLowerCase() === r.toLowerCase()
+                          ) : null;
+                          
+                          let statusText = 'ACTIVE';
+                          let statusStyle = 'bg-indigo-50 text-indigo-600 border-indigo-100'; // ACTIVE in light purple
+
+                          if (review && review.recommendation) {
+                            if (['Approved', 'Accepted'].includes(review.recommendation)) {
+                              statusText = 'COMPLETED';
+                              statusStyle = 'bg-emerald-50 text-emerald-600 border-emerald-100';
+                            } else if (['Rejected'].includes(review.recommendation)) {
+                              statusText = 'REJECTED';
+                              statusStyle = 'bg-rose-50 text-rose-600 border-rose-100';
+                            } else if (['Needs Improvement', 'Need Improvements'].includes(review.recommendation)) {
+                              statusText = 'REVISION';
+                              statusStyle = 'bg-amber-50 text-amber-600 border-amber-200';
+                            }
+                          }
+
+                          const displayRemarks = review?.remarks && 
+                            review.remarks.trim() !== 'Reviewed via peer assessment portal.' && 
+                            review.remarks.trim() !== 'Reviewed via peer assessment portal'
+                              ? `"${review.remarks}"`
+                              : null;
+
+                          return (
+                            <tr key={r} className="hover:bg-zinc-50/30 transition-colors align-middle">
+                              <td className="px-4 py-2 text-xs font-bold text-zinc-800 font-sans align-middle">{r}</td>
+                              <td className="px-4 py-2 align-middle">
+                                <span className={cn(
+                                  "inline-flex items-center px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border leading-none font-sans",
+                                  statusStyle
+                                )}>
+                                  {statusText}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-xs text-zinc-700 font-medium font-sans align-middle">
+                                {displayRemarks ? (
+                                  displayRemarks
+                                ) : (
+                                  <span className="text-zinc-400 italic font-medium">— No comments submitted yet —</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-zinc-50/50 border border-dashed border-zinc-200 rounded-2xl p-6 text-center text-zinc-400 text-xs font-medium italic">
+                  — No reviewers assigned to this manuscript —
+                </div>
+              )}
+
+              {/* Actions Section */}
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+                {article.status === 'Revision Requested' ? (
+                  <span className="px-6 py-3 bg-amber-50/50 border border-amber-100/50 text-amber-600 rounded-xl text-[10px] font-black tracking-widest uppercase font-sans h-11 flex items-center justify-center font-bold">
+                    Under Author Update
+                  </span>
+                ) : ['Published', 'Ready to Publish', 'Rejected', 'Desk Rejected'].includes(article.status) ? (
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider font-sans">No actions required</span>
+                ) : (article.status === 'Revised Submitted' || (article.status === 'Submitted' && article.versions && article.versions.length > 1)) ? (
+                  <button 
+                    onClick={() => {
+                      setPreviewArticle(article);
+                      setIsPreviewOpen(true);
+                      setIsAssigningFromPreview(true);
+                      setIsRejectingFromPreview(false);
+                      setRejectionReasonText('');
+                      setRejectionError(null);
+                      setReviewerSearchTerm('');
+                      setSelectedReviewersForAssigning(article.assignedReviewers || []);
+                    }}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-blue-700 transition-all uppercase cursor-pointer shadow-md hover:shadow-lg font-sans h-11 flex items-center justify-center font-bold"
+                  >
+                    Send back to Reviewer(s)
+                  </button>
+                ) : (!article.assignedReviewers || article.assignedReviewers.length === 0) ? (
+                  <button 
+                    onClick={() => {
+                      setPreviewArticle(article);
+                      setIsPreviewOpen(true);
+                      setIsAssigningFromPreview(false);
+                      setIsRejectingFromPreview(false);
+                      setRejectionReasonText('');
+                      setRejectionError(null);
+                      setSelectedReviewersForAssigning([]);
+                    }}
+                    className="px-6 py-3 bg-black text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase cursor-pointer shadow-md hover:shadow-lg font-sans h-11 flex items-center justify-center font-bold"
+                  >
+                    Review Submission
+                  </button>
+                ) : (() => {
+                  const reviewsList = article.reviews ? Object.values(article.reviews) : (article.reviewerFeedback ? [article.reviewerFeedback] : []);
+                  const diff = article.reviewDeadline ? getRemainingDays(article.reviewDeadline) : null;
+                  const isOverdue = diff !== null && diff < 0;
+
+                  const approvedReviews = reviewsList.filter((r: any) => ['Approved', 'Accepted'].includes(r.recommendation));
+                  const rejectOrRevisionReviews = reviewsList.filter((r: any) => ['Rejected', 'Needs Improvement', 'Need Improvements'].includes(r.recommendation));
+
+                  const hasFeedback = reviewsList.length > 0;
+                  const showPublish = approvedReviews.length > 0 || isOverdue;
+                  const showSendBack = rejectOrRevisionReviews.length > 0 || isOverdue;
+
+                  if (!hasFeedback && !isOverdue) {
+                    return (
+                      <span className="px-6 py-3 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-xl text-[10px] font-black tracking-widest uppercase font-sans h-11 flex items-center justify-center font-bold shadow-sm">
+                        Waiting for Reviews
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <div className="flex flex-wrap items-center gap-3">
+                      {showSendBack && (
+                        <button
+                          onClick={() => {
+                            setSelectedArticle(article);
+                            setAdminNote('');
+                            setIsAdminNoteModalOpen(true);
+                          }}
+                          className="px-6 py-3 bg-amber-500 text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-amber-600 transition-all uppercase cursor-pointer shadow-md hover:shadow-lg font-sans h-11 flex items-center justify-center font-bold"
+                        >
+                          Send Back to Author
+                        </button>
+                      )}
+
+                      {showPublish && (
+                        <button
+                          onClick={() => {
+                            confirm({
+                              title: 'Move to Publish List',
+                              message: 'Move this article to the Ready to Publish list?',
+                              confirmText: 'Move',
+                              onConfirm: () => {
+                                updateStatus(article.id, 'Ready to Publish', null, 'Article successfully moved to Ready to Publish list.');
+                              }
+                            });
+                          }}
+                          className="px-6 py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black tracking-widest hover:bg-emerald-700 transition-all uppercase cursor-pointer shadow-md hover:shadow-lg font-sans h-11 flex items-center justify-center font-bold"
+                        >
+                          Move to Publish List
+                        </button>
                       )}
                     </div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="flex flex-col items-end justify-center gap-1.5 ml-auto w-[135px]">
-                      {/* Contextual Action Buttons */}
-                      {article.status === 'Revision Requested' ? (
-                        <span className="text-[9px] font-black text-amber-500 uppercase tracking-wider bg-amber-50 border border-amber-200/50 px-1 py-2 rounded-xl font-sans w-[135px] text-center whitespace-nowrap">
-                          Under Author Update
-                        </span>
-                      ) : ['Published', 'Ready to Publish', 'Rejected', 'Desk Rejected'].includes(article.status) ? (
-                        <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider w-[135px] text-center whitespace-nowrap">No actions required</span>
-                      ) : (article.status === 'Revised Submitted' || (article.status === 'Submitted' && article.versions && article.versions.length > 1)) ? (
-                        <button 
-                          onClick={() => {
-                            setPreviewArticle(article);
-                            setIsPreviewOpen(true);
-                            setIsAssigningFromPreview(true);
-                            setIsRejectingFromPreview(false);
-                            setRejectionReasonText('');
-                            setRejectionError(null);
-                            setReviewerSearchTerm('');
-                            setSelectedReviewersForAssigning(article.assignedReviewers || []);
-                          }}
-                          className="px-1 py-2 bg-blue-600 text-white rounded-lg text-[9px] font-black tracking-wider hover:bg-blue-700 transition-all uppercase cursor-pointer w-[135px] text-center whitespace-nowrap font-sans font-bold"
-                        >
-                          Send back to Reviewer(s)
-                        </button>
-                      ) : (!article.assignedReviewers || article.assignedReviewers.length === 0) ? (
-                        // Stage 1: Before Reviewer Assignment
-                        <button 
-                          onClick={() => {
-                            setPreviewArticle(article);
-                            setIsPreviewOpen(true);
-                            setIsAssigningFromPreview(false);
-                            setIsRejectingFromPreview(false);
-                            setRejectionReasonText('');
-                            setRejectionError(null);
-                            setSelectedReviewersForAssigning([]);
-                          }}
-                          className="px-1 py-2 bg-black text-white rounded-lg text-[9px] font-black tracking-wider hover:bg-zinc-800 transition-all uppercase cursor-pointer w-[135px] text-center whitespace-nowrap"
-                        >
-                          Review Submission
-                        </button>
-                      ) : (() => {
-                        const reviewsList = article.reviews ? Object.values(article.reviews) : (article.reviewerFeedback ? [article.reviewerFeedback] : []);
-                        const diff = article.reviewDeadline ? getRemainingDays(article.reviewDeadline) : null;
-                        const isOverdue = diff !== null && diff < 0;
+                  );
+                })()}
+              </div>
 
-                        const approvedReviews = reviewsList.filter((r: any) => ['Approved', 'Accepted'].includes(r.recommendation));
-                        const rejectOrRevisionReviews = reviewsList.filter((r: any) => ['Rejected', 'Needs Improvement', 'Need Improvements'].includes(r.recommendation));
-
-                        const hasFeedback = reviewsList.length > 0;
-                        const showPublish = approvedReviews.length > 0 || isOverdue;
-                        const showSendBack = rejectOrRevisionReviews.length > 0 || isOverdue;
-
-                        if (!hasFeedback && !isOverdue) {
-                          return (
-                            <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider w-[135px] text-center whitespace-nowrap bg-zinc-50 border border-zinc-200/50 px-1 py-2 rounded-xl">
-                              Waiting for Reviews
-                            </span>
-                          );
-                        }
-
-                        return (
-                          <>
-                            {showSendBack && (
-                              <button
-                                onClick={() => {
-                                  setSelectedArticle(article);
-                                  setAdminNote('');
-                                  setIsAdminNoteModalOpen(true);
-                                }}
-                                className="px-1 py-2 bg-amber-500 text-white rounded-lg text-[9px] font-black tracking-wider hover:bg-amber-600 transition-all uppercase cursor-pointer w-[135px] text-center whitespace-nowrap font-sans font-bold"
-                              >
-                                Send Back to Author
-                              </button>
-                            )}
-
-                            {showPublish && (
-                              <button
-                                onClick={() => {
-                                  confirm({
-                                    title: 'Move to Publish List',
-                                    message: 'Move this article to the Ready to Publish list?',
-                                    confirmText: 'Move',
-                                    onConfirm: () => {
-                                      updateStatus(article.id, 'Ready to Publish', null, 'Article successfully moved to Ready to Publish list.');
-                                    }
-                                  });
-                                }}
-                                className="px-1 py-2 bg-emerald-600 text-white rounded-lg text-[9px] font-black tracking-wider hover:bg-emerald-700 transition-all uppercase cursor-pointer w-[135px] text-center whitespace-nowrap font-sans font-bold"
-                              >
-                                Move to Publish List
-                              </button>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Article Details Side Panel / Drawer */}
