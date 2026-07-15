@@ -35,7 +35,7 @@ import { auth, db } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 // Types
-type Status = 'Submitted' | 'Revised Submitted' | 'Under Review' | 'Revision Required' | 'Approved' | 'Rejected' | 'Published';
+type Status = 'Submitted' | 'Revised Submitted' | 'Under Review' | 'Revision Required' | 'Approved' | 'Rejected' | 'Published' | 'Revised';
 
 interface Version {
   version: number;
@@ -219,16 +219,8 @@ const MyArticles = () => {
       });
       
       mappedArticles.sort((a, b) => {
-        const dateA = a.updatedAt || a.dateSubmitted;
-        const dateB = b.updatedAt || b.dateSubmitted;
-        
-        const timeA = dateA && dateA._seconds 
-          ? dateA._seconds * 1000 
-          : (dateA ? new Date(dateA).getTime() : 0);
-        const timeB = dateB && dateB._seconds 
-          ? dateB._seconds * 1000 
-          : (dateB ? new Date(dateB).getTime() : 0);
-        
+        const timeA = new Date(a.dateSubmitted).getTime();
+        const timeB = new Date(b.dateSubmitted).getTime();
         return timeB - timeA;
       });
       
@@ -262,9 +254,10 @@ const MyArticles = () => {
   const mapStatus = (backendStatus: string): Status => {
     switch(backendStatus) {
       case 'submitted': return 'Submitted';
-      case 'revised_submitted': return 'Revised Submitted';
+      case 'revised_submitted': return 'Revised';
       case 'under_review': return 'Under Review';
       case 'revision_requested': return 'Revision Required';
+      case 'revision_submitted': return 'Revised';
       case 'accepted': return 'Approved';
       case 'published': return 'Published';
       case 'rejected':
@@ -280,6 +273,7 @@ const MyArticles = () => {
       case 'Revised Submitted': return 'bg-blue-50 text-blue-600 border-blue-100';
       case 'Under Review': return 'bg-amber-50 text-amber-600 border-amber-100';
       case 'Revision Required': return 'bg-rose-50 text-rose-600 border-rose-100';
+      case 'Revised': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
       case 'Approved': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
       case 'Rejected': return 'bg-red-50 text-red-600 border-red-100';
       case 'Published': return 'bg-purple-50 text-purple-600 border-purple-100';
@@ -293,6 +287,7 @@ const MyArticles = () => {
       case 'Revised Submitted': return <Clock size={12} />;
       case 'Under Review': return <History size={12} />;
       case 'Revision Required': return <AlertCircle size={12} />;
+      case 'Revised': return <RefreshCw size={12} />;
       case 'Approved': return <CheckCircle2 size={12} />;
       case 'Rejected': return <Ban size={12} />;
       case 'Published': return <Upload size={12} />;
@@ -637,7 +632,7 @@ const MyArticles = () => {
                     All Status
                   </button>
                   
-                  {(['Submitted', 'Under Review', 'Revision Required', 'Approved', 'Rejected', 'Published'] as Status[]).map((status) => (
+                  {(['Submitted', 'Under Review', 'Revision Required', 'Revised', 'Approved', 'Rejected', 'Published'] as Status[]).map((status) => (
                     <button
                       key={status}
                       onClick={() => { setStatusFilter(status); setIsFilterOpen(false); }}
@@ -651,8 +646,10 @@ const MyArticles = () => {
                         status === 'Submitted' && "bg-blue-500",
                         status === 'Under Review' && "bg-amber-500",
                         status === 'Revision Required' && "bg-rose-500",
+                        status === 'Revised' && "bg-indigo-500",
                         status === 'Approved' && "bg-emerald-500",
-                        status === 'Rejected' && "bg-zinc-500"
+                        status === 'Rejected' && "bg-zinc-500",
+                        status === 'Published' && "bg-purple-500"
                       )} />
                       {status}
                     </button>

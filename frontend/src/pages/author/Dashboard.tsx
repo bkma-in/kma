@@ -56,6 +56,13 @@ const Dashboard = () => {
             
             return true;
           });
+          
+          filteredArticles.sort((a: any, b: any) => {
+            const timeA = new Date(a.createdAt).getTime();
+            const timeB = new Date(b.createdAt).getTime();
+            return timeB - timeA;
+          });
+
           setArticles(filteredArticles);
         }
       } catch (error) {
@@ -136,10 +143,6 @@ const Dashboard = () => {
     bgColor: a.status === 'accepted' ? 'bg-emerald-50' : 
              a.status === 'revision_requested' ? 'bg-rose-50' : 'bg-blue-50'
   }));
-
-  const notifications = [
-    { message: 'Welcome to the BKMA Author Portal!', time: 'Now' },
-  ];
 
   return (
     <div className="animate-in fade-in duration-700 max-w-7xl mx-auto">
@@ -290,7 +293,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Right Column: Notifications & Info */}
+        {/* Right Column: Archive Focus */}
         <div className="space-y-8">
           {/* Notifications Preview */}
           <div className="bg-zinc-900 text-white rounded-3xl p-8 shadow-xl border border-zinc-800 relative overflow-hidden">

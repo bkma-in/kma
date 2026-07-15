@@ -62,38 +62,31 @@ const TermsAndConditions: React.FC = () => {
               />
             </div>
 
-            {isLoggedIn ? (
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={handleLogout}
-                  className="text-[10px] font-black text-zinc-400 hover:text-black uppercase tracking-widest transition-colors cursor-pointer"
-                >
-                  Logout
-                </button>
-                <button
-                  onClick={() => currentUser && navigate(getDashboardByRole(currentUser.role))}
-                  className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-bold shadow-lg shadow-black/20 cursor-pointer"
-                >
-                  USER
-                </button>
-              </div>
-            ) : (
-              <>
-                <button
-                  onClick={() => navigate('/auth?mode=login')}
-                  className="text-sm sm:text-base font-bold hover:text-zinc-600 transition-colors shrink-0 uppercase tracking-widest cursor-pointer"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => navigate('/auth?mode=register')}
-                  className="bg-black text-white text-sm sm:text-base font-black py-3 px-5 sm:py-4 sm:px-10 rounded-xl shadow-2xl shadow-black/20 hover:bg-zinc-800 transition-all active:scale-95 text-center leading-tight sm:leading-normal uppercase tracking-[0.1em] shrink-0 cursor-pointer"
-                >
-                  <span className="hidden sm:inline">Get Started</span>
-                  <span className="sm:hidden">Get <br /> Started</span>
-                </button>
-              </>
-            )}
+            <button 
+              onClick={() => {
+                if (isLoggedIn && currentUser) {
+                  navigate(getDashboardByRole(currentUser.role));
+                } else {
+                  navigate('/auth?mode=login');
+                }
+              }}
+              className="text-sm sm:text-base font-bold hover:text-zinc-600 transition-colors shrink-0 uppercase tracking-widest cursor-pointer"
+            >
+              Login
+            </button>
+            <button 
+              onClick={() => {
+                if (isLoggedIn && currentUser) {
+                  navigate(getDashboardByRole(currentUser.role));
+                } else {
+                  navigate('/auth?mode=register');
+                }
+              }}
+              className="bg-black text-white text-sm sm:text-base font-black py-3 px-5 sm:py-4 sm:px-10 rounded-xl shadow-2xl shadow-black/20 hover:bg-zinc-800 transition-all active:scale-95 text-center leading-tight sm:leading-normal uppercase tracking-[0.1em] shrink-0 cursor-pointer"
+            >
+              <span className="hidden sm:inline">Get Started</span>
+              <span className="sm:hidden">Get <br /> Started</span>
+            </button>
           </div>
         </div>
       </nav>
@@ -267,21 +260,28 @@ const TermsAndConditions: React.FC = () => {
               <p className="text-zinc-500 text-[11px] leading-relaxed max-w-sm">
                 Advancing mathematical research and higher education through global collaboration and peer-reviewed scholarly excellence.
               </p>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-2.5 sm:gap-4">
                 <Link to="/about-us" className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">About Us</Link>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Guidelines</button>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Archives</button>
+                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Author Guidelines</button>
+                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Reviewer Guidelines</button>
               </div>
             </div>
 
-            {/* Column 2: Policies */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Policies</h4>
               <ul className="space-y-2.5">
-                {['Publication', 'Review Guidelines', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
+                {['Publication', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
                   <li key={link}>
                     {link === 'Refund/Cancellation Policy' ? (
                       <Link to="/refund-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : link === 'Privacy Policy' ? (
+                      <Link to="/privacy-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : link === 'Copyright' ? (
+                      <Link to="/copyright" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
                         {link}
                       </Link>
                     ) : (
@@ -292,11 +292,10 @@ const TermsAndConditions: React.FC = () => {
               </ul>
             </div>
 
-            {/* Column 3: Access */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Access</h4>
               <ul className="space-y-2.5">
-                {['Pricing', 'How it Works', 'Service Description', 'Editorial Board', 'Terms & Conditions'].map(link => (
+                {['Pricing', 'Service Description', 'Editorial Board', 'Terms & Conditions'].map(link => (
                   <li key={link}>
                     {link === 'Terms & Conditions' ? (
                       <Link to="/terms" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
@@ -324,7 +323,13 @@ const TermsAndConditions: React.FC = () => {
               <ul className="space-y-2.5">
                 {['Contact Us', 'Help Center', 'Report Issue'].map(link => (
                   <li key={link}>
-                    <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
+                    {link === 'Contact Us' ? (
+                      <Link to="/contact-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
+                        {link}
+                      </Link>
+                    ) : (
+                      <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
+                    )}
                   </li>
                 ))}
               </ul>
