@@ -272,6 +272,35 @@ router.get('/profile', authMiddleware_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch profile' });
     }
 });
+// Get Public Profile (Unauthenticated)
+router.get('/:id/public-profile', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userDoc = await firebase_1.db.collection('users').doc(id).get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: 'User profile not found' });
+        }
+        const data = userDoc.data();
+        res.json({
+            success: true,
+            profile: {
+                uid: data.uid,
+                name: data.name,
+                email: data.email || '',
+                role: data.role || 'author',
+                bio: data.bio || '',
+                designation: data.designation || '',
+                phone: data.phone || '',
+                profileImage: data.profileImage || '',
+                createdAt: data.createdAt
+            }
+        });
+    }
+    catch (error) {
+        console.error('Get public profile error:', error);
+        res.status(500).json({ error: 'Failed to fetch public profile' });
+    }
+});
 // Update Profile (Optimized: 1 Read, 1 Write, Non-blocking Cleanup)
 router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.single('profileImage'), async (req, res) => {
     try {

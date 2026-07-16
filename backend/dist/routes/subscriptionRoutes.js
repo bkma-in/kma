@@ -72,4 +72,94 @@ router.post('/create-order', authMiddleware_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to create payment order' });
     }
 });
+// Create Razorpay Order for Single Article Purchase
+router.post('/create-article-order', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const { uid, email } = req.user;
+        const { articleId } = req.body;
+        if (!articleId) {
+            return res.status(400).json({ error: 'Article ID is required' });
+        }
+        const articleDoc = await firebase_1.db.collection('articles').doc(articleId).get();
+        if (!articleDoc.exists) {
+            return res.status(404).json({ error: 'Article not found' });
+        }
+        const orderAmount = 499;
+        const options = {
+            amount: orderAmount * 100, // paise
+            currency: "INR",
+            receipt: `art_receipt_${Date.now()}_${uid.substring(0, 5)}`,
+            notes: {
+                userId: uid,
+                email: email,
+                articleId: articleId,
+                type: 'article_purchase'
+            }
+        };
+        const order = await razorpay.orders.create(options);
+        // Save pending purchase in Firestore
+        const purchaseRef = firebase_1.db.collection('purchases').doc();
+        await purchaseRef.set({
+            purchaseId: purchaseRef.id,
+            userId: uid,
+            articleId,
+            amount: orderAmount,
+            currency: "INR",
+            status: 'pending',
+            paymentId: order.id,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        });
+        res.json({
+            success: true,
+            orderId: order.id,
+            paymentSessionId: order.id,
+            keyId: env_1.config.payments.razorpay.keyId
+        });
+    }
+    catch (error) {
+        console.error('Create article order error:', error);
+        res.status(500).json({ error: 'Failed to create payment order' });
+    }
+});
+// Dev-only: Simulate individual article payment completion in Firestore
+router.post('/simulate-article-payment', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const { uid } = req.user;
+        const { articleId } = req.body;
+        if (!articleId) {
+            return res.status(400).json({ error: 'Article ID is required' });
+        }
+        // Check if there is a pending purchase
+        const snapshot = await firebase_1.db.collection('purchases')
+            .where('userId', '==', uid)
+            .where('articleId', '==', articleId)
+            .limit(1)
+            .get();
+        if (!snapshot.empty) {
+            await snapshot.docs[0].ref.update({
+                status: 'completed',
+                updatedAt: new Date()
+            });
+            return res.json({ success: true, message: 'Simulated payment completed successfully' });
+        }
+        // If no pending purchase, create a completed one directly
+        const purchaseRef = firebase_1.db.collection('purchases').doc();
+        await purchaseRef.set({
+            purchaseId: purchaseRef.id,
+            userId: uid,
+            articleId,
+            amount: 499,
+            currency: "INR",
+            status: 'completed',
+            createdAt: new Date(),
+            updatedAt: new Date()
+        });
+        res.json({ success: true, message: 'Simulated purchase created directly' });
+    }
+    catch (error) {
+        console.error('Simulate article payment error:', error);
+        res.status(500).json({ error: 'Failed to simulate payment' });
+    }
+});
 exports.default = router;
