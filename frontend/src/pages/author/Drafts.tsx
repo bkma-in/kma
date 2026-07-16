@@ -136,9 +136,6 @@ const Drafts = () => {
                     >
                       {draft.title}
                     </h2>
-                    <p className="text-xs text-zinc-500 font-semibold font-sans mt-1">
-                      Category: <span className="uppercase text-zinc-700">{draft.category}</span>
-                    </p>
                   </div>
 
                   <div className="flex items-start gap-2 shrink-0">

@@ -54,7 +54,6 @@ interface Article {
   id: string;
   title: string;
   author: string;
-  category: string;
   abstract: string;
   status: ArticleStatus;
   assignedReviewers: string[];
@@ -250,7 +249,6 @@ const AdminArticles = () => {
               id: a.articleId || a.id,
               title: a.title,
               author: a.authors?.find((au: any) => au.role === 'submitter')?.name || a.author || 'Author',
-              category: a.category || 'Mathematics',
               abstract: a.abstract || '',
               status,
               assignedReviewers: a.assignedReviewers || [],
@@ -856,9 +854,6 @@ const AdminArticles = () => {
             {/* Modal Header */}
             <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-white/5 bg-zinc-900/50 backdrop-blur-md flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3 sm:gap-4">
-                <span className="bg-blue-900/30 text-blue-400 border border-blue-800/30 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                  {previewArticle.category}
-                </span>
                 <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest pt-0.5">
                   Manuscript Preview • {previewArticle.id}
                 </span>

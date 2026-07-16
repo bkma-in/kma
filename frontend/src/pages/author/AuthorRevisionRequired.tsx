@@ -37,7 +37,6 @@ interface Article {
   title: string;
   author: string;
   authorId: string;
-  category: string;
   abstract: string;
   status: string;
   lastUpdated: string;
@@ -110,7 +109,6 @@ const AuthorRevisionRequired = () => {
           title: data.title || 'Untitled Article',
           author: data.author || 'Author',
           authorId: data.authorId || '',
-          category: data.category || 'Mathematics',
           abstract: data.abstract || '',
           status: 'Revision Required',
           lastUpdated: formatDate(data.updatedAt || data.createdAt),
@@ -319,7 +317,6 @@ const AuthorRevisionRequired = () => {
                   <thead>
                     <tr className="bg-zinc-50/50 border-b border-zinc-100">
                       <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest font-['Outfit']">Manuscript Details</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest font-['Outfit']">Category</th>
                       <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest font-['Outfit']">Returned</th>
                       <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest font-['Outfit'] text-right">Actions</th>
                     </tr>
@@ -354,11 +351,7 @@ const AuthorRevisionRequired = () => {
                               <p className="text-[10px] text-zinc-400 font-medium uppercase mt-1">Submitted {article.submittedDate}</p>
                             </div>
                           </td>
-                          <td className="px-6 py-5">
-                            <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-zinc-50 border border-zinc-100 text-zinc-600">
-                              {article.category}
-                            </span>
-                          </td>
+
                           <td className="px-6 py-5 text-xs text-zinc-500 font-medium font-sans">
                             {article.lastUpdated}
                           </td>

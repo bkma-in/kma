@@ -47,7 +47,6 @@ interface Version {
 interface Article {
   id: string;
   title: string;
-  category: string;
   dateSubmitted: string;
   status: Status | 'Draft';
   abstract: string;
@@ -143,7 +142,6 @@ const MyArticles = () => {
         return {
           id: a.articleId,
           title: a.title,
-          category: a.category || 'Mathematics',
           authorId: a.authorId,
           authors: a.authors || [],
           dateSubmitted: (() => {
@@ -722,11 +720,6 @@ const MyArticles = () => {
                       </span>
                     </div>
 
-                    {/* Category */}
-                    <div className="space-y-0.5 border-l border-indigo-100/50 pl-6 sm:pl-8">
-                      <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block font-sans">Category</span>
-                      <span className="text-xs font-bold text-zinc-700 font-sans">{article.category}</span>
-                    </div>
                   </div>
                 </div>
 
@@ -845,14 +838,7 @@ const MyArticles = () => {
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-10 bg-white">
               <div className="max-w-4xl mx-auto space-y-10">
-                {/* Title & Category */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-[10px] font-black text-white bg-black px-3 py-1 rounded-full uppercase tracking-widest">
-                      {selectedArticle.category}
-                    </span>
-                    <div className="h-[1px] flex-1 bg-zinc-100" />
-                  </div>
                   <h2 className="text-4xl font-bold text-black leading-[1.1] tracking-tighter font-['Outfit']">
                     {selectedArticle.title}
                   </h2>
