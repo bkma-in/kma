@@ -31,6 +31,11 @@ export const getPdfUrl = async (articleId: string, key?: string) => {
   return response.data;
 };
 
+export const getPublicPdfUrl = async (articleId: string) => {
+  const response = await api.get(`/articles/${articleId}/pdf-public`);
+  return response.data;
+};
+
 export const updateArticle = async (id: string, formData: FormData) => {
   const response = await api.put(`/articles/${id}`, formData, {
     headers: {
