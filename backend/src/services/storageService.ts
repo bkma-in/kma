@@ -87,6 +87,29 @@ export const getSignedPdfUrl = async (objectKey: string, originalName?: string):
 };
 
 /**
+ * Returns a readable stream of a PDF file from R2.
+ */
+export const getPdfStreamFromR2 = async (objectKey: string) => {
+  if (!config.r2.accountId || !config.r2.accessKeyId || !config.r2.secretAccessKey || !config.r2.bucketName) {
+    console.error('[STORAGE-SERVICE] Missing Cloudflare R2 configuration.');
+    throw new Error('Cloudflare R2 is not configured properly on the server.');
+  }
+
+  try {
+    const command = new GetObjectCommand({
+      Bucket: config.r2.bucketName,
+      Key: objectKey,
+    });
+
+    const s3Response = await s3Client.send(command);
+    return s3Response.Body;
+  } catch (error: any) {
+    console.error(`[STORAGE-SERVICE] Stream failed for key "${objectKey}": ${error.message || error}`);
+    throw new Error(`R2 stream failure: ${error.message || error}`);
+  }
+};
+
+/**
  * Deletes a PDF file from Cloudflare R2.
  * @param objectKey The key of the PDF object in R2.
  */

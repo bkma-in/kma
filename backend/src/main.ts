@@ -3,9 +3,13 @@ import cors from 'cors';
 import { config } from './config/env';
 import { runMigrations } from './services/migrationService';
 import { checkAndSendReviewReminders } from './services/notificationService';
+import { queueService } from './services/archive/queueService';
 
 // Run migrations in background
 runMigrations().catch(err => console.error('Startup migration error:', err));
+
+// Resume interrupted archive jobs
+queueService.resumeInterruptedJobs().catch(err => console.error('Startup archive jobs resumption error:', err));
 
 // Run reviewer reminders at startup and set 12-hour interval scheduler
 checkAndSendReviewReminders().catch(err => console.error('Startup reminders check error:', err));
@@ -21,6 +25,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes';
 import webhookRoutes from './routes/webhookRoutes';
 import userRoutes from './routes/userRoutes';
 import notificationRoutes from './routes/notificationRoutes';
+import archiveRoutes from './routes/archiveRoutes';
 
 const app = express();
 
@@ -39,6 +44,7 @@ app.use('/api/issues', issueRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/archive', archiveRoutes);
 
 app.get('/', (req, res) => {
   res.send({ status: 'ok', message: 'KMA Backend is running' });
