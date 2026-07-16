@@ -45,20 +45,17 @@ const SubmitArticle = () => {
     title: prefillData?.title || '',
     abstract: prefillData?.abstract || '',
     keywords: prefillData?.keywords || '',
-    category: prefillData?.category || '',
-    allowComments: prefillData?.allowComments !== undefined ? prefillData.allowComments : true,
+    category: '',
+    allowComments: false,
     termsAccepted: false,
     pdfName: prefillData?.pdfName || ''
   });
   
   const [file, setFile] = useState<File | null>(null);
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [savedDraftId, setSavedDraftId] = useState<string | null>(prefillData?.id || prefillData?.articleId || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   // Co-author state
@@ -95,7 +92,6 @@ const SubmitArticle = () => {
   }, [userSearchTerm, profile?.uid, coAuthors]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (prefillData) {
@@ -103,7 +99,7 @@ const SubmitArticle = () => {
         title: prefillData.title || '',
         abstract: prefillData.abstract || '',
         keywords: prefillData.keywords || '',
-        category: prefillData.category || '',
+        category: '',
         allowComments: false,
         termsAccepted: false,
         pdfName: prefillData.pdfName || ''
@@ -163,30 +159,10 @@ const SubmitArticle = () => {
   };
 
 
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      const extension = selectedFile.name.split('.').pop()?.toLowerCase();
-      if (['jpg', 'jpeg', 'png', 'webp'].includes(extension || '')) {
-        setThumbnailFile(selectedFile);
-        const url = URL.createObjectURL(selectedFile);
-        setThumbnailPreview(url);
-      } else {
-        showToast('Please upload an image file (JPG, PNG, WEBP).', 'error');
-      }
-    }
-  };
-
   const removeFile = () => {
     setFile(null);
     setFormData(prev => ({ ...prev, pdfName: '' }));
     if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const removeThumbnail = () => {
-    setThumbnailFile(null);
-    setThumbnailPreview(null);
-    if (thumbnailInputRef.current) thumbnailInputRef.current.value = '';
   };
 
   const validateStep = (step: number) => {
@@ -194,7 +170,6 @@ const SubmitArticle = () => {
     
     if (step === 1) {
       if (!formData.title.trim()) newErrors.title = 'Manuscript title is required';
-      if (!formData.category) newErrors.category = 'Please select a research category';
       if (!formData.abstract.trim()) {
         newErrors.abstract = 'Executive abstract is required';
       } else if (formData.abstract.trim().split(/\s+/).length < 10) { 
@@ -243,9 +218,7 @@ const SubmitArticle = () => {
         payload.append('pdfName', formData.pdfName);
       }
 
-      if (thumbnailFile) {
-        payload.append('thumbnail', thumbnailFile);
-      }
+
 
       let response;
       if (savedDraftId) {
@@ -307,7 +280,7 @@ const SubmitArticle = () => {
 
       setErrors(allErrors);
 
-      if (allErrors.title || allErrors.abstract || allErrors.category) setCurrentStep(1);
+      if (allErrors.title || allErrors.abstract) setCurrentStep(1);
       else if (allErrors.pdf) setCurrentStep(2);
       else setCurrentStep(3);
       return;
@@ -319,9 +292,7 @@ const SubmitArticle = () => {
       const payload = new FormData();
       payload.append('title', formData.title);
       payload.append('abstract', formData.abstract);
-      payload.append('category', formData.category);
       if (file) payload.append('pdf', file);
-      if (thumbnailFile) payload.append('thumbnail', thumbnailFile);
       payload.append('status', 'submitted');
       
       // Add co-authors
@@ -358,8 +329,6 @@ const SubmitArticle = () => {
         setFile(null);
         setCoAuthors([]);
         setSavedDraftId(null);
-        setThumbnailFile(null);
-        setThumbnailPreview(null);
       }
     } catch (error: any) {
       console.error('Submission failed:', error);
@@ -398,8 +367,6 @@ const SubmitArticle = () => {
               });
               setCoAuthors([]);
               setSavedDraftId(null);
-              setThumbnailFile(null);
-              setThumbnailPreview(null);
               setErrors({});
             }}
             className="px-8 py-4 bg-black text-white rounded-2xl font-bold text-xs tracking-widest hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 active:scale-95"
@@ -567,119 +534,15 @@ const SubmitArticle = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Article Thumbnail (Optional)</label>
-                    <div className="flex items-center gap-6 p-4 bg-zinc-50 rounded-2xl border border-zinc-200">
-                      <div className="w-20 h-20 bg-white rounded-xl border border-zinc-100 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
-                        {thumbnailPreview ? (
-                          <img src={thumbnailPreview} alt="Thumbnail preview" className="w-full h-full object-cover" />
-                        ) : (
-                          <Upload className="text-zinc-300" size={24} />
-                        )}
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <button 
-                            type="button"
-                            onClick={() => thumbnailInputRef.current?.click()}
-                            className="px-4 py-2 bg-black text-white rounded-lg text-[10px] font-black tracking-widest hover:bg-zinc-800 transition-all uppercase"
-                          >
-                            {thumbnailFile ? 'Change Image' : 'Select Image'}
-                          </button>
-                          {thumbnailFile && (
-                            <button 
-                              type="button"
-                              onClick={removeThumbnail}
-                              className="px-4 py-2 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black tracking-widest hover:bg-rose-100 transition-all uppercase"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                        <p className="text-[9px] text-zinc-400 font-medium">Recommended: 1200x630px (JPG/PNG). Max 5MB.</p>
-                        <input 
-                          type="file"
-                          ref={thumbnailInputRef}
-                          onChange={handleThumbnailChange}
-                          accept="image/*"
-                          className="hidden"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Category *</label>
-                      <div className="relative">
-                        <button 
-                          type="button"
-                          onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                          className={cn(
-                            "w-full flex items-center justify-between px-5 py-4 bg-zinc-50 border rounded-2xl text-sm outline-none cursor-pointer transition-all hover:border-black",
-                            errors.category 
-                              ? "border-rose-500 bg-rose-50/30 focus:ring-2 focus:ring-rose-200" 
-                              : "border-zinc-200 focus:ring-2 focus:ring-black"
-                          )}
-                        >
-                          <span className={cn(formData.category ? "text-black font-bold" : "text-zinc-400")}>
-                            {formData.category || 'Select Category'}
-                          </span>
-                          <ChevronDown size={18} className={cn("text-zinc-400 transition-transform duration-200", isCategoryOpen && "rotate-180")} />
-                        </button>
-                        {errors.category && (
-                          <p className="mt-2 text-[10px] font-bold text-rose-500 uppercase tracking-widest flex items-center gap-1.5 animate-in slide-in-from-top-1">
-                            <AlertCircle size={12} />
-                            {errors.category}
-                          </p>
-                        )}
-
-                        {isCategoryOpen && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setIsCategoryOpen(false)} />
-                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-zinc-100 rounded-2xl shadow-2xl z-20 py-2 animate-in slide-in-from-top-2 duration-200 overflow-hidden">
-                              {['Pure Mathematics', 'Applied Mathematics', 'Statistics', 'Mathematical Physics'].map((cat) => (
-                                <button
-                                  key={cat}
-                                  type="button"
-                                  onClick={() => {
-                                    setFormData(prev => ({ ...prev, category: cat }));
-                                    setIsCategoryOpen(false);
-                                    if (errors.category) {
-                                      setErrors(prev => {
-                                        const newErrors = { ...prev };
-                                        delete newErrors.category;
-                                        return newErrors;
-                                      });
-                                    }
-                                  }}
-                                  className={cn(
-                                    "w-full px-5 py-3 text-left text-xs font-bold transition-all flex items-center gap-3",
-                                    formData.category === cat ? "bg-zinc-50 text-black" : "text-zinc-500 hover:bg-zinc-50 hover:text-black"
-                                  )}
-                                >
-                                  <div className={cn(
-                                    "w-1.5 h-1.5 rounded-full",
-                                    formData.category === cat ? "bg-black" : "bg-zinc-200"
-                                  )} />
-                                  {cat}
-                                </button>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Keywords</label>
-                      <input 
-                        type="text" 
-                        name="keywords"
-                        value={formData.keywords}
-                        onChange={handleInputChange}
-                        placeholder="Topology, Analysis, etc."
-                        className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:ring-2 focus:ring-black outline-none transition-all placeholder:text-zinc-400"
-                      />
-                    </div>
+                    <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Keywords</label>
+                    <input 
+                      type="text" 
+                      name="keywords"
+                      value={formData.keywords}
+                      onChange={handleInputChange}
+                      placeholder="Topology, Analysis, etc."
+                      className="w-full px-5 py-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-sm focus:ring-2 focus:ring-black outline-none transition-all placeholder:text-zinc-400"
+                    />
                   </div>
 
                   <div>
