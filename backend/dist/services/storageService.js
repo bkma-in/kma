@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deletePdfFromR2 = exports.getSignedPdfUrl = exports.uploadPdfToR2 = void 0;
+exports.deletePdfFromR2 = exports.getPdfStreamFromR2 = exports.getSignedPdfUrl = exports.uploadPdfToR2 = void 0;
 const client_s3_1 = require("@aws-sdk/client-s3");
 const s3_request_presigner_1 = require("@aws-sdk/s3-request-presigner");
 const r2_1 = require("../config/r2");
@@ -84,6 +84,28 @@ const getSignedPdfUrl = async (objectKey, originalName) => {
     }
 };
 exports.getSignedPdfUrl = getSignedPdfUrl;
+/**
+ * Returns a readable stream of a PDF file from R2.
+ */
+const getPdfStreamFromR2 = async (objectKey) => {
+    if (!env_1.config.r2.accountId || !env_1.config.r2.accessKeyId || !env_1.config.r2.secretAccessKey || !env_1.config.r2.bucketName) {
+        console.error('[STORAGE-SERVICE] Missing Cloudflare R2 configuration.');
+        throw new Error('Cloudflare R2 is not configured properly on the server.');
+    }
+    try {
+        const command = new client_s3_1.GetObjectCommand({
+            Bucket: env_1.config.r2.bucketName,
+            Key: objectKey,
+        });
+        const s3Response = await r2_1.s3Client.send(command);
+        return s3Response.Body;
+    }
+    catch (error) {
+        console.error(`[STORAGE-SERVICE] Stream failed for key "${objectKey}": ${error.message || error}`);
+        throw new Error(`R2 stream failure: ${error.message || error}`);
+    }
+};
+exports.getPdfStreamFromR2 = getPdfStreamFromR2;
 /**
  * Deletes a PDF file from Cloudflare R2.
  * @param objectKey The key of the PDF object in R2.

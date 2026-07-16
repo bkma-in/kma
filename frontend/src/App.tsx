@@ -20,6 +20,9 @@ import AdminAuthorsList from './pages/admin/AdminAuthorsList';
 import AdminArticles from './pages/admin/AdminArticles';
 import AdminReadyToPublish from './pages/admin/AdminReadyToPublish';
 import AdminReadersList from './pages/admin/AdminReadersList';
+import AdminIngestArchive from './pages/admin/AdminIngestArchive';
+import ArchiveManagement from './pages/admin/ArchiveManagement';
+import ArchiveReview from './pages/admin/ArchiveReview';
 import ReviewerLayout from './layouts/ReviewerLayout';
 import ReviewerDashboard from './pages/reviewer/ReviewerDashboard';
 import ReviewerArticles from './pages/reviewer/ReviewerArticles';
@@ -216,6 +219,9 @@ function AdminRoutes() {
         <Route path="readers" element={<AdminReadersList />} />
         <Route path="articles" element={<AdminArticles />} />
         <Route path="ready-to-publish" element={<AdminReadyToPublish />} />
+        <Route path="ingest-archive" element={<Navigate to="../archive-management" replace />} />
+        <Route path="archive-management" element={<ArchiveManagement />} />
+        <Route path="archive-review/:jobId" element={<ArchiveReview />} />
         <Route path="notifications" element={<Notifications />} />
       </Route>
     </Routes>
