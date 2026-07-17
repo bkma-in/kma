@@ -17,8 +17,6 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSubscription } from '../../utils/SubscriptionContext';
-import { getPublishedArticles, getPdfUrl } from '../../services/article.service';
-import AuthorProfileModal from '../../components/AuthorProfileModal';
 import { getPublishedArticles } from '../../services/article.service';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import ArticlePreviewModal from '../../components/ArticlePreviewModal';
@@ -30,14 +28,6 @@ const ReaderDashboard = () => {
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
-  const [selectedAuthorId, setSelectedAuthorId] = useState<string | null>(null);
-  const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
-
-  const handleOpenAuthorProfile = (name: string, id?: string | null) => {
-    setSelectedAuthor(name);
-    setSelectedAuthorId(id || null);
-    setIsAuthorModalOpen(true);
   const [previewArticle, setPreviewArticle] = useState<any | null>(null);
 
   // Author Details Modal states
@@ -354,14 +344,6 @@ const ReaderDashboard = () => {
           </div>
         )}
       </div>
-
-      <AuthorProfileModal 
-        isOpen={isAuthorModalOpen} 
-        onClose={() => setIsAuthorModalOpen(false)} 
-        authorName={selectedAuthor || ''}
-        authorId={selectedAuthorId}
-        </div>
-      )}
 
       <AuthorDetailsModal
         isOpen={isAuthorModalOpen}

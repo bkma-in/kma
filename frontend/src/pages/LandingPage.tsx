@@ -18,7 +18,6 @@ import PricingModal from '../components/PricingModal';
 import { useAuth } from '../context/AuthContext';
 import { getPublishedArticles, getPdfUrl } from '../services/article.service';
 import { getDashboardByRole } from '../utils/auth';
-import { getPublishedArticles } from '../services/article.service';
 import AuthorDetailsModal from '../components/AuthorDetailsModal';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
 
