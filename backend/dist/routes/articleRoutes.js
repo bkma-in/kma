@@ -394,7 +394,6 @@ router.get('/published', async (req, res) => {
                 id: data.articleId,
                 title: data.title,
                 abstract: data.abstract,
-                authorId: data.authors && data.authors.length > 0 ? (data.authors[0].userId || data.authorId || null) : (data.authorId || null),
                 author: data.authors && data.authors.length > 0 ? data.authors[0].name : 'Old BKMA Contributor',
                 authorId: data.authors && data.authors.length > 0 ? (data.authors[0].userId || data.authorId || null) : (data.authorId || null),
                 authors: data.authors || [],
