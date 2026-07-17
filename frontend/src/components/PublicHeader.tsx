@@ -114,43 +114,10 @@ const PublicHeader: React.FC = () => {
                 >
                   <X size={20} />
                 </button>
-              </div>
-
-              {/* Navigation Links inside Drawer */}
-              <nav className="flex flex-col gap-4">
-                <Link 
-                  to="/" 
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="text-sm font-bold uppercase tracking-wider text-zinc-900 hover:text-zinc-600 py-1"
-                >
-                  Home
-                </Link>
-                <Link 
-                  to="/about-us" 
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="text-sm font-bold uppercase tracking-wider text-zinc-900 hover:text-zinc-600 py-1"
-                >
-                  About Us
-                </Link>
-                <Link 
-                  to="/pricing" 
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="text-sm font-bold uppercase tracking-wider text-zinc-900 hover:text-zinc-600 py-1"
-                >
-                  Pricing
-                </Link>
-                <Link 
-                  to="/contact-us" 
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="text-sm font-bold uppercase tracking-wider text-zinc-900 hover:text-zinc-600 py-1"
-                >
-                  Contact Us
-                </Link>
-              </nav>
-            </div>
+              </div>            </div>
 
             {/* Auth Actions in Drawer */}
-            <div className="space-y-3 pt-6 border-t border-zinc-100">
+            <div className="space-y-3 pt-6">
               <button
                 onClick={() => {
                   setIsDrawerOpen(false);
