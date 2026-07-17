@@ -12,10 +12,8 @@ import {
 import logo from '../assets/logo.png';
 import PublicHeader from '../components/PublicHeader';
 import { cn } from '../utils/cn';
-import GlobalFooter from '../components/GlobalFooter';
-import EditorialBoardModal from '../components/EditorialBoardModal';
 import { SkeletonArticleCard } from '../components/skeletons/SkeletonArticleCard';
-import PricingModal from '../components/PricingModal';
+import PublicFooter from '../components/PublicFooter';
 import { useAuth } from '../context/AuthContext';
 import { getDashboardByRole } from '../utils/auth';
 import { getPublishedArticles, getPdfUrl } from '../services/article.service';
@@ -65,8 +63,6 @@ const LandingPage: React.FC = () => {
   const isLoggedIn = !!currentUser;
 
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
-  const [isEditorialBoardOpen, setIsEditorialBoardOpen] = useState(false);
-  const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -244,42 +240,42 @@ const LandingPage: React.FC = () => {
                           <div
                             key={i}
                             onClick={() => setPreviewArticle(art)}
-                            className="w-[280px] shrink-0 snap-start bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-xl transition-all flex flex-col cursor-pointer group"
+                            className="w-[280px] shrink-0 snap-start bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-xl transition-all flex flex-col cursor-pointer group"
                           >
                             {/* Issue info */}
-                            <div className="flex items-center gap-2 mb-5 flex-wrap">
+                            <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
                               {art.isOld && (
-                                <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                                <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider">
                                   Legacy Edition
                                 </span>
                               )}
-                              <span className="text-zinc-500 text-[11px] font-semibold">
+                              <span className="text-zinc-500 text-[10px] font-semibold">
                                 {getIssueDetailsString(art)}
                               </span>
                             </div>
-                            <h3 className="text-2xl font-bold mb-4 leading-tight min-h-[4rem] group-hover:text-zinc-700 transition-colors">{art.title}</h3>
-                            <p className="text-zinc-500 text-sm mb-8 leading-relaxed line-clamp-3">
+                            <h3 className="text-sm font-bold mb-1.5 leading-snug line-clamp-2 group-hover:text-zinc-700 transition-colors">{art.title}</h3>
+                            <p className="text-zinc-500 text-[11px] mb-4 leading-relaxed line-clamp-2">
                               {art.abstract}
                             </p>
                             <div className="mt-auto">
-                              <div className="flex items-center justify-between mb-6 pt-6 border-t border-zinc-100">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
-                                    <Users size={14} />
+                              <div className="flex items-center justify-between mb-3.5 pt-3.5 border-t border-zinc-100">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+                                    <Users size={12} />
                                   </div>
-                                  <span className="text-sm font-bold">
+                                  <span className="text-[11px] font-bold text-black truncate max-w-[140px]">
                                     {art.authors && art.authors.length > 0
                                       ? art.authors.map((au: any) => au.name).join(', ')
                                       : art.author}
                                   </span>
                                 </div>
-                                <span className="text-[10px] font-bold text-zinc-400">{art.date}</span>
+                                <span className="text-[9px] font-bold text-zinc-400">{art.date}</span>
                               </div>
 
                               <button
-                                className="w-full py-3 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10"
+                                className="w-full py-2 rounded-lg text-[9px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-1.5 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10"
                               >
-                                VIEW ARTICLE <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                                VIEW ARTICLE <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
                               </button>
                             </div>
                           </div>
@@ -385,117 +381,7 @@ const LandingPage: React.FC = () => {
       })()}
 
       {/* Footer */}
-      <footer className="bg-black text-white py-12 px-6 border-t border-white/5">
-        <div className="max-w-7xl mx-auto">
-          {/* Main Footer Content Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 mb-12">
-
-            {/* Column 1: Branding */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1.5 shadow-xl shadow-white/5 overflow-hidden">
-                  <img src={logo} alt="BKMA Logo" className="w-full h-full object-contain" />
-                </div>
-                <h1 className="font-['Playfair_Display'] font-black text-xl tracking-[-0.02em]"> Bulletin Of Kerala Mathematical Association</h1>
-              </div>
-              <p className="text-zinc-500 text-[11px] leading-relaxed max-w-sm">
-                Advancing mathematical research and higher education through global collaboration and peer-reviewed scholarly excellence.
-              </p>
-              <div className="flex flex-wrap gap-2.5 sm:gap-4">
-                <Link 
-                  to="/about-us"
-                  className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md flex items-center justify-center"
-                >
-                  About Us
-                </Link>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Author Guidelines</button>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Reviewer Guidelines</button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Policies</h4>
-              <ul className="space-y-2.5">
-                {['Publication', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
-                  <li key={link}>
-                    {link === 'Refund/Cancellation Policy' ? (
-                      <Link to="/refund-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : link === 'Privacy Policy' ? (
-                      <Link to="/privacy-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : link === 'Copyright' ? (
-                      <Link to="/copyright" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : (
-                      <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Access</h4>
-              <ul className="space-y-2.5">
-                {['Pricing', 'Service Description', 'Editorial Board', 'Terms & Conditions'].map(link => (
-                  <li key={link}>
-                    {link === 'Terms & Conditions' ? (
-                      <Link to="/terms" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : link === 'Pricing' ? (
-                      <Link to="/pricing" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : link === 'Service Description' ? (
-                      <Link to="/service-description" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          if (link === 'Editorial Board') setIsEditorialBoardOpen(true);
-                        }}
-                        className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
-                      >
-                        {link}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Column 4: Support */}
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Support</h4>
-              <ul className="space-y-2.5">
-                {['Contact Us', 'Help Center', 'Report Issue'].map(link => (
-                  <li key={link}>
-                    {link === 'Contact Us' ? (
-                      <Link to="/contact-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : (
-                      <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <div className="pt-3 border-t border-white/5 mt-4">
-                <p className="text-[8px] font-black uppercase tracking-[0.1em] text-zinc-600">24/7 Research Support</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Row: Global Footer Component */}
-          <GlobalFooter showSocials={true} showTaglines={false} />
-        </div>
-      </footer>
+      <PublicFooter />
 
       {/* Article Preview Modal */}
       <ArticlePreviewModal
@@ -511,15 +397,6 @@ const LandingPage: React.FC = () => {
         onClose={() => setIsAuthorModalOpen(false)}
         userId={selectedAuthorId}
         legacyAuthorData={selectedLegacyAuthor}
-      />
-
-      <EditorialBoardModal
-        isOpen={isEditorialBoardOpen}
-        onClose={() => setIsEditorialBoardOpen(false)}
-      />
-      <PricingModal
-        isOpen={isPricingOpen}
-        onClose={() => setIsPricingOpen(false)}
       />
     </div>
   );
