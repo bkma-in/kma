@@ -14,6 +14,7 @@ import PublicHeader from '../components/PublicHeader';
 import { cn } from '../utils/cn';
 import GlobalFooter from '../components/GlobalFooter';
 import EditorialBoardModal from '../components/EditorialBoardModal';
+import { SkeletonArticleCard } from '../components/skeletons/SkeletonArticleCard';
 import PricingModal from '../components/PricingModal';
 import { useAuth } from '../context/AuthContext';
 import { getDashboardByRole } from '../utils/auth';
@@ -203,9 +204,7 @@ const LandingPage: React.FC = () => {
           </div>
 
           {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <Loader2 className="animate-spin text-zinc-300" size={32} />
-            </div>
+            <SkeletonArticleCard count={3} />
           ) : (() => {
             const regularArticles = articles.filter(art => !(/obituary|tribute|in memoriam/i.test(art.title || '') || /obituary|tribute/i.test(art.tag || '')));
             return regularArticles.length === 0 ? (
