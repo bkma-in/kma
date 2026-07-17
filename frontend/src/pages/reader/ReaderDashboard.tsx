@@ -171,40 +171,13 @@ const ReaderDashboard = () => {
             <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No matching results</h3>
             <p className="text-sm text-zinc-500 max-w-sm">We couldn't find any articles matching your search criteria. Try checking your spelling or using different keywords.</p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredArticles.map((art) => (
-              <div 
-                key={art.id}
-                className="group p-6 bg-white border border-zinc-100 rounded-2xl hover:border-zinc-300 hover:shadow-lg transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
-              >
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <span className="px-2.5 py-0.5 bg-zinc-100 text-zinc-600 rounded-md text-[10px] font-black uppercase tracking-widest">
-                      {art.tag}
-                    </span>
-                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{art.id}</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-black group-hover:text-blue-600 transition-colors leading-tight">
-                    {art.title}
-                  </h3>
-                  <div className="flex items-center gap-4 text-xs text-zinc-500 font-medium">
-                    <button 
-                      onClick={() => handleOpenAuthorProfile(art.author, art.authorId)}
-                      className="flex items-center gap-1.5 hover:text-black transition-colors focus:outline-none cursor-pointer"
-                      title="View Author Profile"
-                    >
-                      <Users size={14} className="text-zinc-400" /> {art.author}
-                    </button>
-                    <div className="flex items-center gap-1.5">
-                      <Clock size={14} className="text-zinc-400" /> {art.date}
-        {(() => {
-          const regularArticles = articles.filter(art => !(/obituary|tribute|in memoriam/i.test(art.title || '') || /obituary|tribute/i.test(art.tag || '')));
+        ) : (() => {
+          const regularArticles = filteredArticles.filter(art => !(/obituary|tribute|in memoriam/i.test(art.title || '') || /obituary|tribute/i.test(art.tag || '')));
           return regularArticles.length === 0 ? (
             <div className="text-center py-20 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4">
-              <AlertCircle size={40} className="text-amber-500 animate-pulse" />
-              <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No published articles available</h3>
-              <p className="text-sm text-zinc-500 max-w-sm">There are no peer-reviewed articles published in the archives yet. Please check back later.</p>
+              <BookOpen size={40} className="text-zinc-300 animate-pulse" />
+              <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No research articles found</h3>
+              <p className="text-sm text-zinc-500 max-w-sm">There are no research articles matching your search. Please check the Tributes & Memorials section below.</p>
             </div>
           ) : (
             <>
@@ -342,8 +315,8 @@ const ReaderDashboard = () => {
               ))}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <AuthorDetailsModal
         isOpen={isAuthorModalOpen}
