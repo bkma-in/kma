@@ -284,12 +284,13 @@ router.get('/:id/public-profile', async (req, res) => {
         res.json({
             success: true,
             profile: {
-                uid: data.uid,
+                uid: data.uid || id,
                 name: data.name,
                 email: data.email || '',
                 role: data.role || 'author',
                 bio: data.bio || '',
                 designation: data.designation || '',
+                affiliation: data.affiliation || '',
                 phone: data.phone || '',
                 profileImage: data.profileImage || '',
                 createdAt: data.createdAt

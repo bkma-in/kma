@@ -278,8 +278,6 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get Public Profile of any user
-router.get('/:id/public-profile', requireAuth, async (req: AuthRequest, res) => {
 // Get Public Profile (Unauthenticated)
 router.get('/:id/public-profile', async (req, res) => {
   try {
@@ -294,19 +292,13 @@ router.get('/:id/public-profile', async (req, res) => {
     res.json({
       success: true,
       profile: {
-        name: data.name,
-        designation: data.designation || '',
-        affiliation: data.affiliation || '',
-        email: data.email,
-        bio: data.bio || '',
-        profileImage: data.profileImage || null,
-        role: data.role
-        uid: data.uid,
+        uid: data.uid || id,
         name: data.name,
         email: data.email || '',
         role: data.role || 'author',
         bio: data.bio || '',
         designation: data.designation || '',
+        affiliation: data.affiliation || '',
         phone: data.phone || '',
         profileImage: data.profileImage || '',
         createdAt: data.createdAt
