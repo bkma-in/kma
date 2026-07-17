@@ -292,7 +292,8 @@ router.get('/:id/public-profile', async (req, res) => {
                 designation: data.designation || '',
                 phone: data.phone || '',
                 profileImage: data.profileImage || '',
-                createdAt: data.createdAt
+                createdAt: data.createdAt,
+                affiliation: data.affiliation || ''
             }
         });
     }

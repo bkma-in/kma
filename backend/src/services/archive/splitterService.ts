@@ -29,7 +29,7 @@ export const splitPdf = async (
     }
 
     const copiedPages = await dstDoc.copyPages(srcDoc, pageIndices);
-    copiedPages.forEach(page => dstDoc.addPage(page));
+    copiedPages.forEach((page: any) => dstDoc.addPage(page));
 
     const pdfBytes = await dstDoc.save();
     return Buffer.from(pdfBytes);
@@ -52,8 +52,8 @@ export const compileZipToPdf = async (zipBuffer: Buffer): Promise<Buffer> => {
 
     // Find and sort image files
     const imageEntries = entries
-      .filter(e => !e.isDirectory && /\.(png|jpe?g)$/i.test(e.entryName))
-      .sort((a, b) => a.entryName.localeCompare(b.entryName, undefined, { numeric: true, sensitivity: 'base' }));
+      .filter((e: any) => !e.isDirectory && /\.(png|jpe?g)$/i.test(e.entryName))
+      .sort((a: any, b: any) => a.entryName.localeCompare(b.entryName, undefined, { numeric: true, sensitivity: 'base' }));
 
     if (imageEntries.length === 0) {
       throw new Error('No valid PNG or JPG page images found inside the ZIP file.');
