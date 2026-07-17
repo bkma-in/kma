@@ -58,7 +58,20 @@ const ReaderDashboard = () => {
       try {
         const res = await getPublishedArticles();
         if (res.success) {
-          setArticles(res.articles);
+          // Sort newest published first
+          const sorted = [...(res.articles || [])].sort((a: any, b: any) => {
+            const getTime = (art: any): number => {
+              const raw = art.publishedAt || art.date;
+              if (!raw) return 0;
+              if (typeof raw?.toDate === 'function') return raw.toDate().getTime();
+              if (raw?._seconds) return raw._seconds * 1000;
+              if (raw?.seconds) return raw.seconds * 1000;
+              const d = new Date(raw);
+              return isNaN(d.getTime()) ? 0 : d.getTime();
+            };
+            return getTime(b) - getTime(a);
+          });
+          setArticles(sorted);
         }
       } catch (err) {
         console.error('Failed to load published articles:', err);
