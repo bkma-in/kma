@@ -12,9 +12,10 @@ import { register } from '../services/auth.service';
 interface RegistrationFormProps {
   onSuccess: (email: string) => void;
   onSwitchToLogin: () => void;
+  isAuthLoading?: boolean;
 }
 
-const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitchToLogin }) => {
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitchToLogin, isAuthLoading }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -85,6 +86,56 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
       setIsLoading(false);
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 bg-white animate-pulse">
+        <div className="max-w-md mx-auto w-full space-y-6">
+          {/* Header */}
+          <div className="space-y-2 text-center md:text-left">
+            <div className="h-8 bg-zinc-200 rounded w-1/2 mx-auto md:mx-0" />
+            <div className="h-4 bg-zinc-200 rounded w-2/3 mx-auto md:mx-0" />
+          </div>
+
+          <div className="space-y-4">
+            {/* Input 1 */}
+            <div className="space-y-2">
+              <div className="h-4 bg-zinc-200 rounded w-12" />
+              <div className="h-11 bg-zinc-100 rounded-xl w-full" />
+            </div>
+
+            {/* Input 2 */}
+            <div className="space-y-2">
+              <div className="h-4 bg-zinc-200 rounded w-12" />
+              <div className="h-11 bg-zinc-100 rounded-xl w-full" />
+            </div>
+
+            {/* Role buttons */}
+            <div className="space-y-2">
+              <div className="h-4 bg-zinc-200 rounded w-12" />
+              <div className="grid grid-cols-3 gap-2">
+                <div className="h-10 bg-zinc-100 rounded-xl" />
+                <div className="h-10 bg-zinc-100 rounded-xl" />
+                <div className="h-10 bg-zinc-100 rounded-xl" />
+              </div>
+            </div>
+
+            {/* Input 3 */}
+            <div className="space-y-2">
+              <div className="h-4 bg-zinc-200 rounded w-16" />
+              <div className="h-11 bg-zinc-100 rounded-xl w-full" />
+            </div>
+
+            {/* Button */}
+            <div className="h-12 bg-zinc-200 rounded-xl w-full" />
+
+            {/* Links */}
+            <div className="h-4 bg-zinc-200 rounded w-48 mx-auto" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 overflow-y-auto custom-scrollbar bg-white">

@@ -7,9 +7,10 @@ import { getDashboardByRole } from '../utils/auth';
 interface LoginFormProps {
   prefilledEmail?: string;
   onSwitchToRegister: () => void;
+  isAuthLoading?: boolean;
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRegister }) => {
+const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRegister, isAuthLoading }) => {
   const [view, setView] = useState<'login' | 'forgot-email' | 'forgot-otp' | 'forgot-reset'>('login');
   const [email, setEmail] = useState(prefilledEmail);
   const [password, setPassword] = useState('');
@@ -150,6 +151,41 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
   }, [prefilledEmail]);
 
   const passwordCheck = validatePassword(newPassword);
+
+  if (isAuthLoading) {
+    return (
+      <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 bg-white animate-pulse">
+        <div className="max-w-md mx-auto w-full space-y-6">
+          {/* Header */}
+          <div className="space-y-2 text-center md:text-left">
+            <div className="h-8 bg-zinc-200 rounded w-1/2 mx-auto md:mx-0" />
+            <div className="h-4 bg-zinc-200 rounded w-2/3 mx-auto md:mx-0" />
+          </div>
+
+          <div className="space-y-4">
+            {/* Input 1 */}
+            <div className="space-y-2">
+              <div className="h-4 bg-zinc-200 rounded w-12" />
+              <div className="h-11 bg-zinc-100 rounded-xl w-full" />
+            </div>
+
+            {/* Input 2 */}
+            <div className="space-y-2">
+              <div className="h-4 bg-zinc-200 rounded w-16" />
+              <div className="h-11 bg-zinc-100 rounded-xl w-full" />
+            </div>
+
+            {/* Button */}
+            <div className="h-12 bg-zinc-200 rounded-xl w-full" />
+
+            {/* Links */}
+            <div className="h-3 bg-zinc-200 rounded w-24 mx-auto" />
+            <div className="h-4 bg-zinc-200 rounded w-48 mx-auto" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 bg-white">

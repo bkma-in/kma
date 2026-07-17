@@ -3,12 +3,14 @@ import { useSearchParams } from 'react-router-dom';
 import BrandingCard from '../components/BrandingCard';
 import RegistrationForm from '../components/RegistrationForm';
 import LoginForm from '../components/LoginForm';
+import { useAuth } from '../context/AuthContext';
 
 const Auth: React.FC = () => {
   const [searchParams] = useSearchParams();
   // If ?mode=login, flip to login form. Otherwise show registration (default).
   const [isFlipped, setIsFlipped] = useState(searchParams.get('mode') === 'login');
   const [prefilledEmail, setPrefilledEmail] = useState('');
+  const { loading } = useAuth();
 
   const handleRegistrationSuccess = (email: string) => {
     localStorage.removeItem('registration_in_progress');
@@ -39,6 +41,7 @@ const Auth: React.FC = () => {
                 {/* Front: Registration Form */}
                 <div className="flip-face w-full h-full bg-white md:rounded-tr-3xl md:rounded-br-3xl">
                   <RegistrationForm
+                    isAuthLoading={loading}
                     onSuccess={handleRegistrationSuccess}
                     onSwitchToLogin={() => setIsFlipped(true)}
                   />
@@ -47,6 +50,7 @@ const Auth: React.FC = () => {
                 {/* Back: Login Form */}
                 <div className="flip-face flip-back w-full h-full bg-white md:rounded-tr-3xl md:rounded-br-3xl">
                   <LoginForm
+                    isAuthLoading={loading}
                     prefilledEmail={prefilledEmail}
                     onSwitchToRegister={() => setIsFlipped(false)}
                   />

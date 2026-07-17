@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Bug, 
@@ -14,13 +14,55 @@ import GlobalFooter from '../components/GlobalFooter';
 import { useNotification } from '../utils/NotificationContext';
 import { useProfile } from '../hooks/useProfile';
 import { useAuth } from '../context/AuthContext';
+import { SkeletonStatistics } from '../components/skeletons/SkeletonStatistics';
+import { SkeletonArticleCard } from '../components/skeletons/SkeletonArticleCard';
+import { SkeletonTable } from '../components/skeletons/SkeletonTable';
+import { SkeletonNotification } from '../components/skeletons/SkeletonNotification';
 
-const DeveloperLayout = () => {
+interface DeveloperLayoutProps {
+  isLoadingSkeleton?: boolean;
+}
+
+const DeveloperLayout: React.FC<DeveloperLayoutProps> = ({ isLoadingSkeleton = false }) => {
   const { confirm, showToast } = useNotification();
   const { profile } = useProfile();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  const renderSkeletonContent = () => {
+    const path = location.pathname;
+    if (path.endsWith('/dashboard')) {
+      return (
+        <div className="space-y-8 animate-pulse">
+          <div className="space-y-2">
+            <div className="h-8 bg-zinc-200 rounded w-1/4" />
+            <div className="h-4 bg-zinc-200 rounded w-1/3" />
+          </div>
+          <SkeletonStatistics />
+          <div className="space-y-4">
+            <div className="h-6 bg-zinc-200 rounded w-1/6" />
+            <SkeletonArticleCard count={3} />
+          </div>
+        </div>
+      );
+    }
+    if (path.includes('/notifications')) {
+      return (
+        <div className="space-y-6 animate-pulse">
+          <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
+          <SkeletonNotification count={5} />
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
+        <SkeletonTable />
+      </div>
+    );
+  };
 
   const userName = profile?.name || localStorage.getItem('userName') || 'Developer User';
   const sourceName = profile?.name || localStorage.getItem('userName') || 'DV';
@@ -122,14 +164,15 @@ const DeveloperLayout = () => {
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName={userName}
-          userInitials={userInitials}
+          userName={isLoadingSkeleton ? '' : userName}
+          userInitials={isLoadingSkeleton ? '' : userInitials}
           portalName="DEV PORTAL"
+          showProfile={!isLoadingSkeleton}
         />
 
         {/* Page Content */}
         <div className="pt-20 lg:pt-24 p-4 sm:p-6 lg:p-8 flex-1 w-full max-w-7xl mx-auto overflow-y-auto">
-          <Outlet />
+          {isLoadingSkeleton ? renderSkeletonContent() : <Outlet />}
         </div>
         
         {/* Global Footer */}
