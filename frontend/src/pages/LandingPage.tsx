@@ -66,6 +66,7 @@ const LandingPage: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const articlesSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -198,17 +199,36 @@ const LandingPage: React.FC = () => {
       {/* Published Articles Section */}
       <section ref={articlesSectionRef} className="py-20 px-6 bg-zinc-50 border-y border-zinc-200">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-end justify-between mb-12 border-b-2 border-zinc-200 pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-12 border-b-2 border-zinc-200 pb-6">
             <h2 className="text-2xl sm:text-4xl font-bold tracking-tight">Published Articles</h2>
-            <button className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:text-zinc-600 transition-colors">
-              View All Archive <ChevronRight size={16} />
-            </button>
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+              <input
+                type="text"
+                placeholder="Search articles..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none transition-all shadow-sm"
+              />
+            </div>
           </div>
 
           {loading ? (
             <SkeletonArticleCard count={3} />
           ) : (() => {
-            const regularArticles = articles.filter(art => !(/obituary|tribute|in memoriam/i.test(art.title || '') || /obituary|tribute/i.test(art.tag || '')));
+            const regularArticles = articles.filter(art => {
+              const isTribute = /obituary|tribute|in memoriam/i.test(art.title || '') || /obituary|tribute/i.test(art.tag || '');
+              if (isTribute) return false;
+              if (!searchQuery.trim()) return true;
+              const queryStr = searchQuery.toLowerCase();
+              return (art.title || '').toLowerCase().includes(queryStr) || 
+                     (art.abstract || '').toLowerCase().includes(queryStr) ||
+                     (art.author || '').toLowerCase().includes(queryStr) ||
+                     (art.authors || []).some((au: any) => (au.name || '').toLowerCase().includes(queryStr));
+            });
             
             const totalPages = Math.ceil(regularArticles.length / 9);
             const activePage = Math.min(currentPage, Math.max(1, totalPages));
