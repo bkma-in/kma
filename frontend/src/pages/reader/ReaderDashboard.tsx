@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSubscription } from '../../utils/SubscriptionContext';
+import { getPublishedArticles, getPdfUrl } from '../../services/article.service';
+import AuthorProfileModal from '../../components/AuthorProfileModal';
 import { getPublishedArticles } from '../../services/article.service';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import ArticlePreviewModal from '../../components/ArticlePreviewModal';
@@ -27,6 +29,15 @@ const ReaderDashboard = () => {
   const { isSubscribed } = useSubscription();
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedAuthor, setSelectedAuthor] = useState<string | null>(null);
+  const [selectedAuthorId, setSelectedAuthorId] = useState<string | null>(null);
+  const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
+
+  const handleOpenAuthorProfile = (name: string, id?: string | null) => {
+    setSelectedAuthor(name);
+    setSelectedAuthorId(id || null);
+    setIsAuthorModalOpen(true);
   const [previewArticle, setPreviewArticle] = useState<any | null>(null);
 
   // Author Details Modal states
@@ -81,6 +92,13 @@ const ReaderDashboard = () => {
     { label: 'Recent Reads', value: isSubscribed ? '0' : '0', icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
 
+  const filteredArticles = articles.filter(art => 
+    art.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    art.author?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    art.tag?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    art.id?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -101,15 +119,32 @@ const ReaderDashboard = () => {
           <p className="text-zinc-500 mt-1">Explore the latest research in the BKMA scholarly archive.</p>
         </div>
         
-        {!isSubscribed && (
-          <button 
-            onClick={() => navigate('/reader/get-subscription')}
-            className="flex items-center gap-2 px-6 py-3 bg-black text-white rounded-xl text-sm font-bold shadow-xl shadow-black/20 hover:bg-zinc-800 transition-all active:scale-95 animate-pulse"
-          >
-            <Zap size={16} className="fill-yellow-400 text-yellow-400" />
-            Upgrade (Session Only)
+        {/* Search and Filter Section in the Header */}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:flex-initial">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <input 
+              type="text" 
+              placeholder="Filter articles..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-11 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-black outline-none w-full md:w-64 shadow-sm placeholder:text-zinc-400 transition-all focus:border-zinc-300"
+            />
+          </div>
+          <button className="p-2.5 bg-white border border-zinc-200 rounded-xl hover:bg-zinc-50 transition-colors flex items-center justify-center shadow-sm">
+            <Filter size={18} className="text-zinc-600" />
           </button>
-        )}
+          
+          {!isSubscribed && (
+            <button 
+              onClick={() => navigate('/reader/get-subscription')}
+              className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl text-xs font-bold shadow-xl shadow-black/20 hover:bg-zinc-800 transition-all active:scale-95 shrink-0 animate-pulse"
+            >
+              <Zap size={14} className="fill-yellow-400 text-yellow-400" />
+              Upgrade
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -132,22 +167,47 @@ const ReaderDashboard = () => {
             <ShieldCheck size={20} className="text-blue-500" />
             Latest Publications
           </h2>
-          
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-              <input 
-                type="text" 
-                placeholder="Filter articles..."
-                className="pl-11 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:ring-2 focus:ring-black/5 outline-none w-full md:w-64"
-              />
-            </div>
-            <button className="p-2.5 bg-zinc-50 border border-zinc-200 rounded-xl hover:bg-zinc-100 transition-colors">
-              <Filter size={18} className="text-zinc-600" />
-            </button>
-          </div>
         </div>
 
+        {articles.length === 0 ? (
+          <div className="text-center py-20 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4">
+            <AlertCircle size={40} className="text-amber-500 animate-pulse" />
+            <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No published articles available</h3>
+            <p className="text-sm text-zinc-500 max-w-sm">There are no peer-reviewed articles published in the archives yet. Please check back later.</p>
+          </div>
+        ) : filteredArticles.length === 0 ? (
+          <div className="text-center py-20 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4">
+            <Search size={40} className="text-zinc-300 animate-pulse" />
+            <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No matching results</h3>
+            <p className="text-sm text-zinc-500 max-w-sm">We couldn't find any articles matching your search criteria. Try checking your spelling or using different keywords.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredArticles.map((art) => (
+              <div 
+                key={art.id}
+                className="group p-6 bg-white border border-zinc-100 rounded-2xl hover:border-zinc-300 hover:shadow-lg transition-all flex flex-col md:flex-row md:items-center justify-between gap-6"
+              >
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="px-2.5 py-0.5 bg-zinc-100 text-zinc-600 rounded-md text-[10px] font-black uppercase tracking-widest">
+                      {art.tag}
+                    </span>
+                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{art.id}</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-black group-hover:text-blue-600 transition-colors leading-tight">
+                    {art.title}
+                  </h3>
+                  <div className="flex items-center gap-4 text-xs text-zinc-500 font-medium">
+                    <button 
+                      onClick={() => handleOpenAuthorProfile(art.author, art.authorId)}
+                      className="flex items-center gap-1.5 hover:text-black transition-colors focus:outline-none cursor-pointer"
+                      title="View Author Profile"
+                    >
+                      <Users size={14} className="text-zinc-400" /> {art.author}
+                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <Clock size={14} className="text-zinc-400" /> {art.date}
         {(() => {
           const regularArticles = articles.filter(art => !(/obituary|tribute|in memoriam/i.test(art.title || '') || /obituary|tribute/i.test(art.tag || '')));
           return regularArticles.length === 0 ? (
@@ -292,6 +352,14 @@ const ReaderDashboard = () => {
               ))}
             </div>
           </div>
+        )}
+      </div>
+
+      <AuthorProfileModal 
+        isOpen={isAuthorModalOpen} 
+        onClose={() => setIsAuthorModalOpen(false)} 
+        authorName={selectedAuthor || ''}
+        authorId={selectedAuthorId}
         </div>
       )}
 
