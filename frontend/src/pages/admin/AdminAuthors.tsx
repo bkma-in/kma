@@ -31,6 +31,7 @@ import { formatDate } from '../../utils/dateHelpers';
 import AddReviewerModal from '../../components/admin/AddReviewerModal';
 import { useNotification } from '../../utils/NotificationContext';
 import { getReviewers, updateReviewerStatus, resendReviewerCredentials } from '../../services/user.service';
+import { SkeletonTable } from '../../components/skeletons/SkeletonTable';
 
 // Types
 type ReviewerStatus = 'Pending' | 'Approved' | 'Rejected' | 'Deactivated';
@@ -254,8 +255,19 @@ const AdminAuthors = () => {
 
   if (loading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="animate-spin text-zinc-300" size={48} />
+      <div className="space-y-6 max-w-7xl mx-auto px-4">
+        <div className="flex justify-between items-end gap-6 mb-6">
+          <div className="space-y-2">
+            <div className="h-8 bg-zinc-200 rounded w-48 animate-pulse" />
+            <div className="h-4 bg-zinc-200 rounded w-64 animate-pulse" />
+          </div>
+          <div className="flex gap-3">
+            <div className="h-10 bg-zinc-200 rounded-xl w-36 animate-pulse" />
+            <div className="h-10 bg-zinc-200 rounded-xl w-48 animate-pulse" />
+            <div className="h-10 bg-zinc-200 rounded-xl w-36 animate-pulse" />
+          </div>
+        </div>
+        <SkeletonTable rowsCount={4} colsCount={5} />
       </div>
     );
   }

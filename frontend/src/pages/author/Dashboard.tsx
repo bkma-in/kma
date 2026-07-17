@@ -148,6 +148,33 @@ const Dashboard = () => {
     { message: 'Welcome to the BKMA Author Portal!', time: 'Now' }
   ];
 
+  if (loading) {
+    return (
+      <div className="space-y-8 max-w-7xl mx-auto animate-pulse">
+        <div className="space-y-2">
+          <div className="h-8 bg-zinc-200 rounded w-1/4" />
+          <div className="h-4 bg-zinc-200 rounded w-1/3" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div key={idx} className="bg-white border border-zinc-100 p-6 rounded-3xl h-28" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white border border-zinc-100 rounded-3xl h-20" />
+              <div className="bg-white border border-zinc-100 rounded-3xl h-20" />
+              <div className="bg-white border border-zinc-100 rounded-3xl h-20" />
+            </div>
+            <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-10 h-64" />
+          </div>
+          <div className="bg-zinc-950 border border-zinc-800 rounded-[2.5rem] p-10 h-64" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-in fade-in duration-700 max-w-7xl mx-auto">
       {/* Welcome Header */}
@@ -162,76 +189,62 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm animate-pulse">
-              <div className="w-10 h-10 rounded-xl bg-zinc-100 mb-4" />
-              <div className="h-8 w-12 bg-zinc-100 rounded-lg mb-2" />
-              <div className="h-3 w-16 bg-zinc-50 rounded" />
+      {/* Alert Section - Revision Required */}
+      {revisionArticles.map((article) => (
+        <div key={article.articleId} className="mb-6 p-4 bg-rose-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-rose-600/10 animate-pulse-slow border border-white/10">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+              <AlertCircle size={20} />
             </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          {/* Alert Section - Revision Required */}
-          {revisionArticles.map((article) => (
-            <div key={article.articleId} className="mb-6 p-4 bg-rose-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-rose-600/10 animate-pulse-slow border border-white/10">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-                  <AlertCircle size={20} />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold tracking-tight">Revision Required</h4>
-                  <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">{article.title} needs your attention</p>
-                </div>
-              </div>
-              <NavLink to={`/author/articles`} className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-rose-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20 text-center">
-                Review Comments
-              </NavLink>
+            <div>
+              <h4 className="text-sm font-bold tracking-tight">Revision Required</h4>
+              <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">{article.title} needs your attention</p>
             </div>
-          ))}
-
-          {/* Alert Section - Co-author Invitations */}
-          {pendingInvitations.map((article) => {
-            const inviter = article.authors?.find((au: any) => au.role === 'submitter')?.name || 'Another Author';
-            return (
-              <div key={article.articleId} className="mb-6 p-4 bg-indigo-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-indigo-600/10 border border-white/10">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
-                    <UserPlus size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold tracking-tight">Co-author Invitation</h4>
-                    <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">
-                      {inviter} invited you to co-author: {article.title}
-                    </p>
-                  </div>
-                </div>
-                <NavLink to="/author/articles" className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-indigo-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20 text-center">
-                  View Invitation
-                </NavLink>
-              </div>
-            );
-          })}
-
-          {/* Stats Cards Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            {stats.map((stat, i) => (
-              <div key={i} className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm group hover:border-black transition-all cursor-default">
-                <div className="flex justify-between items-start mb-4">
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", stat.bg, stat.color)}>
-                    <stat.icon size={20} />
-                  </div>
-                  <TrendingUp size={16} className="text-zinc-200" />
-                </div>
-                <h3 className="text-3xl font-bold text-black tracking-tighter mb-1">{stat.value}</h3>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{stat.label}</p>
-              </div>
-            ))}
           </div>
-        </>
-      )}
+          <NavLink to={`/author/articles`} className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-rose-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20 text-center">
+            Review Comments
+          </NavLink>
+        </div>
+      ))}
+
+      {/* Alert Section - Co-author Invitations */}
+      {pendingInvitations.map((article) => {
+        const inviter = article.authors?.find((au: any) => au.role === 'submitter')?.name || 'Another Author';
+        return (
+          <div key={article.articleId} className="mb-6 p-4 bg-indigo-600/90 backdrop-blur-md text-white rounded-2xl flex items-center justify-between shadow-xl shadow-indigo-600/10 border border-white/10">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center border border-white/10">
+                <UserPlus size={20} />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold tracking-tight">Co-author Invitation</h4>
+                <p className="text-[10px] opacity-80 font-medium uppercase tracking-widest">
+                  {inviter} invited you to co-author: {article.title}
+                </p>
+              </div>
+            </div>
+            <NavLink to="/author/articles" className="px-6 py-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white hover:text-indigo-600 rounded-lg text-[10px] font-black tracking-widest transition-all uppercase border border-white/20 text-center">
+              View Invitation
+            </NavLink>
+          </div>
+        );
+      })}
+
+      {/* Stats Cards Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        {stats.map((stat, i) => (
+          <div key={i} className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm group hover:border-black transition-all cursor-default">
+            <div className="flex justify-between items-start mb-4">
+              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", stat.bg, stat.color)}>
+                <stat.icon size={20} />
+              </div>
+              <TrendingUp size={16} className="text-zinc-200" />
+            </div>
+            <h3 className="text-3xl font-bold text-black tracking-tighter mb-1">{stat.value}</h3>
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{stat.label}</p>
+          </div>
+        ))}
+      </div>
 
       {/* Main Grid Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
