@@ -94,57 +94,42 @@ const PublicHeader: React.FC = () => {
         </div>
       </nav>
 
-      {/* Mobile Navigation Drawer */}
+      {/* Mobile Navigation Dropdown Menu */}
       {isDrawerOpen && (
-        <div className="fixed inset-0 z-[100] flex justify-end sm:hidden">
+        <div className="fixed inset-0 z-[100] sm:hidden">
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
+            className="fixed inset-0 bg-black/10 transition-opacity duration-300"
             onClick={() => setIsDrawerOpen(false)}
           />
-          {/* Drawer Content */}
-          <div className="relative w-4/5 max-w-xs bg-white h-full shadow-2xl p-6 flex flex-col justify-between z-10 animate-in slide-in-from-right duration-300 border-l border-zinc-100">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
-                <span className="font-['Outfit'] font-black text-xs tracking-widest uppercase text-zinc-400">Menu</span>
-                <button 
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="p-2 text-zinc-500 hover:text-black rounded-lg transition-all"
-                  aria-label="Close navigation menu"
-                >
-                  <X size={20} />
-                </button>
-              </div>            </div>
-
-            {/* Auth Actions in Drawer */}
-            <div className="space-y-3 pt-6">
-              <button
-                onClick={() => {
-                  setIsDrawerOpen(false);
-                  if (currentUser) {
-                    navigate(getDashboardByRole(currentUser.role));
-                  } else {
-                    navigate('/auth?mode=login');
-                  }
-                }}
-                className="w-full py-3.5 text-center text-xs font-bold uppercase tracking-widest border border-zinc-200 hover:border-black rounded-xl transition-all cursor-pointer"
-              >
-                Login
-              </button>
-              <button
-                onClick={() => {
-                  setIsDrawerOpen(false);
-                  if (currentUser) {
-                    navigate(getDashboardByRole(currentUser.role));
-                  } else {
-                    navigate('/auth?mode=register');
-                  }
-                }}
-                className="w-full py-3.5 text-center text-xs font-black uppercase tracking-widest bg-black text-white hover:bg-zinc-800 rounded-xl shadow-xl transition-all active:scale-95 cursor-pointer"
-              >
-                Get Started
-              </button>
-            </div>
+          {/* Floating Dropdown Card */}
+          <div className="absolute top-[72px] right-4 w-48 bg-white border border-zinc-200 rounded-2xl shadow-xl p-4 z-10 animate-in fade-in slide-in-from-top-2 duration-200 space-y-2">
+            <button
+              onClick={() => {
+                setIsDrawerOpen(false);
+                if (currentUser) {
+                  navigate(getDashboardByRole(currentUser.role));
+                } else {
+                  navigate('/auth?mode=login');
+                }
+              }}
+              className="w-full py-2.5 text-center text-xs font-bold uppercase tracking-widest border border-zinc-200 hover:border-black rounded-xl transition-all cursor-pointer"
+            >
+              Login
+            </button>
+            <button
+              onClick={() => {
+                setIsDrawerOpen(false);
+                if (currentUser) {
+                  navigate(getDashboardByRole(currentUser.role));
+                } else {
+                  navigate('/auth?mode=register');
+                }
+              }}
+              className="w-full py-2.5 text-center text-xs font-black uppercase tracking-widest bg-black text-white hover:bg-zinc-800 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+            >
+              Get Started
+            </button>
           </div>
         </div>
       )}
