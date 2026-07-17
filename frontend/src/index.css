@@ -31,6 +31,39 @@
   .form-label {
     @apply block text-xs font-bold uppercase tracking-wider text-zinc-500 mb-2;
   }
+
+  @media (max-width: 768px) {
+    .form-label {
+      font-size: 10px !important;
+      margin-bottom: 4px !important;
+    }
+    .input-field {
+      font-size: 13px !important;
+      padding-top: 10px !important;
+      padding-bottom: 10px !important;
+    }
+    .input-field::placeholder {
+      font-size: 12px !important;
+    }
+    .btn-primary {
+      font-size: 13px !important;
+      padding: 10px 20px !important;
+    }
+
+    /* Table typography */
+    table th {
+      font-size: 10px !important;
+      padding: 8px 10px !important;
+    }
+    table td {
+      font-size: 11px !important;
+      padding: 8px 10px !important;
+    }
+    table td button {
+      font-size: 10px !important;
+      padding: 4px 8px !important;
+    }
+  }
 }
 
 /* Custom Scrollbar for premium feel */

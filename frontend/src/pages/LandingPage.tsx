@@ -135,13 +135,13 @@ const LandingPage: React.FC = () => {
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 xl:px-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-10 lg:gap-16">
             <div className="flex flex-col text-left">
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
+              <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
                 Advancing Pure <br /> & Applied <br /> Mathematics
               </h2>
-              <p className="text-gray-400 mt-6 max-w-lg text-lg leading-relaxed">
+              <p className="text-gray-400 mt-4 sm:mt-6 max-w-lg text-sm sm:text-lg leading-relaxed">
                 The Kerala Mathematical Association promotes advanced mathematical research and higher education through collaboration among scholars worldwide.
               </p>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mt-10 w-full sm:max-w-md shadow-xl lg:w-fit">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mt-6 sm:mt-10 w-full sm:max-w-md shadow-xl lg:w-fit">
                 <div className="flex items-start gap-4">
                   <div className="bg-zinc-800 p-2.5 rounded-lg shrink-0">
                     <Info className="text-white" size={20} />
@@ -150,7 +150,7 @@ const LandingPage: React.FC = () => {
                     <h4 className="text-white font-bold text-sm tracking-wide mb-1 flex items-center gap-2">
                       REVIEWER NOTICE
                     </h4>
-                    <p className="text-zinc-500 text-sm leading-relaxed">
+                    <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed">
                       Reviewer accounts require admin approval. You will be able to log in only after your account has been approved.
                     </p>
                   </div>
@@ -199,7 +199,7 @@ const LandingPage: React.FC = () => {
       <section ref={articlesSectionRef} className="py-20 px-6 bg-zinc-50 border-y border-zinc-200">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-end justify-between mb-12 border-b-2 border-zinc-200 pb-6">
-            <h2 className="text-4xl font-bold tracking-tight">Published Articles</h2>
+            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight">Published Articles</h2>
             <button className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:text-zinc-600 transition-colors">
               View All Archive <ChevronRight size={16} />
             </button>
@@ -426,7 +426,7 @@ const LandingPage: React.FC = () => {
           <section className="py-20 px-6 bg-white border-b border-zinc-200">
             <div className="max-w-7xl mx-auto">
               <div className="flex items-end justify-between mb-12 border-b-2 border-zinc-200 pb-6">
-                <h2 className="text-4xl font-bold tracking-tight">Tributes & Memorials</h2>
+                <h2 className="text-2xl sm:text-4xl font-bold tracking-tight">Tributes & Memorials</h2>
               </div>
 
               <div className="grid md:grid-cols-3 gap-8">

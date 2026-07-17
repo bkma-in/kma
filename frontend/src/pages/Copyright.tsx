@@ -46,7 +46,7 @@ const Copyright: React.FC = () => {
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-zinc-800/10 rounded-full blur-3xl -ml-48 -mb-48" />
 
           <div className="max-w-4xl mx-auto text-center relative z-10 space-y-2.5">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-['Playfair_Display']">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-['Playfair_Display']">
               Copyright Policy
             </h2>
             <p className="text-zinc-400 text-xs sm:text-sm uppercase tracking-widest font-semibold">
