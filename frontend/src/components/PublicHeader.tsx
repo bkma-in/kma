@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
 import { getDashboardByRole } from '../utils/auth';
@@ -55,16 +55,8 @@ const PublicHeader: React.FC = () => {
             </button>
           </div>
 
-          {/* Desktop/Tablet Actions (Search and Auth Actions) */}
+          {/* Desktop/Tablet Actions (Auth Actions) */}
           <div className="hidden sm:flex items-center gap-3 sm:gap-4 md:gap-5 lg:gap-6 xl:gap-8 shrink-0">
-            <div className="hidden sm:flex items-center bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-4 focus-within:ring-2 focus-within:ring-black/5 transition-all w-36 sm:w-40 md:w-44 lg:w-48 xl:w-64 shadow-inner shrink-0">
-              <Search size={20} className="text-zinc-400 shrink-0" />
-              <input
-                type="text"
-                placeholder="search..."
-                className="bg-transparent border-none focus:ring-0 text-base placeholder:text-zinc-400 ml-3 w-full outline-none font-medium"
-              />
-            </div>
 
             <button 
               onClick={() => {
