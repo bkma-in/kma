@@ -264,7 +264,7 @@ const LandingPage: React.FC = () => {
                       }
                       return chunks;
                     };
-                    const rows = chunkArticles(paginatedArticles, 6);
+                    const rows = chunkArticles(paginatedArticles, 3);
                     return rows.map((rowArticles, rowIndex) => (
                       <div
                         key={rowIndex}

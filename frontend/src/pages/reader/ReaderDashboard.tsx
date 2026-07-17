@@ -221,7 +221,7 @@ const ReaderDashboard = () => {
                     }
                     return chunks;
                   };
-                  const rows = chunkArticles(regularArticles, 6);
+                  const rows = chunkArticles(regularArticles, 3);
                   return rows.map((rowArticles, rowIndex) => (
                     <div
                       key={rowIndex}
