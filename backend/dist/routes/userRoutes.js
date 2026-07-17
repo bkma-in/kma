@@ -272,6 +272,35 @@ router.get('/profile', authMiddleware_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch profile' });
     }
 });
+// Get Public Profile (Unauthenticated)
+router.get('/:id/public-profile', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userDoc = await firebase_1.db.collection('users').doc(id).get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: 'User profile not found' });
+        }
+        const data = userDoc.data();
+        res.json({
+            success: true,
+            profile: {
+                uid: data.uid,
+                name: data.name,
+                email: data.email || '',
+                role: data.role || 'author',
+                bio: data.bio || '',
+                designation: data.designation || '',
+                phone: data.phone || '',
+                profileImage: data.profileImage || '',
+                createdAt: data.createdAt
+            }
+        });
+    }
+    catch (error) {
+        console.error('Get public profile error:', error);
+        res.status(500).json({ error: 'Failed to fetch public profile' });
+    }
+});
 // Update Profile (Optimized: 1 Read, 1 Write, Non-blocking Cleanup)
 router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.single('profileImage'), async (req, res) => {
     try {
@@ -330,7 +359,7 @@ router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.s
             }
             else {
                 console.log(`[AUTH-DIAGNOSTIC] Syncing custom claims for UID: ${uid}, Role: "${userData.role}", Name: "${sanitizedName}"`);
-                firebase_1.auth.setCustomUserClaims(uid, { role: userData.role, name: sanitizedName }).catch(err => console.error('[AUTH-DIAGNOSTIC] Background custom claims sync error:', err));
+                firebase_1.auth.setCustomUserClaims(uid, { role: userData.role, name: sanitizedName }).catch((err) => console.error('[AUTH-DIAGNOSTIC] Background custom claims sync error:', err));
             }
         }
         // Performance: Avoid second read by merging locally
@@ -387,7 +416,7 @@ router.post('/report-issue', authMiddleware_1.requireAuth, uploadMiddleware_1.up
 router.get('/reported-issues', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin', 'dev']), async (req, res) => {
     try {
         const snapshot = await firebase_1.db.collection('reported_issues').orderBy('createdAt', 'desc').get();
-        const issues = snapshot.docs.map(doc => {
+        const issues = snapshot.docs.map((doc) => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -449,7 +478,7 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
             .get();
         const [nameSnap, emailSnap] = await Promise.all([nameQuery, emailQuery]);
         const userMap = new Map();
-        nameSnap.docs.forEach(doc => {
+        nameSnap.docs.forEach((doc) => {
             const data = doc.data();
             userMap.set(doc.id, {
                 id: doc.id,
@@ -458,7 +487,7 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
                 affiliation: data.affiliation || ''
             });
         });
-        emailSnap.docs.forEach(doc => {
+        emailSnap.docs.forEach((doc) => {
             const data = doc.data();
             if (!userMap.has(doc.id)) {
                 userMap.set(doc.id, {
@@ -485,7 +514,7 @@ const generateTempPassword = () => {
 router.get('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
     try {
         const snapshot = await firebase_1.db.collection('users').where('role', '==', 'reviewer').get();
-        const reviewers = snapshot.docs.map(doc => {
+        const reviewers = snapshot.docs.map((doc) => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -517,7 +546,7 @@ router.get('/authors', authMiddleware_1.requireAuth, (0, authMiddleware_1.requir
         const limitNum = parseInt(pageSize) || 50;
         // Fetch all authors from database using simple query (no composite index required)
         const snapshot = await firebase_1.db.collection('users').where('role', '==', 'author').get();
-        let allAuthors = snapshot.docs.map(doc => {
+        let allAuthors = snapshot.docs.map((doc) => {
             const data = doc.data();
             return {
                 id: doc.id,
@@ -539,7 +568,7 @@ router.get('/authors', authMiddleware_1.requireAuth, (0, authMiddleware_1.requir
             // Expected format: "<timestamp>|<docId>"
             const [ts, docId] = cursor.split('|');
             const cursorTime = new Date(ts).getTime();
-            const foundIndex = allAuthors.findIndex(a => {
+            const foundIndex = allAuthors.findIndex((a) => {
                 const aTime = new Date(a.regDate).getTime();
                 return aTime === cursorTime && a.id === docId;
             });
@@ -558,6 +587,37 @@ router.get('/authors', authMiddleware_1.requireAuth, (0, authMiddleware_1.requir
     catch (error) {
         console.error('Get authors error:', error);
         res.status(500).json({ error: 'Failed to fetch authors' });
+    }
+});
+// Admin: Get all readers
+router.get('/readers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
+    try {
+        const snapshot = await firebase_1.db.collection('users').where('role', '==', 'reader').get();
+        // Also fetch all active subscriptions to check for life membership type
+        const subsSnapshot = await firebase_1.db.collection('subscriptions').where('status', '==', 'active').get();
+        const activeSubscribes = new Map();
+        subsSnapshot.docs.forEach((doc) => {
+            const data = doc.data();
+            activeSubscribes.set(data.userId, data);
+        });
+        const readers = snapshot.docs.map((doc) => {
+            const data = doc.data();
+            const subData = activeSubscribes.get(doc.id);
+            return {
+                id: doc.id,
+                name: data.name || 'Anonymous Reader',
+                email: data.email || '',
+                regDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
+                isLifeMember: data.lifeMember === true || data.isLifeMember === true || subData?.type === 'lifetime' || subData?.type === 'life'
+            };
+        });
+        // In-memory sort by regDate descending
+        readers.sort((a, b) => new Date(b.regDate).getTime() - new Date(a.regDate).getTime());
+        res.json({ success: true, readers });
+    }
+    catch (error) {
+        console.error('Get readers error:', error);
+        res.status(500).json({ error: 'Failed to fetch readers' });
     }
 });
 // Admin: Update reviewer status (Approve/Reject/Deactivate/Reactivate)
@@ -643,7 +703,7 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
         }
         catch (err) {
             // Rollback: Delete the auth user if database write or claims config fails
-            await firebase_1.auth.deleteUser(userRecord.uid).catch(authErr => console.error('Failed to delete Auth user on rollback:', authErr));
+            await firebase_1.auth.deleteUser(userRecord.uid).catch((authErr) => console.error('Failed to delete Auth user on rollback:', authErr));
             throw err;
         }
         // Record Reviewer Created in audit log

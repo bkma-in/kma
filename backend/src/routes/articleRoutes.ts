@@ -1,9 +1,10 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import crypto from 'crypto';
-import { db } from '../config/firebase';
+import { db, auth } from '../config/firebase';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/authMiddleware';
 import { upload } from '../middleware/uploadMiddleware';
-import { uploadPdfToR2, getSignedPdfUrl, deletePdfFromR2 } from '../services/storageService';
+import { uploadPdfToR2, getSignedPdfUrl, deletePdfFromR2, getPdfStreamFromR2 } from '../services/storageService';
+import { extractPages, extractFirstPageText, extractMetadataWithGemini } from '../services/legacyImportService';
 
 import { uploadImage, deleteImage } from '../services/cloudinaryService';
 import {
@@ -23,6 +24,29 @@ const normalizeRecommendation = (recommendation: string): string => {
   if (val === 'needs improvement' || val === 'needs revision' || val === 'revision') return 'Needs Improvement';
   return recommendation;
 };
+
+// Get signed URL for staged PDF or split article in archive jobs
+router.get('/staged/pdf', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+  try {
+    const { key } = req.query;
+    if (!key || typeof key !== 'string') {
+      return res.status(400).json({ error: 'R2 Key is required' });
+    }
+
+    const stream = await getPdfStreamFromR2(key);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline');
+
+    if (stream && typeof (stream as any).pipe === 'function') {
+      (stream as any).pipe(res);
+    } else {
+      res.status(500).json({ error: 'Invalid file stream received from storage.' });
+    }
+  } catch (err: any) {
+    console.error('Failed to get signed staging URL:', err);
+    res.status(500).json({ error: 'Failed to generate signed preview URL.' });
+  }
+});
 
 // Submit Article or Save Draft (Author only)
 router.post('/', requireAuth, requireRole(['author']), upload.fields([
@@ -387,18 +411,24 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
 // Get Published Articles (Public endpoint)
 router.get('/published', async (req, res) => {
   try {
-    const snapshot = await db.collection('articles').where('status', '==', 'accepted').get();
+    const snapshot = await db.collection('articles').where('status', '==', 'published').get();
     const articles = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: data.articleId,
         title: data.title,
         abstract: data.abstract,
-        author: data.authors && data.authors.length > 0 ? data.authors[0].name : 'Anonymous Author',
+        author: data.authors && data.authors.length > 0 ? data.authors[0].name : 'Old BKMA Contributor',
         authorId: data.authors && data.authors.length > 0 ? (data.authors[0].userId || data.authorId || null) : (data.authorId || null),
+        authors: data.authors || [],
+        isOld: data.isOld || false,
         createdAt: data.createdAt,
         issueId: data.issueId,
         vol: data.volume || 1,
+        volume: data.volume,
+        monthYear: data.monthYear,
+        issueNumber: data.issueNumber,
+        issn: data.issn,
         date: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleDateString() : 'Recent',
         tag: data.tag || 'Scholarly',
         pdfAvailable: !!data.pdfUrl,
@@ -412,11 +442,10 @@ router.get('/published', async (req, res) => {
   }
 });
 
-// Get Single Article Details (with strict role-based access control)
-router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
+// Get Single Article Details (with strict role-based access control and public abstract metadata fallback)
+router.get('/:id', async (req: Request, res) => {
   try {
     const id = req.params.id as string;
-    const { role, uid } = req.user!;
 
     const articleDoc = await db.collection('articles').doc(id).get();
     if (!articleDoc.exists) {
@@ -425,53 +454,57 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
 
     const article = articleDoc.data()!;
 
-    // Access control check
+    // Optional Authentication check to see who is requesting
+    let uid: string | null = null;
+    let role = 'guest';
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = await auth.verifyIdToken(token);
+        uid = decoded.uid;
+        role = decoded.role || 'reader';
+      } catch (err: any) {
+        console.warn('Optional auth token verification failed:', err.message);
+      }
+    }
+
     let hasAccess = false;
+
+    // Admin always has access
     if (role === 'admin') hasAccess = true;
-    
-    if (role === 'reviewer') {
+
+    // Reviewer has access only if assigned
+    if (role === 'reviewer' && uid) {
       const isAssigned = (Array.isArray(article.reviewerIds) && article.reviewerIds.includes(uid)) || (article.reviewerId === uid);
       if (isAssigned) {
         hasAccess = true;
-      } else {
-        return res.status(403).json({ error: 'Article not assigned to you' });
       }
     }
 
-    if (role === 'author') {
+    // Author has access if participant
+    if (role === 'author' && uid) {
       const isParticipant = article.authorId === uid || (Array.isArray(article.participantIds) && article.participantIds.includes(uid));
       if (isParticipant) {
         hasAccess = true;
-      } else {
-        return res.status(403).json({ error: 'Forbidden: You are not an author of this article' });
       }
     }
 
-    if (role === 'reader') {
-      if (article.status !== 'accepted' || !article.issueId) {
-         return res.status(403).json({ error: 'Article not published yet' });
-      }
-
-      // Check subscription
-      const subQuery = await db.collection('subscriptions')
-        .where('userId', '==', uid)
-        .where('issueId', '==', article.issueId)
-        .where('status', '==', 'active')
-        .limit(1)
-        .get();
-
-      if (!subQuery.empty) {
-        hasAccess = true;
+    // Reader/Guest access verification (only if published)
+    const isPublished = article.status === 'published' || article.status === 'accepted';
+    if (isPublished) {
+      // Published articles are freely accessible to any authenticated user.
+      hasAccess = true;
+    } else {
+      // If not published, only authorized roles (admins/reviewers/authors checked above) can view it
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Article not published yet' });
       }
     }
 
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Forbidden: Requires active subscription for this issue' });
-    }
-
-    // Sanitize metadata (double-blind reviewer stripping)
+    // Double-blind reviewer metadata sanitization
     const sanitized = { ...article };
-    if (role === 'reviewer') {
+    if (role === 'reviewer' && uid) {
       delete sanitized.authorId;
       delete sanitized.authors;
       delete sanitized.participantIds;
@@ -482,7 +515,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
         sanitized.reviewerFeedback = sanitized.reviews[uid] || null;
         delete sanitized.reviews;
       }
-    } else if (role === 'author') {
+    } else if (role === 'author' && uid) {
       delete sanitized.reviewerId;
       delete sanitized.reviewerIds;
       delete sanitized.assignedReviewers;
@@ -527,6 +560,17 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
       }
     }
 
+    // Apply subscription check restrictions
+    if (!hasAccess) {
+      // Hide full text and PDF keys for non-subscribers
+      delete sanitized.pdfUrl;
+      delete sanitized.pdfName;
+      delete sanitized.fullContent;
+      sanitized.hasAccess = false;
+    } else {
+      sanitized.hasAccess = true;
+    }
+
     res.json({ success: true, article: sanitized });
   } catch (error) {
     console.error('Get article error:', error);
@@ -534,7 +578,38 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// Get Signed PDF URL (requires active subscription for reader)
+// Get Signed PDF URL for public Tribute/Obituary articles (no auth required)
+router.get('/:id/pdf-public', async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const articleDoc = await db.collection('articles').doc(id).get();
+    if (!articleDoc.exists) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    const article = articleDoc.data()!;
+    const isTribute = /obituary|tribute|in memoriam/i.test(article.title || '') ||
+      /obituary|tribute/i.test(article.tag || '');
+
+    if (!isTribute) {
+      return res.status(403).json({ error: 'Forbidden: This document is not publicly accessible without authentication.' });
+    }
+
+    const key = article.pdfUrl;
+    if (!key) {
+      return res.status(400).json({ error: 'No document has been uploaded for this article' });
+    }
+
+    const originalName = article.pdfName || 'manuscript.pdf';
+    const signedUrl = await getSignedPdfUrl(key, originalName);
+    res.json({ success: true, url: signedUrl });
+  } catch (error) {
+    console.error('Get public PDF URL error:', error);
+    res.status(500).json({ error: 'Failed to generate signed URL' });
+  }
+});
+
+// Get Signed PDF URL (requires active subscription or purchase)
 router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
@@ -570,25 +645,18 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
     }
 
     if (role === 'reader') {
-      if (article.status !== 'accepted' || !article.issueId) {
-         return res.status(403).json({ error: 'Article not published yet' });
+      const isPublished = article.status === 'published' || article.status === 'accepted';
+      if (!isPublished) {
+        return res.status(403).json({ error: 'Article not published yet' });
       }
 
-      // Check subscription
-      const subQuery = await db.collection('subscriptions')
-        .where('userId', '==', uid)
-        .where('issueId', '==', article.issueId)
-        .where('status', '==', 'active')
-        .limit(1)
-        .get();
-
-      if (!subQuery.empty) {
-        hasAccess = true;
-      }
+      // Published articles are freely readable by any authenticated reader.
+      // Subscriptions / purchases are only required for premium gated content (future feature).
+      hasAccess = true;
     }
 
     if (!hasAccess) {
-      return res.status(403).json({ error: 'Forbidden: Requires active subscription for this issue' });
+      return res.status(403).json({ error: 'Forbidden: Requires active subscription or article purchase' });
     }
 
     const key = (req.query.key as string) || article.pdfUrl;
@@ -811,6 +879,178 @@ router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
   } catch (error) {
     console.error('Update article error:', error);
     res.status(500).json({ error: 'Failed to update article' });
+  }
+});
+
+// Admin Extract Metadata from Full PDF for Legacy Import
+router.post('/import-extract', requireAuth, requireRole(['admin']), upload.single('pdf'), async (req: AuthRequest, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'PDF file is required' });
+    }
+
+    const { ranges } = req.body;
+    let parsedRanges = [];
+    try {
+      parsedRanges = JSON.parse(ranges);
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid ranges format. Must be JSON array of { startPage: number, endPage: number }' });
+    }
+
+    if (!Array.isArray(parsedRanges) || parsedRanges.length === 0) {
+      return res.status(400).json({ error: 'At least one page range is required' });
+    }
+
+    const results = [];
+    const fullPdfBuffer = req.file.buffer;
+
+    for (const range of parsedRanges) {
+      const { startPage, endPage } = range;
+      try {
+        // 1. Split page 1 to parse text efficiently
+        const page1Buffer = await extractPages(fullPdfBuffer, startPage, startPage);
+        // 2. Extract text from page 1
+        const text = await extractFirstPageText(page1Buffer);
+        // 3. Extract structured metadata using Gemini
+        const metadata = await extractMetadataWithGemini(text);
+
+        results.push({
+          startPage,
+          endPage,
+          ...metadata
+        });
+      } catch (err: any) {
+        console.error(`Failed to extract metadata for range ${startPage}-${endPage}:`, err);
+        results.push({
+          startPage,
+          endPage,
+          title: '',
+          abstract: '',
+          authors: [],
+          keywords: [],
+          subjectClassification: '',
+          error: err.message || 'Extraction failed'
+        });
+      }
+    }
+
+    res.json({ success: true, extracted: results });
+  } catch (error: any) {
+    console.error('Import extract error:', error);
+    res.status(500).json({ error: error.message || 'Failed to extract metadata' });
+  }
+});
+
+// Admin Import & Split Legacy Issue
+router.post('/import-split', requireAuth, requireRole(['admin']), upload.single('pdf'), async (req: AuthRequest, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'PDF file is required' });
+    }
+
+    const { volumeNo, monthYear, issueNumber, issn, articlesJson } = req.body;
+    if (!volumeNo || !monthYear || !issueNumber || !articlesJson) {
+      return res.status(400).json({ error: 'Volume No, Month & Year, Issue Number, and Articles data are required' });
+    }
+
+    const parsedIssueNumber = parseInt(issueNumber, 10);
+    if (isNaN(parsedIssueNumber) || parsedIssueNumber <= 0) {
+      return res.status(400).json({ error: 'Issue Number must be a positive integer' });
+    }
+
+    let parsedArticles = [];
+    try {
+      parsedArticles = JSON.parse(articlesJson);
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid articles JSON format' });
+    }
+
+    const fullPdfBuffer = req.file.buffer;
+    const authorId = 'admin_ingested';
+
+    const docId = `vol_${volumeNo}_issue_${parsedIssueNumber}_${monthYear.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+    const issueRef = db.collection('issues').doc(docId);
+
+    const createdArticleIds: string[] = [];
+
+    await db.runTransaction(async (transaction) => {
+      const issueDoc = await transaction.get(issueRef);
+      if (issueDoc.exists) {
+        throw new Error('This publication issue already exists. Please use a different Volume or Issue Number.');
+      }
+
+      for (let i = 0; i < parsedArticles.length; i++) {
+        const art = parsedArticles[i];
+        const { title, abstract, authors, keywords, startPage, endPage, category, subjectClassification } = art;
+
+        // Extract PDF pages
+        const splitBuffer = await extractPages(fullPdfBuffer, startPage, endPage);
+
+        // Upload split PDF
+        const originalName = `${title.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30)}_p${startPage}_p${endPage}.pdf`;
+        const objectKey = await uploadPdfToR2(splitBuffer, originalName, authorId);
+
+        // Save article doc
+        const articleRef = db.collection('articles').doc();
+        const finalAuthors = (authors || []).map((au: any, idx: number) => ({
+          userId: au.userId || `legacy_${articleRef.id}_${idx}`,
+          name: au.name,
+          email: au.email || '',
+          affiliation: au.affiliation || '',
+          role: idx === 0 ? 'submitter' : 'coauthor',
+          accepted: true,
+          acceptedAt: new Date()
+        }));
+
+        const newArticle = {
+          articleId: articleRef.id,
+          title,
+          abstract,
+          authorId,
+          participantIds: [authorId],
+          authors: finalAuthors,
+          reviewerId: null,
+          status: 'published',
+          pdfUrl: objectKey,
+          pdfName: originalName,
+          issueId: issueRef.id,
+          volume: volumeNo,
+          volumeNo: volumeNo,
+          monthYear: monthYear,
+          issueNumber: parsedIssueNumber,
+          issn: issn || null,
+          isOld: true,
+          category: category || 'Mathematics',
+          subjectClassification: subjectClassification || '',
+          keywords: keywords || [],
+          publishedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        transaction.set(articleRef, newArticle);
+        createdArticleIds.push(articleRef.id);
+      }
+
+      const newIssue = {
+        issueId: issueRef.id,
+        title: `Volume ${volumeNo}, Issue ${parsedIssueNumber} (${monthYear})`,
+        volume: volumeNo,
+        issueNumber: parsedIssueNumber,
+        monthYear: monthYear,
+        issn: issn || null,
+        articleIds: createdArticleIds,
+        publishedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      transaction.set(issueRef, newIssue);
+    });
+
+    res.json({ success: true, publishedCount: createdArticleIds.length, issueId: issueRef.id });
+  } catch (error: any) {
+    console.error('Import split error:', error);
+    res.status(500).json({ error: error.message || 'Failed to split and import articles' });
   }
 });
 

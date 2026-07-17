@@ -30,7 +30,6 @@ interface Article {
   id: string;
   title: string;
   author: string;
-  category: string;
   abstract: string;
   status: ArticleStatus;
   assignedReviewers: string[];
@@ -166,7 +165,6 @@ const AdminReadyToPublish = () => {
               id: a.articleId || a.id,
               title: a.title,
               author: a.authors?.find((au: any) => au.role === 'submitter')?.name || a.author || 'Author',
-              category: a.category || 'Mathematics',
               abstract: a.abstract || '',
               status,
               assignedReviewers: a.assignedReviewers || [],
@@ -471,7 +469,6 @@ const AdminReadyToPublish = () => {
                   </th>
                   <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Manuscript Details</th>
                   <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Author</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Category</th>
                   <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
@@ -498,11 +495,7 @@ const AdminReadyToPublish = () => {
                     <td className="px-6 py-5 text-xs text-zinc-600 font-bold uppercase tracking-wider">
                       {article.author}
                     </td>
-                    <td className="px-6 py-5">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-zinc-50 text-zinc-600 border-zinc-100">
-                        {article.category}
-                      </span>
-                    </td>
+
                     <td className="px-6 py-5">
                       <div className="flex items-center justify-end gap-2">
                         <button
