@@ -25,7 +25,7 @@ const splitPdf = async (pdfBuffer, startPage, endPage) => {
             throw new Error(`Invalid page range: ${startPage}-${endPage} is out of bounds (total pages: ${pageCount})`);
         }
         const copiedPages = await dstDoc.copyPages(srcDoc, pageIndices);
-        copiedPages.forEach(page => dstDoc.addPage(page));
+        copiedPages.forEach((page) => dstDoc.addPage(page));
         const pdfBytes = await dstDoc.save();
         return Buffer.from(pdfBytes);
     }
@@ -46,7 +46,7 @@ const compileZipToPdf = async (zipBuffer) => {
         const entries = zip.getEntries();
         // Find and sort image files
         const imageEntries = entries
-            .filter(e => !e.isDirectory && /\.(png|jpe?g)$/i.test(e.entryName))
+            .filter((e) => !e.isDirectory && /\.(png|jpe?g)$/i.test(e.entryName))
             .sort((a, b) => a.entryName.localeCompare(b.entryName, undefined, { numeric: true, sensitivity: 'base' }));
         if (imageEntries.length === 0) {
             throw new Error('No valid PNG or JPG page images found inside the ZIP file.');

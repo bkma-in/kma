@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSubscription } from '../../utils/SubscriptionContext';
-import { getPublishedArticles } from '../../services/article.service';
+import { getPublishedArticles, getPdfUrl } from '../../services/article.service';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import ArticlePreviewModal from '../../components/ArticlePreviewModal';
 import { getIssueDetailsString } from '../LandingPage';
@@ -159,27 +159,40 @@ const ReaderDashboard = () => {
           </h2>
         </div>
 
-        {articles.length === 0 ? (
-          <div className="text-center py-20 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4">
-            <AlertCircle size={40} className="text-amber-500 animate-pulse" />
-            <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No published articles available</h3>
-            <p className="text-sm text-zinc-500 max-w-sm">There are no peer-reviewed articles published in the archives yet. Please check back later.</p>
-          </div>
-        ) : filteredArticles.length === 0 ? (
-          <div className="text-center py-20 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4">
-            <Search size={40} className="text-zinc-300 animate-pulse" />
-            <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No matching results</h3>
-            <p className="text-sm text-zinc-500 max-w-sm">We couldn't find any articles matching your search criteria. Try checking your spelling or using different keywords.</p>
-          </div>
-        ) : (() => {
+        {(() => {
+          if (articles.length === 0) {
+            return (
+              <div className="text-center py-20 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4">
+                <AlertCircle size={40} className="text-amber-500 animate-pulse" />
+                <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No published articles available</h3>
+                <p className="text-sm text-zinc-500 max-w-sm">There are no peer-reviewed articles published in the archives yet. Please check back later.</p>
+              </div>
+            );
+          }
+
+          if (filteredArticles.length === 0) {
+            return (
+              <div className="text-center py-20 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4">
+                <Search size={40} className="text-zinc-300 animate-pulse" />
+                <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No matching results</h3>
+                <p className="text-sm text-zinc-500 max-w-sm">We couldn't find any articles matching your search criteria. Try checking your spelling or using different keywords.</p>
+              </div>
+            );
+          }
+
           const regularArticles = filteredArticles.filter(art => !(/obituary|tribute|in memoriam/i.test(art.title || '') || /obituary|tribute/i.test(art.tag || '')));
-          return regularArticles.length === 0 ? (
-            <div className="text-center py-20 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4">
-              <BookOpen size={40} className="text-zinc-300 animate-pulse" />
-              <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No research articles found</h3>
-              <p className="text-sm text-zinc-500 max-w-sm">There are no research articles matching your search. Please check the Tributes & Memorials section below.</p>
-            </div>
-          ) : (
+          
+          if (regularArticles.length === 0) {
+            return (
+              <div className="text-center py-20 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4">
+                <AlertCircle size={40} className="text-amber-500 animate-pulse" />
+                <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No research papers found</h3>
+                <p className="text-sm text-zinc-500 max-w-sm">No regular research papers match your current search.</p>
+              </div>
+            );
+          }
+
+          return (
             <>
               <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {regularArticles.map((art) => (

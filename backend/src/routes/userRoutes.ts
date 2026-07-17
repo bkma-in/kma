@@ -292,16 +292,16 @@ router.get('/:id/public-profile', async (req, res) => {
     res.json({
       success: true,
       profile: {
-        uid: data.uid || id,
+        uid: data.uid,
         name: data.name,
         email: data.email || '',
         role: data.role || 'author',
         bio: data.bio || '',
         designation: data.designation || '',
-        affiliation: data.affiliation || '',
         phone: data.phone || '',
         profileImage: data.profileImage || '',
-        createdAt: data.createdAt
+        createdAt: data.createdAt,
+        affiliation: data.affiliation || ''
       }
     });
   } catch (error) {
@@ -309,7 +309,6 @@ router.get('/:id/public-profile', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch public profile' });
   }
 });
-
 
 // Update Profile (Optimized: 1 Read, 1 Write, Non-blocking Cleanup)
 router.put('/profile', requireAuth, upload.single('profileImage'), async (req: AuthRequest, res: Response) => {
