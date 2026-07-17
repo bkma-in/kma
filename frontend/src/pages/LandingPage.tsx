@@ -214,52 +214,129 @@ const LandingPage: React.FC = () => {
                 <p className="text-sm text-zinc-500 max-w-sm">There are no peer-reviewed articles published in the archives yet. Please check back later.</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-3 gap-8">
-                {regularArticles.map((art, i) => (
-                  <div
-                    key={i}
-                    onClick={() => setPreviewArticle(art)}
-                    className="bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col cursor-pointer group"
-                  >
-                    {/* Issue info */}
-                    <div className="flex items-center gap-2 mb-5 flex-wrap">
-                      {art.isOld && (
-                        <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
-                          Legacy Edition
-                        </span>
-                      )}
-                      <span className="text-zinc-500 text-[11px] font-semibold">
-                        {getIssueDetailsString(art)}
-                      </span>
-                    </div>
-                    <h3 className="text-2xl font-bold mb-4 leading-tight min-h-[4rem] group-hover:text-zinc-700 transition-colors">{art.title}</h3>
-                    <p className="text-zinc-500 text-sm mb-8 leading-relaxed line-clamp-3">
-                      {art.abstract}
-                    </p>
-                    <div className="mt-auto">
-                      <div className="flex items-center justify-between mb-6 pt-6 border-t border-zinc-100">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
-                            <Users size={14} />
-                          </div>
-                          <span className="text-sm font-bold">
-                            {art.authors && art.authors.length > 0
-                              ? art.authors.map((au: any) => au.name).join(', ')
-                              : art.author}
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-bold text-zinc-400">{art.date}</span>
-                      </div>
-
-                      <button
-                        className="w-full py-3 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10"
+              <>
+                {/* Mobile horizontal scroll rows */}
+                <div className="md:hidden space-y-8 overflow-hidden">
+                  <style>{`
+                    .no-scrollbar::-webkit-scrollbar {
+                      display: none;
+                    }
+                    .no-scrollbar {
+                      -ms-overflow-style: none;
+                      scrollbar-width: none;
+                    }
+                  `}</style>
+                  {(() => {
+                    const chunkArticles = (arr: any[], size: number) => {
+                      const chunks = [];
+                      for (let i = 0; i < arr.length; i += size) {
+                        chunks.push(arr.slice(i, i + size));
+                      }
+                      return chunks;
+                    };
+                    const rows = chunkArticles(regularArticles, 6);
+                    return rows.map((rowArticles, rowIndex) => (
+                      <div
+                        key={rowIndex}
+                        className="flex gap-6 overflow-x-auto snap-x snap-mandatory pb-4 no-scrollbar scroll-smooth px-1"
                       >
-                        VIEW ARTICLE <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                      </button>
+                        {rowArticles.map((art, i) => (
+                          <div
+                            key={i}
+                            onClick={() => setPreviewArticle(art)}
+                            className="w-[280px] shrink-0 snap-start bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-xl transition-all flex flex-col cursor-pointer group"
+                          >
+                            {/* Issue info */}
+                            <div className="flex items-center gap-2 mb-5 flex-wrap">
+                              {art.isOld && (
+                                <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                                  Legacy Edition
+                                </span>
+                              )}
+                              <span className="text-zinc-500 text-[11px] font-semibold">
+                                {getIssueDetailsString(art)}
+                              </span>
+                            </div>
+                            <h3 className="text-2xl font-bold mb-4 leading-tight min-h-[4rem] group-hover:text-zinc-700 transition-colors">{art.title}</h3>
+                            <p className="text-zinc-500 text-sm mb-8 leading-relaxed line-clamp-3">
+                              {art.abstract}
+                            </p>
+                            <div className="mt-auto">
+                              <div className="flex items-center justify-between mb-6 pt-6 border-t border-zinc-100">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+                                    <Users size={14} />
+                                  </div>
+                                  <span className="text-sm font-bold">
+                                    {art.authors && art.authors.length > 0
+                                      ? art.authors.map((au: any) => au.name).join(', ')
+                                      : art.author}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-bold text-zinc-400">{art.date}</span>
+                              </div>
+
+                              <button
+                                className="w-full py-3 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10"
+                              >
+                                VIEW ARTICLE <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ));
+                  })()}
+                </div>
+
+                {/* Desktop/Tablet view */}
+                <div className="hidden md:grid md:grid-cols-3 gap-8">
+                  {regularArticles.map((art, i) => (
+                    <div
+                      key={i}
+                      onClick={() => setPreviewArticle(art)}
+                      className="bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col cursor-pointer group"
+                    >
+                      {/* Issue info */}
+                      <div className="flex items-center gap-2 mb-5 flex-wrap">
+                        {art.isOld && (
+                          <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                            Legacy Edition
+                          </span>
+                        )}
+                        <span className="text-zinc-500 text-[11px] font-semibold">
+                          {getIssueDetailsString(art)}
+                        </span>
+                      </div>
+                      <h3 className="text-2xl font-bold mb-4 leading-tight min-h-[4rem] group-hover:text-zinc-700 transition-colors">{art.title}</h3>
+                      <p className="text-zinc-500 text-sm mb-8 leading-relaxed line-clamp-3">
+                        {art.abstract}
+                      </p>
+                      <div className="mt-auto">
+                        <div className="flex items-center justify-between mb-6 pt-6 border-t border-zinc-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+                              <Users size={14} />
+                            </div>
+                            <span className="text-sm font-bold">
+                              {art.authors && art.authors.length > 0
+                                ? art.authors.map((au: any) => au.name).join(', ')
+                                : art.author}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-bold text-zinc-400">{art.date}</span>
+                        </div>
+
+                        <button
+                          className="w-full py-3 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10"
+                        >
+                          VIEW ARTICLE <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             );
           })()}
         </div>
