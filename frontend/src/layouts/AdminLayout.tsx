@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud, ChevronDown, ChevronUp, UserCheck, BookOpen, User } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
 import GlobalHeader from '../components/GlobalHeader';
@@ -20,6 +20,7 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isUsersDropdownOpen, setIsUsersDropdownOpen] = useState(false);
   const location = useLocation();
   const [counts, setCounts] = useState({
     reviewers: 0
@@ -45,6 +46,17 @@ const AdminLayout = () => {
       clearUnread();
     }
   }, [location.pathname, clearUnread]);
+
+  // Auto-expand users dropdown if we are on user directory paths
+  useEffect(() => {
+    if (
+      location.pathname.startsWith('/admin/reviewers') ||
+      location.pathname.startsWith('/admin/authors') ||
+      location.pathname.startsWith('/admin/readers')
+    ) {
+      setIsUsersDropdownOpen(true);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -92,10 +104,19 @@ const AdminLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', end: true, icon: LayoutDashboard },
-    { name: 'Reviewers', path: '/admin/reviewers', icon: Users, badge: formatBadgeCount(counts.reviewers) },
-    { name: 'Authors', path: '/admin/authors-list', icon: Users },
+    {
+      name: 'User Directory',
+      icon: Users,
+      isDropdown: true,
+      children: [
+        { name: 'Reviewers', path: '/admin/reviewers', icon: UserCheck, badge: formatBadgeCount(counts.reviewers) },
+        { name: 'Authors', path: '/admin/authors-list', icon: User },
+        { name: 'Readers', path: '/admin/readers', icon: BookOpen }
+      ]
+    },
     { name: 'Articles', path: '/admin/articles', icon: FileText },
     { name: 'Ready to Publish', path: '/admin/ready-to-publish', icon: UploadCloud },
+    { name: 'Archive Ingestion', path: '/admin/archive-management', icon: UploadCloud },
     { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: formatBadgeCount(unreadCount) },
   ];
 
@@ -125,38 +146,104 @@ const AdminLayout = () => {
         </div>
 
         <nav className="flex-1 mt-6 lg:mt-8 space-y-1 px-4 overflow-y-auto">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.name}
-              to={item.path}
-              end={item.end}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 relative",
-                  isActive
-                    ? "bg-zinc-800/80 text-white shadow-lg ring-1 ring-white/10"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-900"
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div className="flex items-center gap-3">
-                    <item.icon size={18} />
-                    {item.name}
-                  </div>
-                  {item.badge && (
-                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
-                      {item.badge}
-                    </span>
+          {navItems.map((item) => {
+            if (item.isDropdown) {
+              return (
+                <div key={item.name} className="space-y-1">
+                  <button
+                    onClick={() => setIsUsersDropdownOpen(!isUsersDropdownOpen)}
+                    className={cn(
+                      "w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer",
+                      isUsersDropdownOpen 
+                        ? "text-white bg-zinc-900/60" 
+                        : "text-zinc-400 hover:text-white hover:bg-zinc-900"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon size={18} />
+                      <span>{item.name}</span>
+                    </div>
+                    {isUsersDropdownOpen ? (
+                      <ChevronUp size={16} className="text-zinc-400" />
+                    ) : (
+                      <ChevronDown size={16} className="text-zinc-400" />
+                    )}
+                  </button>
+
+                  {isUsersDropdownOpen && item.children && (
+                    <div className="mt-1 ml-6 pl-4 border-l border-zinc-800 space-y-1 relative">
+                      {item.children.map((child) => (
+                        <NavLink
+                          key={child.name}
+                          to={child.path}
+                          onClick={() => setIsSidebarOpen(false)}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 relative",
+                              isActive
+                                ? "bg-zinc-800 text-white shadow-sm ring-1 ring-white/5"
+                                : "text-zinc-500 hover:text-white hover:bg-zinc-950"
+                            )
+                          }
+                        >
+                          {({ isActive }) => (
+                            <>
+                              <div className="flex items-center gap-2.5">
+                                <child.icon size={15} />
+                                <span>{child.name}</span>
+                              </div>
+                              {child.badge && (
+                                <span className="bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center leading-none">
+                                  {child.badge}
+                                </span>
+                              )}
+                              {isActive && (
+                                <div className="absolute left-[-17px] top-1/4 bottom-1/4 w-1 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
+                              )}
+                            </>
+                          )}
+                        </NavLink>
+                      ))}
+                    </div>
                   )}
-                  {isActive && (
-                    <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
+                </div>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.name}
+                to={item.path!}
+                end={item.end}
+                onClick={() => setIsSidebarOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 relative",
+                    isActive
+                      ? "bg-zinc-800/80 text-white shadow-lg ring-1 ring-white/10"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-900"
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <item.icon size={18} />
+                      {item.name}
+                    </div>
+                    {item.badge && (
+                      <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                        {item.badge}
+                      </span>
+                    )}
+                    {isActive && (
+                      <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
+                    )}
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
         <div className="p-4 mb-4 border-t border-zinc-800 mt-auto">

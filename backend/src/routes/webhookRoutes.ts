@@ -1,11 +1,11 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { db } from '../config/firebase';
 import crypto from 'crypto';
 import { config } from '../config/env';
 
 const router = Router();
 
-router.post('/razorpay', async (req, res) => {
+router.post('/razorpay', async (req: Request, res: Response) => {
   try {
     const signature = req.headers["x-razorpay-signature"] as string;
     const webhookSecret = config.payments.razorpay.webhookSecret;
@@ -42,17 +42,28 @@ router.post('/razorpay', async (req, res) => {
 
       if (orderId) {
         // Find subscription by orderId (stored as paymentId in our DB)
-        const snapshot = await db.collection('subscriptions').where('paymentId', '==', orderId).limit(1).get();
+        const subSnapshot = await db.collection('subscriptions').where('paymentId', '==', orderId).limit(1).get();
         
-        if (!snapshot.empty) {
-          const docRef = snapshot.docs[0].ref;
+        if (!subSnapshot.empty) {
+          const docRef = subSnapshot.docs[0].ref;
           await docRef.update({
             status: 'active',
             updatedAt: new Date()
           });
           console.log(`Subscription updated to active for order ${orderId}`);
         } else {
-          console.warn(`No subscription found for order ${orderId}`);
+          // If not in subscriptions, check purchases
+          const purchaseSnapshot = await db.collection('purchases').where('paymentId', '==', orderId).limit(1).get();
+          if (!purchaseSnapshot.empty) {
+            const docRef = purchaseSnapshot.docs[0].ref;
+            await docRef.update({
+              status: 'completed',
+              updatedAt: new Date()
+            });
+            console.log(`Purchase updated to completed for order ${orderId}`);
+          } else {
+            console.warn(`No subscription or purchase found for order ${orderId}`);
+          }
         }
       }
     } else if (event === 'subscription.active') {

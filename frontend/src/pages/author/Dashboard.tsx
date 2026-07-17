@@ -144,6 +144,10 @@ const Dashboard = () => {
              a.status === 'revision_requested' ? 'bg-rose-50' : 'bg-blue-50'
   }));
 
+  const notifications = [
+    { message: 'Welcome to the BKMA Author Portal!', time: 'Now' }
+  ];
+
   return (
     <div className="animate-in fade-in duration-700 max-w-7xl mx-auto">
       {/* Welcome Header */}

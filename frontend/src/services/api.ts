@@ -2,7 +2,7 @@ import axios from 'axios';
 import { auth } from '../config/firebase';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://bkma.onrender.com/api',
 });
 
 // Track initialization state globally to avoid memory leaks/repeated subscriptions

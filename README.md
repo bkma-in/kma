@@ -51,7 +51,7 @@ The system features a role-based architecture with dedicated dashboards for Auth
 
 ---
 
-© 2026 KMA Article Publishing System. All Rights Reserved.
+© 2026-JUL KMA Article Publishing System. All Rights Reserved.
 
 This project, including its source code, UI/UX design, architecture, branding, and associated materials, is protected under applicable copyright laws.
 

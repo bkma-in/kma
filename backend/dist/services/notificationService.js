@@ -350,7 +350,7 @@ const sendArticleSubmittedNotifications = async (articleId) => {
         // 2. Notify Admins via In-App Only (No Email)
         const adminsSnapshot = await firebase_1.db.collection('users').where('role', '==', 'admin').get();
         if (!adminsSnapshot.empty) {
-            adminsSnapshot.docs.forEach(adminDoc => {
+            adminsSnapshot.docs.forEach((adminDoc) => {
                 const notifRef = firebase_1.db.collection('notifications').doc();
                 batch.set(notifRef, {
                     notificationId: notifRef.id,

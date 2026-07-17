@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { db, auth } from '../config/firebase';
 import { FieldPath } from 'firebase-admin/firestore';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/authMiddleware';
@@ -262,7 +262,7 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
 const router = Router();
 
 // Get Current User Profile
-router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
+router.get('/profile', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.user!;
     const userDoc = await db.collection('users').doc(uid).get();
@@ -280,6 +280,8 @@ router.get('/profile', requireAuth, async (req: AuthRequest, res) => {
 
 // Get Public Profile of any user
 router.get('/:id/public-profile', requireAuth, async (req: AuthRequest, res) => {
+// Get Public Profile (Unauthenticated)
+router.get('/:id/public-profile', async (req, res) => {
   try {
     const { id } = req.params;
     const userDoc = await db.collection('users').doc(id).get();
@@ -299,6 +301,15 @@ router.get('/:id/public-profile', requireAuth, async (req: AuthRequest, res) => 
         bio: data.bio || '',
         profileImage: data.profileImage || null,
         role: data.role
+        uid: data.uid,
+        name: data.name,
+        email: data.email || '',
+        role: data.role || 'author',
+        bio: data.bio || '',
+        designation: data.designation || '',
+        phone: data.phone || '',
+        profileImage: data.profileImage || '',
+        createdAt: data.createdAt
       }
     });
   } catch (error) {
@@ -307,8 +318,9 @@ router.get('/:id/public-profile', requireAuth, async (req: AuthRequest, res) => 
   }
 });
 
+
 // Update Profile (Optimized: 1 Read, 1 Write, Non-blocking Cleanup)
-router.put('/profile', requireAuth, upload.single('profileImage'), async (req: AuthRequest, res) => {
+router.put('/profile', requireAuth, upload.single('profileImage'), async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.user!;
     const { name, phone, designation, bio } = req.body;
@@ -375,7 +387,7 @@ router.put('/profile', requireAuth, upload.single('profileImage'), async (req: A
         console.error(`[AUTH-DIAGNOSTIC] ❌ Cannot sync custom claims: User ${uid} has no role in Firestore`);
       } else {
         console.log(`[AUTH-DIAGNOSTIC] Syncing custom claims for UID: ${uid}, Role: "${userData.role}", Name: "${sanitizedName}"`);
-        auth.setCustomUserClaims(uid, { role: userData.role, name: sanitizedName }).catch(err => 
+        auth.setCustomUserClaims(uid, { role: userData.role, name: sanitizedName }).catch((err: any) => 
           console.error('[AUTH-DIAGNOSTIC] Background custom claims sync error:', err)
         );
       }
@@ -401,7 +413,7 @@ router.put('/profile', requireAuth, upload.single('profileImage'), async (req: A
 });
 
 // Report an Issue (Bug/UI)
-router.post('/report-issue', requireAuth, upload.single('screenshot'), async (req: AuthRequest, res) => {
+router.post('/report-issue', requireAuth, upload.single('screenshot'), async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.user!;
     const { type, description, metadata } = req.body;
@@ -439,10 +451,10 @@ router.post('/report-issue', requireAuth, upload.single('screenshot'), async (re
 });
 
 // Get All Reported Issues (for Developer Dashboard)
-router.get('/reported-issues', requireAuth, requireRole(['admin', 'dev']), async (req: AuthRequest, res) => {
+router.get('/reported-issues', requireAuth, requireRole(['admin', 'dev']), async (req: AuthRequest, res: Response) => {
   try {
     const snapshot = await db.collection('reported_issues').orderBy('createdAt', 'desc').get();
-    const issues = snapshot.docs.map(doc => {
+    const issues = snapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -460,7 +472,7 @@ router.get('/reported-issues', requireAuth, requireRole(['admin', 'dev']), async
 });
 
 // Update Reported Issue Status (for Developer Dashboard)
-router.patch('/reported-issues/:id/status', requireAuth, requireRole(['admin', 'dev']), async (req: AuthRequest, res) => {
+router.patch('/reported-issues/:id/status', requireAuth, requireRole(['admin', 'dev']), async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
     const { status } = req.body;
@@ -488,7 +500,7 @@ router.patch('/reported-issues/:id/status', requireAuth, requireRole(['admin', '
 });
 
 // Search Users (Registered users only)
-router.get('/', requireAuth, async (req: AuthRequest, res) => {
+router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { search = '', limit = '20' } = req.query;
     const searchTerm = (search as string).toLowerCase();
@@ -514,7 +526,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     const [nameSnap, emailSnap] = await Promise.all([nameQuery, emailQuery]);
     const userMap = new Map();
 
-    nameSnap.docs.forEach(doc => {
+    nameSnap.docs.forEach((doc: any) => {
       const data = doc.data();
       userMap.set(doc.id, {
         id: doc.id,
@@ -524,7 +536,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       });
     });
 
-    emailSnap.docs.forEach(doc => {
+    emailSnap.docs.forEach((doc: any) => {
       const data = doc.data();
       if (!userMap.has(doc.id)) {
         userMap.set(doc.id, {
@@ -551,10 +563,10 @@ const generateTempPassword = () => {
 };
 
 // Admin: Get all reviewers
-router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
   try {
     const snapshot = await db.collection('users').where('role', '==', 'reviewer').get();
-    const reviewers = snapshot.docs.map(doc => {
+    const reviewers = snapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -572,7 +584,7 @@ router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRe
     });
 
     // In-memory sort by regDate descending
-    reviewers.sort((a, b) => new Date(b.regDate).getTime() - new Date(a.regDate).getTime());
+    reviewers.sort((a: any, b: any) => new Date(b.regDate).getTime() - new Date(a.regDate).getTime());
 
     res.json({ success: true, reviewers });
   } catch (error) {
@@ -582,7 +594,7 @@ router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRe
 });
 
 // Admin: Get all authors (paginated)
-router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
   try {
     const { pageSize = '50', cursor } = req.query;
     const limitNum = parseInt(pageSize as string) || 50;
@@ -590,7 +602,7 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
     // Fetch all authors from database using simple query (no composite index required)
     const snapshot = await db.collection('users').where('role', '==', 'author').get();
     
-    let allAuthors = snapshot.docs.map(doc => {
+    let allAuthors = snapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -606,7 +618,7 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
     });
 
     // Sort by regDate descending (createdAt) in memory
-    allAuthors.sort((a, b) => new Date(b.regDate).getTime() - new Date(a.regDate).getTime());
+    allAuthors.sort((a: any, b: any) => new Date(b.regDate).getTime() - new Date(a.regDate).getTime());
 
     // Apply pagination cursor in-memory
     let startIndex = 0;
@@ -615,7 +627,7 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
       const [ts, docId] = (cursor as string).split('|');
       const cursorTime = new Date(ts).getTime();
       
-      const foundIndex = allAuthors.findIndex(a => {
+      const foundIndex = allAuthors.findIndex((a: any) => {
         const aTime = new Date(a.regDate).getTime();
         return aTime === cursorTime && a.id === docId;
       });
@@ -640,8 +652,43 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
   }
 });
 
+// Admin: Get all readers
+router.get('/readers', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
+  try {
+    const snapshot = await db.collection('users').where('role', '==', 'reader').get();
+    
+    // Also fetch all active subscriptions to check for life membership type
+    const subsSnapshot = await db.collection('subscriptions').where('status', '==', 'active').get();
+    const activeSubscribes = new Map();
+    subsSnapshot.docs.forEach((doc: any) => {
+      const data = doc.data();
+      activeSubscribes.set(data.userId, data);
+    });
+
+    const readers = snapshot.docs.map((doc: any) => {
+      const data = doc.data();
+      const subData = activeSubscribes.get(doc.id);
+      return {
+        id: doc.id,
+        name: data.name || 'Anonymous Reader',
+        email: data.email || '',
+        regDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
+        isLifeMember: data.lifeMember === true || data.isLifeMember === true || subData?.type === 'lifetime' || subData?.type === 'life'
+      };
+    });
+
+    // In-memory sort by regDate descending
+    readers.sort((a: any, b: any) => new Date(b.regDate).getTime() - new Date(a.regDate).getTime());
+
+    res.json({ success: true, readers });
+  } catch (error) {
+    console.error('Get readers error:', error);
+    res.status(500).json({ error: 'Failed to fetch readers' });
+  }
+});
+
 // Admin: Update reviewer status (Approve/Reject/Deactivate/Reactivate)
-router.patch('/reviewers/:id/status', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.patch('/reviewers/:id/status', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
   const adminId = req.user!.uid;
   try {
     const id = req.params.id as string;
@@ -693,7 +740,7 @@ router.patch('/reviewers/:id/status', requireAuth, requireRole(['admin']), async
 });
 
 // Admin: Create pre-approved reviewer user (delivered via secure email onboarding)
-router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
   const adminId = req.user!.uid;
   try {
     const { name, email, qualification, experience } = req.body;
@@ -735,7 +782,7 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
       await auth.setCustomUserClaims(userRecord.uid, { role: 'reviewer', name });
     } catch (err) {
       // Rollback: Delete the auth user if database write or claims config fails
-      await auth.deleteUser(userRecord.uid).catch(authErr => 
+      await auth.deleteUser(userRecord.uid).catch((authErr: any) => 
         console.error('Failed to delete Auth user on rollback:', authErr)
       );
       throw err;
@@ -776,7 +823,7 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
 });
 
 // Admin: Resend reviewer credentials (regenerates password, updates Auth, emails Reviewer, logs audit)
-router.post('/reviewers/:id/resend-credentials', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.post('/reviewers/:id/resend-credentials', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
   const adminId = req.user!.uid;
   try {
     const id = req.params.id as string;

@@ -8,6 +8,11 @@ export interface AuthRequest extends Request {
     role: string;
     name: string;
   };
+  file?: any;
+  files?: any;
+  params: any;
+  body: any;
+  query: any;
 }
 
 export const requireAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
