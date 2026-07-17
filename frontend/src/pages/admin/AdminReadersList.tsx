@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useNotification } from '../../utils/NotificationContext';
 import { getReaders } from '../../services/user.service';
+import { SkeletonTable } from '../../components/skeletons/SkeletonTable';
 
 interface Reader {
   id: string;
@@ -61,8 +62,15 @@ const AdminReadersList = () => {
 
   if (loading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="animate-spin text-zinc-300" size={48} />
+      <div className="space-y-6 max-w-7xl mx-auto px-4">
+        <div className="flex justify-between items-end gap-6 mb-6">
+          <div className="space-y-2">
+            <div className="h-8 bg-zinc-200 rounded w-48 animate-pulse" />
+            <div className="h-4 bg-zinc-200 rounded w-64 animate-pulse" />
+          </div>
+          <div className="h-10 bg-zinc-200 rounded-xl w-64 animate-pulse" />
+        </div>
+        <SkeletonTable rowsCount={4} colsCount={4} />
       </div>
     );
   }

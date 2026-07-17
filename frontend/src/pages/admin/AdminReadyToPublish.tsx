@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   FileText,
@@ -15,6 +15,7 @@ import { getArticles, updateArticleStatus, bulkPublishArticles } from '../../ser
 import { formatDate } from '../../utils/dateHelpers';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { SkeletonTable } from '../../components/skeletons/SkeletonTable';
 
 // Types
 type ArticleStatus = 'Ready to Publish' | 'Published';
@@ -379,8 +380,18 @@ const AdminReadyToPublish = () => {
 
   if (loading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="animate-spin text-zinc-300" size={48} />
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="flex justify-between items-end gap-6 mb-6">
+          <div className="space-y-2">
+            <div className="h-8 bg-zinc-200 rounded w-48 animate-pulse" />
+            <div className="h-4 bg-zinc-200 rounded w-64 animate-pulse" />
+          </div>
+          <div className="flex gap-3">
+            <div className="h-10 bg-zinc-200 rounded-xl w-10 animate-pulse" />
+            <div className="h-10 bg-zinc-200 rounded-xl w-36 animate-pulse" />
+          </div>
+        </div>
+        <SkeletonTable rowsCount={3} colsCount={4} />
       </div>
     );
   }
