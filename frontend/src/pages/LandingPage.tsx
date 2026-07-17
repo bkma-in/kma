@@ -20,6 +20,87 @@ import { getPublishedArticles, getPdfUrl } from '../services/article.service';
 import AuthorDetailsModal from '../components/AuthorDetailsModal';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
 
+// --- Mobile Article Row with scroll-tracked dot indicators ---
+export const ArticleScrollRow: React.FC<{
+  rowArticles: any[];
+  setPreviewArticle: (art: any) => void;
+  getIssueDetailsString: (art: any) => string;
+}> = ({ rowArticles, setPreviewArticle, getIssueDetailsString }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeDot, setActiveDot] = useState(0);
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const el = scrollRef.current;
+    const cardWidth = 280 + 24; // card width (280px) + gap (24px = gap-6)
+    const idx = Math.round(el.scrollLeft / cardWidth);
+    setActiveDot(Math.min(idx, rowArticles.length - 1));
+  };
+
+  return (
+    <div>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' } as React.CSSProperties}
+        className="flex gap-6 overflow-x-auto snap-x snap-mandatory pb-4 scroll-smooth px-1 [&::-webkit-scrollbar]:hidden"
+      >
+        {rowArticles.map((art, i) => (
+          <div
+            key={i}
+            onClick={() => setPreviewArticle(art)}
+            className="w-[280px] shrink-0 snap-start bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-xl transition-all flex flex-col cursor-pointer group"
+          >
+            <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
+              {art.isOld && (
+                <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider">
+                  Legacy Edition
+                </span>
+              )}
+              <span className="text-zinc-500 text-[10px] font-semibold">
+                {getIssueDetailsString(art)}
+              </span>
+            </div>
+            <h3 className="text-sm font-bold mb-1.5 leading-snug line-clamp-2 group-hover:text-zinc-700 transition-colors">{art.title}</h3>
+            <p className="text-zinc-500 text-[11px] mb-4 leading-relaxed line-clamp-2">{art.abstract}</p>
+            <div className="mt-auto">
+              <div className="flex items-center justify-between mb-3.5 pt-3.5 border-t border-zinc-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+                    <Users size={12} />
+                  </div>
+                  <span className="text-[11px] font-bold text-black truncate max-w-[140px]">
+                    {art.authors && art.authors.length > 0
+                      ? art.authors.map((au: any) => au.name).join(', ')
+                      : art.author}
+                  </span>
+                </div>
+                <span className="text-[9px] font-bold text-zinc-400">{art.date}</span>
+              </div>
+              <button className="w-full py-2 rounded-lg text-[9px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-1.5 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10">
+                VIEW ARTICLE <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Dot indicators */}
+      {rowArticles.length > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-1 mb-2">
+          {rowArticles.map((_, dotIdx) => (
+            <span
+              key={dotIdx}
+              className={`rounded-full transition-all duration-300 ${
+                dotIdx === activeDot ? 'w-2 h-2 bg-black' : 'w-1.5 h-1.5 bg-zinc-300'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- Types ---
 interface Article {
   id: string;
@@ -301,55 +382,12 @@ const LandingPage: React.FC = () => {
                     };
                     const rows = chunkArticles(paginatedArticles, 3);
                     return rows.map((rowArticles, rowIndex) => (
-                      <div
+                      <ArticleScrollRow
                         key={rowIndex}
-                        className="flex gap-6 overflow-x-auto snap-x snap-mandatory pb-4 no-scrollbar scroll-smooth px-1"
-                      >
-                        {rowArticles.map((art, i) => (
-                          <div
-                            key={i}
-                            onClick={() => setPreviewArticle(art)}
-                            className="w-[280px] shrink-0 snap-start bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-xl transition-all flex flex-col cursor-pointer group"
-                          >
-                            {/* Issue info */}
-                            <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
-                              {art.isOld && (
-                                <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider">
-                                  Legacy Edition
-                                </span>
-                              )}
-                              <span className="text-zinc-500 text-[10px] font-semibold">
-                                {getIssueDetailsString(art)}
-                              </span>
-                            </div>
-                            <h3 className="text-sm font-bold mb-1.5 leading-snug line-clamp-2 group-hover:text-zinc-700 transition-colors">{art.title}</h3>
-                            <p className="text-zinc-500 text-[11px] mb-4 leading-relaxed line-clamp-2">
-                              {art.abstract}
-                            </p>
-                            <div className="mt-auto">
-                              <div className="flex items-center justify-between mb-3.5 pt-3.5 border-t border-zinc-100">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
-                                    <Users size={12} />
-                                  </div>
-                                  <span className="text-[11px] font-bold text-black truncate max-w-[140px]">
-                                    {art.authors && art.authors.length > 0
-                                      ? art.authors.map((au: any) => au.name).join(', ')
-                                      : art.author}
-                                  </span>
-                                </div>
-                                <span className="text-[9px] font-bold text-zinc-400">{art.date}</span>
-                              </div>
-
-                              <button
-                                className="w-full py-2 rounded-lg text-[9px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-1.5 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10"
-                              >
-                                VIEW ARTICLE <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                        rowArticles={rowArticles}
+                        setPreviewArticle={setPreviewArticle}
+                        getIssueDetailsString={getIssueDetailsString}
+                      />
                     ));
                   })()}
                 </div>
