@@ -25,16 +25,16 @@ const PublicHeader: React.FC = () => {
         ? "bg-white/70 backdrop-blur-lg border-b border-zinc-200 py-3 shadow-sm"
         : "bg-white border-b border-zinc-100 py-4 lg:py-6"
         }`}>
-        <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-4 lg:gap-6 h-10 sm:h-16">
+        <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-4 lg:gap-6 h-12 sm:h-16">
           {/* Logo and Title */}
           <div className="flex items-center gap-3 sm:gap-4 lg:gap-5 min-w-0 flex-1 sm:flex-initial">
             <Link to="/" className="flex items-center gap-2.5 sm:gap-4 lg:gap-5 min-w-0">
-              <div className="w-9 h-9 sm:w-16 sm:h-16 bg-white rounded-lg sm:rounded-xl flex items-center justify-center p-1.5 shadow-xl shadow-black/5 overflow-hidden border border-zinc-100 shrink-0">
+              <div className="w-11 h-11 sm:w-16 sm:h-16 bg-white rounded-lg sm:rounded-xl flex items-center justify-center p-1.5 shadow-xl shadow-black/5 overflow-hidden border border-zinc-100 shrink-0">
                 <img src={logo} alt="BKMA Logo" className="w-full h-full object-contain" />
               </div>
               <h1 className="font-['Playfair_Display'] font-black leading-[1.1] sm:leading-tight tracking-[-0.01em] [word-spacing:0.18em] text-black min-w-0">
                 {/* On mobile, full name wrapped max 2 lines. On desktop, large font inline */}
-                <span className="block sm:hidden text-[12px] text-center leading-tight font-extrabold uppercase line-clamp-2 max-w-[200px] xs:max-w-xs">
+                <span className="block sm:hidden text-[14px] text-center leading-tight font-extrabold uppercase line-clamp-2 max-w-[230px] xs:max-w-xs">
                   Bulletin Of Kerala Mathematical Association
                 </span>
                 <span className="hidden sm:inline text-lg md:text-xl lg:text-3xl xl:text-4xl lg:whitespace-nowrap">
@@ -103,7 +103,7 @@ const PublicHeader: React.FC = () => {
             onClick={() => setIsDrawerOpen(false)}
           />
           {/* Floating Dropdown Card */}
-          <div className="absolute top-[72px] right-4 w-48 bg-white border border-zinc-200 rounded-2xl shadow-xl p-4 z-10 animate-in fade-in slide-in-from-top-2 duration-200 space-y-2">
+          <div className="absolute top-[80px] right-4 w-48 bg-white border border-zinc-200 rounded-2xl shadow-xl p-4 z-10 animate-in fade-in slide-in-from-top-2 duration-200 space-y-2">
             <button
               onClick={() => {
                 setIsDrawerOpen(false);
