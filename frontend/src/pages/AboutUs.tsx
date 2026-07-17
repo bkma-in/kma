@@ -4,8 +4,7 @@ import { Search, ChevronRight, Info, History, Target, Award, BookOpen, Users } f
 import logo from '../assets/logo.png';
 import PublicHeader from '../components/PublicHeader';
 import { useAuth } from '../context/AuthContext';
-import { getDashboardByRole } from '../utils/auth';
-import GlobalFooter from '../components/GlobalFooter';
+import PublicFooter from '../components/PublicFooter';
 
 const AboutUs: React.FC = () => {
   const navigate = useNavigate();
@@ -133,104 +132,7 @@ const AboutUs: React.FC = () => {
       </main>
 
       {/* Footer Section */}
-      <footer className="bg-black text-white w-full py-16 px-4 sm:px-6 border-t border-white/5 mt-auto">
-        <div className="max-w-7xl mx-auto">
-          {/* Main Footer Content Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 mb-12">
-            {/* Column 1: Branding */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-lg p-1.5 overflow-hidden border border-white/10 shrink-0">
-                  <img src={logo} alt="BKMA Logo" className="w-full h-full object-contain" />
-                </div>
-                <h1 className="font-['Playfair_Display'] font-black text-xl tracking-[-0.02em]">Bulletin Of Kerala Mathematical Association</h1>
-              </div>
-              <p className="text-zinc-500 text-[11px] leading-relaxed max-w-sm">
-                Advancing mathematical research and higher education through global collaboration and peer-reviewed scholarly excellence.
-              </p>
-              <div className="flex flex-wrap gap-2.5 sm:gap-4">
-                <Link to="/about-us" className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">About Us</Link>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Author Guidelines</button>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Reviewer Guidelines</button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Policies</h4>
-              <ul className="space-y-2.5">
-                {['Publication', 'Copyright', 'Privacy Policy', 'Refund/Cancellation Policy'].map(link => (
-                  <li key={link}>
-                    {link === 'Refund/Cancellation Policy' ? (
-                      <Link to="/refund-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : link === 'Privacy Policy' ? (
-                      <Link to="/privacy-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : link === 'Copyright' ? (
-                      <Link to="/copyright" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : (
-                      <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Access</h4>
-              <ul className="space-y-2.5">
-                {['Pricing', 'Service Description', 'Editorial Board', 'Terms & Conditions'].map(link => (
-                  <li key={link}>
-                    {link === 'Terms & Conditions' ? (
-                      <Link to="/terms" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : link === 'Pricing' ? (
-                      <Link to="/pricing" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : link === 'Service Description' ? (
-                      <Link to="/service-description" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : (
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors cursor-pointer">{link}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Column 4: Support */}
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Support</h4>
-              <ul className="space-y-2.5">
-                {['Contact Us', 'Help Center', 'Report Issue'].map(link => (
-                  <li key={link}>
-                    {link === 'Contact Us' ? (
-                      <Link to="/contact-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
-                        {link}
-                      </Link>
-                    ) : (
-                      <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <div className="pt-3 border-t border-white/5 mt-4">
-                <p className="text-[8px] font-black uppercase tracking-[0.1em] text-zinc-600">24/7 Research Support</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Row: Global Footer Component */}
-          <GlobalFooter showSocials={true} showTaglines={false} />
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 };
