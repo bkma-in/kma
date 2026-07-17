@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Search,
@@ -65,6 +65,8 @@ const LandingPage: React.FC = () => {
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const articlesSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchPublished = async () => {
@@ -85,6 +87,10 @@ const LandingPage: React.FC = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [articles]);
 
   // Author Details Modal states
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
@@ -129,13 +135,13 @@ const LandingPage: React.FC = () => {
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 xl:px-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-10 lg:gap-16">
             <div className="flex flex-col text-left">
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
+              <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
                 Advancing Pure <br /> & Applied <br /> Mathematics
               </h2>
-              <p className="text-gray-400 mt-6 max-w-lg text-lg leading-relaxed">
+              <p className="text-gray-400 mt-4 sm:mt-6 max-w-lg text-sm sm:text-lg leading-relaxed">
                 The Kerala Mathematical Association promotes advanced mathematical research and higher education through collaboration among scholars worldwide.
               </p>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mt-10 w-full sm:max-w-md shadow-xl lg:w-fit">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mt-6 sm:mt-10 w-full sm:max-w-md shadow-xl lg:w-fit">
                 <div className="flex items-start gap-4">
                   <div className="bg-zinc-800 p-2.5 rounded-lg shrink-0">
                     <Info className="text-white" size={20} />
@@ -144,7 +150,7 @@ const LandingPage: React.FC = () => {
                     <h4 className="text-white font-bold text-sm tracking-wide mb-1 flex items-center gap-2">
                       REVIEWER NOTICE
                     </h4>
-                    <p className="text-zinc-500 text-sm leading-relaxed">
+                    <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed">
                       Reviewer accounts require admin approval. You will be able to log in only after your account has been approved.
                     </p>
                   </div>
@@ -190,10 +196,10 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Published Articles Section */}
-      <section className="py-20 px-6 bg-zinc-50 border-y border-zinc-200">
+      <section ref={articlesSectionRef} className="py-20 px-6 bg-zinc-50 border-y border-zinc-200">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-end justify-between mb-12 border-b-2 border-zinc-200 pb-6">
-            <h2 className="text-4xl font-bold tracking-tight">Published Articles</h2>
+            <h2 className="text-2xl sm:text-4xl font-bold tracking-tight">Published Articles</h2>
             <button className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:text-zinc-600 transition-colors">
               View All Archive <ChevronRight size={16} />
             </button>
@@ -203,6 +209,34 @@ const LandingPage: React.FC = () => {
             <SkeletonArticleCard count={3} />
           ) : (() => {
             const regularArticles = articles.filter(art => !(/obituary|tribute|in memoriam/i.test(art.title || '') || /obituary|tribute/i.test(art.tag || '')));
+            
+            const totalPages = Math.ceil(regularArticles.length / 9);
+            const activePage = Math.min(currentPage, Math.max(1, totalPages));
+            const startIndex = (activePage - 1) * 9;
+            const paginatedArticles = regularArticles.slice(startIndex, startIndex + 9);
+
+            const handlePageChange = (page: number) => {
+              setCurrentPage(page);
+              articlesSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+            };
+
+            const getPageNumbers = () => {
+              const pages = [];
+              const maxVisible = 5;
+              if (totalPages <= maxVisible) {
+                for (let i = 1; i <= totalPages; i++) pages.push(i);
+              } else {
+                if (activePage <= 3) {
+                  pages.push(1, 2, 3, 4, '...', totalPages);
+                } else if (activePage >= totalPages - 2) {
+                  pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+                } else {
+                  pages.push(1, '...', activePage - 1, activePage, activePage + 1, '...', totalPages);
+                }
+              }
+              return pages;
+            };
+
             return regularArticles.length === 0 ? (
               <div className="text-center py-20 bg-white border border-zinc-200 rounded-[2rem] p-10 flex flex-col items-center justify-center gap-4">
                 <BookOpen size={48} className="text-zinc-300 animate-pulse" />
@@ -230,7 +264,7 @@ const LandingPage: React.FC = () => {
                       }
                       return chunks;
                     };
-                    const rows = chunkArticles(regularArticles, 6);
+                    const rows = chunkArticles(paginatedArticles, 6);
                     return rows.map((rowArticles, rowIndex) => (
                       <div
                         key={rowIndex}
@@ -287,7 +321,7 @@ const LandingPage: React.FC = () => {
 
                 {/* Desktop/Tablet view */}
                 <div className="hidden md:grid md:grid-cols-3 gap-8">
-                  {regularArticles.map((art, i) => (
+                  {paginatedArticles.map((art, i) => (
                     <div
                       key={i}
                       onClick={() => setPreviewArticle(art)}
@@ -332,6 +366,52 @@ const LandingPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 sm:gap-4 pt-12 mt-12 border-t border-zinc-200">
+                    <button
+                      onClick={() => handlePageChange(activePage - 1)}
+                      disabled={activePage === 1}
+                      className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-black disabled:text-zinc-300 disabled:pointer-events-none transition-colors px-3 py-2 cursor-pointer"
+                    >
+                      ← Previous
+                    </button>
+                    
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      {getPageNumbers().map((page, idx) => {
+                        if (page === '...') {
+                          return (
+                            <span key={idx} className="px-2 py-2 text-zinc-400 text-xs font-bold">
+                              ...
+                            </span>
+                          );
+                        }
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => handlePageChange(page as number)}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${
+                              activePage === page
+                                ? 'bg-black text-white shadow-md'
+                                : 'text-zinc-500 hover:bg-zinc-200/50 hover:text-black'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => handlePageChange(activePage + 1)}
+                      disabled={activePage === totalPages}
+                      className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-black disabled:text-zinc-300 disabled:pointer-events-none transition-colors px-3 py-2 cursor-pointer"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
               </>
             );
           })()}
@@ -346,7 +426,7 @@ const LandingPage: React.FC = () => {
           <section className="py-20 px-6 bg-white border-b border-zinc-200">
             <div className="max-w-7xl mx-auto">
               <div className="flex items-end justify-between mb-12 border-b-2 border-zinc-200 pb-6">
-                <h2 className="text-4xl font-bold tracking-tight">Tributes & Memorials</h2>
+                <h2 className="text-2xl sm:text-4xl font-bold tracking-tight">Tributes & Memorials</h2>
               </div>
 
               <div className="grid md:grid-cols-3 gap-8">

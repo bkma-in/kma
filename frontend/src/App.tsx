@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import { getDashboardByRole } from './utils/auth';
 import { Loader2, AlertTriangle, RefreshCw, Home } from 'lucide-react';
@@ -53,6 +54,16 @@ import ReaderNotifications from './pages/reader/ReaderNotifications';
 import ReaderSavedArticles from './pages/reader/ReaderSavedArticles';
 import GetSubscription from './pages/reader/GetSubscription';
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   const { currentUser, loading, roleLoading, roleError, refreshRole, logout } = useAuth();
   const navigate = useNavigate();
@@ -100,28 +111,24 @@ function App() {
           <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-6">
             <AlertTriangle className="text-rose-500" size={32} />
           </div>
-          <h2 className="text-xl font-bold text-zinc-900 mb-2 font-['Outfit']">
-            Access Verification Failed
-          </h2>
-          <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
-            {roleError}
+          <h3 className="text-xl font-bold text-zinc-900 mb-2">Access Verification Failed</h3>
+          <p className="text-zinc-500 text-sm mb-6 leading-relaxed">
+            We couldn't verify your account credentials or system access role. This might be due to a temporary network issue.
           </p>
-          <div className="flex flex-col gap-3">
+          <div className="space-y-3">
             <button
-              onClick={() => {
-                console.log('[AUTH-DIAGNOSTIC] Retry verification clicked');
-                refreshRole();
-              }}
-              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-black text-white text-sm font-bold rounded-xl hover:bg-zinc-800 transition-all shadow-md cursor-pointer"
+              onClick={refreshRole}
+              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-black text-white text-sm font-black rounded-xl hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 cursor-pointer"
             >
               <RefreshCw size={16} />
               Retry Verification
             </button>
             <button
               onClick={async () => {
-                console.log('[AUTH-DIAGNOSTIC] Return home clicked. Performing logout and redirecting to landing page.');
                 try {
                   await logout();
+                  localStorage.clear();
+                  sessionStorage.clear();
                 } catch (err) {
                   console.error('[AUTH-DIAGNOSTIC] Logout failed:', err);
                 }
@@ -143,6 +150,7 @@ function App() {
 
   return (
     <div className="w-full min-h-screen">
+      <ScrollToTop />
       <SessionOverlay />
       <ToastContainer />
       <ConfirmModal />
