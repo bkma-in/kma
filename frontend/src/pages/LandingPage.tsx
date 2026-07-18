@@ -75,7 +75,6 @@ export const ArticleScrollRow: React.FC<{
                       : art.author}
                   </span>
                 </div>
-                <span className="text-[9px] font-bold text-zinc-400">{art.date}</span>
               </div>
               <button className="w-full py-2 rounded-lg text-[9px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-1.5 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10">
                 VIEW ARTICLE <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
@@ -116,6 +115,7 @@ interface Article {
   isOld?: boolean;
   date: string;
   abstract: string;
+  keywords?: string | string[];
   fullContent?: string;
   pdfAvailable?: boolean;
 }
@@ -137,6 +137,35 @@ export const getIssueDetailsString = (art: any) => {
   return parts.join(' | ');
 };
 
+export const parseMonthYear = (monthYearStr: string | undefined): number => {
+  if (!monthYearStr) return 0;
+  const d = new Date(monthYearStr);
+  if (!isNaN(d.getTime())) {
+    return d.getTime();
+  }
+  const parts = monthYearStr.trim().split(/\s+/);
+  if (parts.length === 2) {
+    const monthNames = [
+      "january", "february", "march", "april", "may", "june",
+      "july", "august", "september", "october", "november", "december"
+    ];
+    const monthShorts = [
+      "jan", "feb", "mar", "apr", "may", "jun",
+      "jul", "aug", "sep", "oct", "nov", "dec"
+    ];
+    const monthInput = parts[0].toLowerCase();
+    let monthIdx = monthNames.indexOf(monthInput);
+    if (monthIdx === -1) {
+      monthIdx = monthShorts.indexOf(monthInput);
+    }
+    const yearVal = parseInt(parts[1], 10);
+    if (monthIdx !== -1 && !isNaN(yearVal)) {
+      return new Date(yearVal, monthIdx, 1).getTime();
+    }
+  }
+  return 0;
+};
+
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
@@ -155,8 +184,19 @@ const LandingPage: React.FC = () => {
       try {
         const res = await getPublishedArticles();
         if (res.success) {
-          // Sort newest published first
+          // Sort newest published first for new articles, and chronologically for legacy articles
           const sorted = [...(res.articles || [])].sort((a: any, b: any) => {
+            if (a.isOld && b.isOld) {
+              const timeA = parseMonthYear(a.monthYear);
+              const timeB = parseMonthYear(b.monthYear);
+              if (timeA !== timeB) {
+                return timeB - timeA; // Descending order: latest first (e.g. December 2023 before June 2019)
+              }
+              return (a.title || '').localeCompare(b.title || '');
+            }
+            if (a.isOld) return 1;
+            if (b.isOld) return -1;
+
             const getTime = (art: any): number => {
               const raw = art.publishedAt || art.date;
               if (!raw) return 0;
@@ -319,11 +359,17 @@ const LandingPage: React.FC = () => {
               const isTribute = /obituary|tribute|in memoriam/i.test(art.title || '') || /obituary|tribute/i.test(art.tag || '');
               if (isTribute) return false;
               if (!searchQuery.trim()) return true;
-              const queryStr = searchQuery.toLowerCase();
+              const queryStr = searchQuery.trim().toLowerCase();
+              const kwStr = typeof art.keywords === 'string'
+                ? art.keywords
+                : Array.isArray(art.keywords)
+                  ? art.keywords.join(', ')
+                  : '';
               return (art.title || '').toLowerCase().includes(queryStr) || 
                      (art.abstract || '').toLowerCase().includes(queryStr) ||
                      (art.author || '').toLowerCase().includes(queryStr) ||
-                     (art.authors || []).some((au: any) => (au.name || '').toLowerCase().includes(queryStr));
+                     (art.authors || []).some((au: any) => (au.name || '').toLowerCase().includes(queryStr)) ||
+                     kwStr.toLowerCase().includes(queryStr);
             });
             
             const totalPages = Math.ceil(regularArticles.length / 9);
@@ -354,11 +400,19 @@ const LandingPage: React.FC = () => {
             };
 
             return regularArticles.length === 0 ? (
-              <div className="text-center py-20 bg-white border border-zinc-200 rounded-[2rem] p-10 flex flex-col items-center justify-center gap-4">
-                <BookOpen size={48} className="text-zinc-300 animate-pulse" />
-                <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No published articles available</h3>
-                <p className="text-sm text-zinc-500 max-w-sm">There are no peer-reviewed articles published in the archives yet. Please check back later.</p>
-              </div>
+              searchQuery.trim() ? (
+                <div className="text-center py-20 bg-white border border-zinc-200 rounded-[2rem] p-10 flex flex-col items-center justify-center gap-4">
+                  <Search size={48} className="text-zinc-300 animate-pulse" />
+                  <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No matching results</h3>
+                  <p className="text-sm text-zinc-500 max-w-sm">We couldn't find any articles matching your search criteria. Try checking your spelling or using different keywords.</p>
+                </div>
+              ) : (
+                <div className="text-center py-20 bg-white border border-zinc-200 rounded-[2rem] p-10 flex flex-col items-center justify-center gap-4">
+                  <BookOpen size={48} className="text-zinc-300 animate-pulse" />
+                  <h3 className="text-lg font-bold text-black font-sans uppercase tracking-widest">No published articles available</h3>
+                  <p className="text-sm text-zinc-500 max-w-sm">There are no peer-reviewed articles published in the archives yet. Please check back later.</p>
+                </div>
+              )
             ) : (
               <>
                 {/* Mobile horizontal scroll rows */}
@@ -427,7 +481,6 @@ const LandingPage: React.FC = () => {
                                 : art.author}
                             </span>
                           </div>
-                          <span className="text-[10px] font-bold text-zinc-400">{art.date}</span>
                         </div>
 
                         <button
