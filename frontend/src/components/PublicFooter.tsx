@@ -55,7 +55,6 @@ const PublicFooter: React.FC = () => {
                   <li><Link to="/contact-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Contact Us</Link></li>
                   <li><button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Help Center</button></li>
                   <li><button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Report Issue</button></li>
-                  <li className="pt-1.5 border-t border-white/5 mt-1.5"><p className="text-[8px] font-black uppercase tracking-[0.1em] text-zinc-600">24/7 Research Support</p></li>
                 </ul>
               </div>
 
@@ -180,9 +179,6 @@ const PublicFooter: React.FC = () => {
                   </li>
                 ))}
               </ul>
-              <div className="pt-3 border-t border-white/5 mt-4">
-                <p className="text-[8px] font-black uppercase tracking-[0.1em] text-zinc-600">24/7 Research Support</p>
-              </div>
             </div>
           </div>
 
