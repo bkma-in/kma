@@ -250,15 +250,6 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
           {/* Metadata row — hidden for tributes */}
           {!isTribute && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {article.date && (
-              <div className="bg-zinc-50 border border-zinc-100 rounded-xl p-3 flex items-center gap-2">
-                <Calendar size={14} className="text-zinc-400 shrink-0" />
-                <div>
-                  <p className="text-[9px] text-zinc-400 font-black uppercase tracking-widest">Published</p>
-                  <p className="text-xs font-bold text-black mt-0.5">{article.date}</p>
-                </div>
-              </div>
-            )}
             {(article.vol || article.volume) && (
               <div className="bg-zinc-50 border border-zinc-100 rounded-xl p-3 flex items-center gap-2">
                 <Hash size={14} className="text-zinc-400 shrink-0" />

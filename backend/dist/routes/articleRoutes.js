@@ -405,6 +405,7 @@ router.get('/published', async (req, res) => {
                 monthYear: data.monthYear,
                 issueNumber: data.issueNumber,
                 issn: data.issn,
+                keywords: data.keywords || '',
                 date: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleDateString() : 'Recent',
                 tag: data.tag || 'Scholarly',
                 pdfAvailable: !!data.pdfUrl,

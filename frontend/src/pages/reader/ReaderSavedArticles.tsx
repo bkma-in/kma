@@ -146,7 +146,6 @@ const ReaderSavedArticles = () => {
                     >
                       {art.author}
                     </button>
-                    <p className="text-zinc-400">{art.date}</p>
                   </div>
                 </div>
                 

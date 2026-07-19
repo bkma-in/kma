@@ -20,7 +20,7 @@ import { useSubscription } from '../../utils/SubscriptionContext';
 import { getPublishedArticles, getPdfUrl } from '../../services/article.service';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import ArticlePreviewModal from '../../components/ArticlePreviewModal';
-import { getIssueDetailsString, ArticleScrollRow } from '../LandingPage';
+import { getIssueDetailsString, ArticleScrollRow, parseMonthYear } from '../LandingPage';
 import { SkeletonArticleCard } from '../../components/skeletons/SkeletonArticleCard';
 
 const ReaderDashboard = () => {
@@ -58,8 +58,19 @@ const ReaderDashboard = () => {
       try {
         const res = await getPublishedArticles();
         if (res.success) {
-          // Sort newest published first
+          // Sort newest published first for new articles, and chronologically for legacy articles
           const sorted = [...(res.articles || [])].sort((a: any, b: any) => {
+            if (a.isOld && b.isOld) {
+              const timeA = parseMonthYear(a.monthYear);
+              const timeB = parseMonthYear(b.monthYear);
+              if (timeA !== timeB) {
+                return timeB - timeA; // Descending order: latest first (e.g. December 2023 before June 2019)
+              }
+              return (a.title || '').localeCompare(b.title || '');
+            }
+            if (a.isOld) return 1;
+            if (b.isOld) return -1;
+
             const getTime = (art: any): number => {
               const raw = art.publishedAt || art.date;
               if (!raw) return 0;
@@ -96,12 +107,20 @@ const ReaderDashboard = () => {
     { label: 'Recent Reads', value: isSubscribed ? '0' : '0', icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
 
-  const filteredArticles = articles.filter(art => 
-    art.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    art.author?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    art.tag?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    art.id?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredArticles = articles.filter(art => {
+    const queryStr = searchQuery.trim().toLowerCase();
+    const kwStr = typeof art.keywords === 'string'
+      ? art.keywords
+      : Array.isArray(art.keywords)
+        ? art.keywords.join(', ')
+        : '';
+    return (art.title || '').toLowerCase().includes(queryStr) ||
+           (art.author || '').toLowerCase().includes(queryStr) ||
+           (art.authors || []).some((au: any) => (au.name || '').toLowerCase().includes(queryStr)) ||
+           kwStr.toLowerCase().includes(queryStr) ||
+           (art.tag || '').toLowerCase().includes(queryStr) ||
+           (art.id || '').toLowerCase().includes(queryStr);
+  });
 
   if (loading) {
     return (
@@ -268,7 +287,6 @@ const ReaderDashboard = () => {
                             {art.authors && art.authors.length > 0 ? art.authors.map((au: any) => au.name).join(', ') : art.author}
                           </span>
                         </div>
-                        <span className="text-[10px] font-bold text-zinc-400 shrink-0 ml-2">{art.date}</span>
                       </div>
                       <button className="w-full py-3 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10">
                         VIEW ARTICLE <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
