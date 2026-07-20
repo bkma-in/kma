@@ -127,32 +127,6 @@ function App() {
     if (path.startsWith('/dev')) {
       return <DeveloperLayout isLoadingSkeleton={true} />;
     }
-    const isPublicRoute = (p: string): boolean => {
-      const protectedPrefixes = ['/admin', '/author', '/reviewer', '/reader', '/dev'];
-      const authPaths = ['/auth', '/login', '/signin', '/register'];
-      if (protectedPrefixes.some(prefix => p.startsWith(prefix))) return false;
-      if (authPaths.some(ap => p.startsWith(ap))) return false;
-      return true;
-    };
-
-    if (!isPublicRoute(path)) {
-      if (path.startsWith('/admin')) {
-        return <AdminLayout isLoadingSkeleton={true} />;
-      }
-      if (path.startsWith('/author')) {
-        return <AuthorLayout isLoadingSkeleton={true} />;
-      }
-      if (path.startsWith('/reviewer')) {
-        return <ReviewerLayout isLoadingSkeleton={true} />;
-      }
-      if (path.startsWith('/reader')) {
-        return <ReaderLayout isLoadingSkeleton={true} />;
-      }
-      if (path.startsWith('/dev')) {
-        return <DeveloperLayout isLoadingSkeleton={true} />;
-      }
-      return lazyRoute(Auth);
-    }
   }
 
   if (roleError) {
