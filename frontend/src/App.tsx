@@ -126,6 +126,7 @@ function App() {
     }
     if (path.startsWith('/dev')) {
       return <DeveloperLayout isLoadingSkeleton={true} />;
+    }
     const isPublicRoute = (p: string): boolean => {
       const protectedPrefixes = ['/admin', '/author', '/reviewer', '/reader', '/dev'];
       const authPaths = ['/auth', '/login', '/signin', '/register'];

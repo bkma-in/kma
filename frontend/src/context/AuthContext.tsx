@@ -86,24 +86,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setRoleError(null); // Reset role error at start of attempt
 
-    setRoleError(null);
-
-    const cachedRole = localStorage.getItem(ROLE_CACHE_KEY) as Role | null;
-    const cachedName = localStorage.getItem(NAME_CACHE_KEY);
-    const hasCache = cachedRole && VALID_ROLES.includes(cachedRole);
-
-    if (hasCache && !isTokenRefresh) {
-      console.log(`[AUTH-DIAGNOSTIC] Cache First: Immediate render shell with role "${cachedRole}"`);
-      setCurrentUser({
-        ...user,
-        role: cachedRole,
-        name: cachedName || user.displayName || user.email?.split('@')[0] || 'User'
-      } as any);
-      setRoleLoading(false);
-    } else {
-      setRoleLoading(true);
-    }
-
 
     try {
       console.log(`[AUTH-DIAGNOSTIC] Verifying role from backend for UID: ${user.uid}...`);
