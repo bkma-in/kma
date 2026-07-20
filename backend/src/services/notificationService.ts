@@ -467,10 +467,8 @@ export const sendReviewerAssignedNotifications = async (articleId: string, revie
         let bodyText = `You have been assigned as a peer reviewer for a recently submitted article in the Bulletin of Kerala Mathematical Association. Your expertise is highly valuable to us in maintaining the scholarly quality of our publications.`;
         
         if (article.reviewDeadline) {
-          bodyText += `<br /><br /><div style="background-color: #fafafa; border-left: 4px solid #3b82f6; padding: 12px; margin: 16px 0; border-radius: 4px; font-size: 13px; color: #1e3a8a;"><strong>Workflow Notice:</strong> This deadline is intended for workflow management. You may still submit your review after the deadline if necessary.</div>`;
-          
           if (article.reviewerNote) {
-            bodyText += `<br /><strong>Note from Editor:</strong><br />"${article.reviewerNote}"`;
+            bodyText += `<br /><br /><strong>Note from Editor:</strong><br />"${article.reviewerNote}"`;
           }
         }
 
@@ -807,8 +805,6 @@ export const checkAndSendReviewReminders = async () => {
           let noticeText = reminderMessage;
           if (diffDays < 0) {
             noticeText += `<br /><br /><div style="background-color: #fafafa; border-left: 4px solid #ef4444; padding: 12px; margin: 16px 0; border-radius: 4px; font-size: 13px; color: #991b1b;"><strong>Status Update:</strong> The recommended review timeline has passed. You may still complete and submit your review.</div>`;
-          } else {
-            noticeText += `<br /><br /><div style="background-color: #fafafa; border-left: 4px solid #3b82f6; padding: 12px; margin: 16px 0; border-radius: 4px; font-size: 13px; color: #1e3a8a;"><strong>Workflow Notice:</strong> This deadline is intended for workflow management. You may still submit your review after the deadline if necessary.</div>`;
           }
 
           const emailHtml = buildHtmlEmail(
