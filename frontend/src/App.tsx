@@ -1,58 +1,82 @@
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
+import type { ComponentType } from 'react';
 import { useAuth } from './context/AuthContext';
 import { getDashboardByRole } from './utils/auth';
 import { Loader2, AlertTriangle, RefreshCw, Home } from 'lucide-react';
-import Auth from './pages/Auth';
-import LandingPage from './pages/LandingPage';
 import ToastContainer from './components/notifications/ToastContainer';
 import ConfirmModal from './components/notifications/ConfirmModal';
 import AuthorLayout from './layouts/AuthorLayout';
-import Dashboard from './pages/author/Dashboard';
-import MyArticles from './pages/author/MyArticles';
-import SubmitArticle from './pages/author/SubmitArticle';
-import Notifications from './pages/author/Notifications';
-import Drafts from './pages/author/Drafts';
-import AuthorRevisionRequired from './pages/author/AuthorRevisionRequired';
 import AdminLayout from './layouts/AdminLayout';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminAuthors from './pages/admin/AdminAuthors';
-import AdminAuthorsList from './pages/admin/AdminAuthorsList';
-import AdminArticles from './pages/admin/AdminArticles';
-import AdminReadyToPublish from './pages/admin/AdminReadyToPublish';
-import AdminReadersList from './pages/admin/AdminReadersList';
-import AdminIngestArchive from './pages/admin/AdminIngestArchive';
-import ArchiveManagement from './pages/admin/ArchiveManagement';
-import ArchiveReview from './pages/admin/ArchiveReview';
 import ReviewerLayout from './layouts/ReviewerLayout';
-import ReviewerDashboard from './pages/reviewer/ReviewerDashboard';
-import ReviewerArticles from './pages/reviewer/ReviewerArticles';
-import ReviewerNotifications from './pages/reviewer/ReviewerNotifications';
 import DeveloperLayout from './layouts/DeveloperLayout';
-import DeveloperDashboard from './pages/developer/DeveloperDashboard';
-import DeveloperIssues from './pages/developer/DeveloperIssues';
-import DeveloperNotifications from './pages/developer/DeveloperNotifications';
-import AcceptInvitation from './pages/AcceptInvitation';
 import ProtectedRoute from './components/ProtectedRoute';
 import SessionOverlay from './components/SessionOverlay';
-import AboutUs from './pages/AboutUs';
-import RefundPolicy from './pages/RefundPolicy';
-import TermsAndConditions from './pages/TermsAndConditions';
-import PricingPage from './pages/PricingPage';
-import ServiceDescription from './pages/ServiceDescription';
-
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import Copyright from './pages/Copyright';
-import ContactUs from './pages/ContactUs';
 
 // Reader Portal Imports
 import ReaderLayout from './layouts/ReaderLayout';
-import ReaderDashboard from './pages/reader/ReaderDashboard';
-import ReaderProfile from './pages/reader/ReaderProfile';
-import ReaderPayments from './pages/reader/ReaderPayments';
-import ReaderNotifications from './pages/reader/ReaderNotifications';
-import ReaderSavedArticles from './pages/reader/ReaderSavedArticles';
-import GetSubscription from './pages/reader/GetSubscription';
+
+// Lazy-loaded pages
+const Auth = lazy(() => import('./pages/Auth'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
+const AboutUs = lazy(() => import('./pages/AboutUs'));
+const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
+const TermsAndConditions = lazy(() => import('./pages/TermsAndConditions'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
+const ServiceDescription = lazy(() => import('./pages/ServiceDescription'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const Copyright = lazy(() => import('./pages/Copyright'));
+const ContactUs = lazy(() => import('./pages/ContactUs'));
+
+// Author pages
+const Dashboard = lazy(() => import('./pages/author/Dashboard'));
+const MyArticles = lazy(() => import('./pages/author/MyArticles'));
+const SubmitArticle = lazy(() => import('./pages/author/SubmitArticle'));
+const Notifications = lazy(() => import('./pages/author/Notifications'));
+const Drafts = lazy(() => import('./pages/author/Drafts'));
+const AuthorRevisionRequired = lazy(() => import('./pages/author/AuthorRevisionRequired'));
+
+// Admin pages
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminAuthors = lazy(() => import('./pages/admin/AdminAuthors'));
+const AdminAuthorsList = lazy(() => import('./pages/admin/AdminAuthorsList'));
+const AdminArticles = lazy(() => import('./pages/admin/AdminArticles'));
+const AdminReadyToPublish = lazy(() => import('./pages/admin/AdminReadyToPublish'));
+const AdminReadersList = lazy(() => import('./pages/admin/AdminReadersList'));
+const ArchiveManagement = lazy(() => import('./pages/admin/ArchiveManagement'));
+const ArchiveReview = lazy(() => import('./pages/admin/ArchiveReview'));
+
+// Reviewer pages
+const ReviewerDashboard = lazy(() => import('./pages/reviewer/ReviewerDashboard'));
+const ReviewerArticles = lazy(() => import('./pages/reviewer/ReviewerArticles'));
+const ReviewerNotifications = lazy(() => import('./pages/reviewer/ReviewerNotifications'));
+
+// Reader pages
+const ReaderDashboard = lazy(() => import('./pages/reader/ReaderDashboard'));
+const ReaderProfile = lazy(() => import('./pages/reader/ReaderProfile'));
+const ReaderPayments = lazy(() => import('./pages/reader/ReaderPayments'));
+const ReaderNotifications = lazy(() => import('./pages/reader/ReaderNotifications'));
+const ReaderSavedArticles = lazy(() => import('./pages/reader/ReaderSavedArticles'));
+const GetSubscription = lazy(() => import('./pages/reader/GetSubscription'));
+
+// Developer pages
+const DeveloperDashboard = lazy(() => import('./pages/developer/DeveloperDashboard'));
+const DeveloperIssues = lazy(() => import('./pages/developer/DeveloperIssues'));
+const DeveloperNotifications = lazy(() => import('./pages/developer/DeveloperNotifications'));
+
+// Dynamic route boundary spinner wrapper
+const lazyRoute = (Component: ComponentType<any>) => (
+  <Suspense
+    fallback={
+      <div className="flex min-h-[400px] w-full items-center justify-center p-8 bg-transparent">
+        <Loader2 className="animate-spin text-black" size={32} />
+      </div>
+    }
+  >
+    <Component />
+  </Suspense>
+);
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -97,7 +121,7 @@ function App() {
       if (path.startsWith('/dev')) {
         return <DeveloperLayout isLoadingSkeleton={true} />;
       }
-      return <Auth />;
+      return lazyRoute(Auth);
     }
   }
 
@@ -152,27 +176,27 @@ function App() {
       <ToastContainer />
       <ConfirmModal />
       <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/about-us" element={<AboutUs />} />
-          <Route path="/refund-policy" element={<RefundPolicy />} />
+          <Route path="/" element={lazyRoute(LandingPage)} />
+          <Route path="/about-us" element={lazyRoute(AboutUs)} />
+          <Route path="/refund-policy" element={lazyRoute(RefundPolicy)} />
           <Route path="/refund-cancellation-policy" element={<Navigate to="/refund-policy" replace />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/privacy-policy" element={lazyRoute(PrivacyPolicy)} />
           <Route path="/privacy policy" element={<Navigate to="/privacy-policy" replace />} />
-          <Route path="/copyright" element={<Copyright />} />
+          <Route path="/copyright" element={lazyRoute(Copyright)} />
           <Route path="/copyright-policy" element={<Navigate to="/copyright" replace />} />
           <Route path="/copyright policy" element={<Navigate to="/copyright" replace />} />
-          <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+          <Route path="/terms-and-conditions" element={lazyRoute(TermsAndConditions)} />
           <Route path="/terms" element={<Navigate to="/terms-and-conditions" replace />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/service-description" element={<ServiceDescription />} />
-          <Route path="/contact-us" element={<ContactUs />} />
+          <Route path="/pricing" element={lazyRoute(PricingPage)} />
+          <Route path="/service-description" element={lazyRoute(ServiceDescription)} />
+          <Route path="/contact-us" element={lazyRoute(ContactUs)} />
           <Route path="/contact" element={<Navigate to="/contact-us" replace />} />
           <Route path="/contact us" element={<Navigate to="/contact-us" replace />} />
-          <Route path="/auth" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Auth />} />
+          <Route path="/auth" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : lazyRoute(Auth)} />
           <Route path="/login" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
           <Route path="/signin" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
           <Route path="/register" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=register" replace />} />
-          <Route path="/invitation/accept/:token" element={<AcceptInvitation />} />
+          <Route path="/invitation/accept/:token" element={lazyRoute(AcceptInvitation)} />
           
           {/* Author Portal Routes */}
           <Route path="/author/*" element={
@@ -222,12 +246,12 @@ function AuthorRoutes() {
     <Routes>
       <Route element={<AuthorLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="articles" element={<MyArticles />} />
-        <Route path="submit" element={<SubmitArticle />} />
-        <Route path="drafts" element={<Drafts />} />
-        <Route path="revision-required" element={<AuthorRevisionRequired />} />
-        <Route path="notifications" element={<Notifications />} />
+        <Route path="dashboard" element={lazyRoute(Dashboard)} />
+        <Route path="articles" element={lazyRoute(MyArticles)} />
+        <Route path="submit" element={lazyRoute(SubmitArticle)} />
+        <Route path="drafts" element={lazyRoute(Drafts)} />
+        <Route path="revision-required" element={lazyRoute(AuthorRevisionRequired)} />
+        <Route path="notifications" element={lazyRoute(Notifications)} />
       </Route>
     </Routes>
   );
@@ -238,16 +262,16 @@ function AdminRoutes() {
     <Routes>
       <Route element={<AdminLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="reviewers" element={<AdminAuthors />} />
-        <Route path="authors-list" element={<AdminAuthorsList />} />
-        <Route path="readers" element={<AdminReadersList />} />
-        <Route path="articles" element={<AdminArticles />} />
-        <Route path="ready-to-publish" element={<AdminReadyToPublish />} />
+        <Route path="dashboard" element={lazyRoute(AdminDashboard)} />
+        <Route path="reviewers" element={lazyRoute(AdminAuthors)} />
+        <Route path="authors-list" element={lazyRoute(AdminAuthorsList)} />
+        <Route path="readers" element={lazyRoute(AdminReadersList)} />
+        <Route path="articles" element={lazyRoute(AdminArticles)} />
+        <Route path="ready-to-publish" element={lazyRoute(AdminReadyToPublish)} />
         <Route path="ingest-archive" element={<Navigate to="../archive-management" replace />} />
-        <Route path="archive-management" element={<ArchiveManagement />} />
-        <Route path="archive-review/:jobId" element={<ArchiveReview />} />
-        <Route path="notifications" element={<Notifications />} />
+        <Route path="archive-management" element={lazyRoute(ArchiveManagement)} />
+        <Route path="archive-review/:jobId" element={lazyRoute(ArchiveReview)} />
+        <Route path="notifications" element={lazyRoute(Notifications)} />
       </Route>
     </Routes>
   );
@@ -258,9 +282,9 @@ function ReviewerRoutes() {
     <Routes>
       <Route element={<ReviewerLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<ReviewerDashboard />} />
-        <Route path="articles" element={<ReviewerArticles />} />
-        <Route path="notifications" element={<ReviewerNotifications />} />
+        <Route path="dashboard" element={lazyRoute(ReviewerDashboard)} />
+        <Route path="articles" element={lazyRoute(ReviewerArticles)} />
+        <Route path="notifications" element={lazyRoute(ReviewerNotifications)} />
       </Route>
     </Routes>
   );
@@ -271,12 +295,12 @@ function ReaderRoutes() {
     <Routes>
       <Route element={<ReaderLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
-        <Route path="dashboard" element={<ReaderDashboard />} />
-        <Route path="payments" element={<ReaderPayments />} />
-        <Route path="notifications" element={<ReaderNotifications />} />
-        <Route path="saved" element={<ReaderSavedArticles />} />
-        <Route path="profile" element={<ReaderProfile />} />
-        <Route path="get-subscription" element={<GetSubscription />} />
+        <Route path="dashboard" element={lazyRoute(ReaderDashboard)} />
+        <Route path="payments" element={lazyRoute(ReaderPayments)} />
+        <Route path="notifications" element={lazyRoute(ReaderNotifications)} />
+        <Route path="saved" element={lazyRoute(ReaderSavedArticles)} />
+        <Route path="profile" element={lazyRoute(ReaderProfile)} />
+        <Route path="get-subscription" element={lazyRoute(GetSubscription)} />
       </Route>
     </Routes>
   );
@@ -287,12 +311,13 @@ function DeveloperRoutes() {
     <Routes>
       <Route index element={<Navigate to="dashboard" replace />} />
       <Route element={<DeveloperLayout />}>
-        <Route path="dashboard" element={<DeveloperDashboard />} />
-        <Route path="issues" element={<DeveloperIssues />} />
-        <Route path="notifications" element={<DeveloperNotifications />} />
+        <Route path="dashboard" element={lazyRoute(DeveloperDashboard)} />
+        <Route path="issues" element={lazyRoute(DeveloperIssues)} />
+        <Route path="notifications" element={lazyRoute(DeveloperNotifications)} />
       </Route>
     </Routes>
   );
 }
 
 export default App;
+
