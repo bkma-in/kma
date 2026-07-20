@@ -117,15 +117,24 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       
       const poll = async () => {
         try {
-          const snapshot = await getDocs(q);
-          processSnapshot(snapshot);
+          const response = await api.get('/notifications?limit=50');
+          if (response.data && response.data.success) {
+            const clearedAt = parseInt(localStorage.getItem(`notifications_cleared_at_${currentUser.uid}`) || '0');
+            const notifs = response.data.notifications || [];
+            const count = notifs.filter((n: any) => {
+              if (n.read) return false;
+              const time = getTimestamp(n.createdAt);
+              return time > clearedAt;
+            }).length;
+            setUnreadCount(count);
+          }
         } catch (err) {
           console.error('[NotificationContext] Polling fallback error:', err);
         }
       };
 
       poll();
-      pollingRef.current = setInterval(poll, 2500); // Poll every 2.5 seconds
+      pollingRef.current = setInterval(poll, 30000); // Poll every 30 seconds
     };
 
     try {
@@ -137,12 +146,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
         processSnapshot(snapshot);
       }, (error) => {
-        console.warn('[NotificationContext] real-time listener error, falling back to polling:', error);
+        console.warn('[NotificationContext] real-time listener error, falling back to backend polling:', error);
         startPolling();
       });
       unsubscribeRef.current = unsubscribe;
     } catch (err) {
-      console.warn('[NotificationContext] Failed to start real-time listener, falling back to polling:', err);
+      console.warn('[NotificationContext] Failed to start real-time listener, falling back to backend polling:', err);
       startPolling();
     }
 
