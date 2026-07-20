@@ -159,35 +159,35 @@ const AboutUs: React.FC = () => {
             <div className="mb-10">
               <h3 className="text-xl font-bold text-zinc-800 mb-6 pb-2 border-b border-zinc-100">Core Editorial Team</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div>
-                  <h4 className="text-lg font-bold text-black mb-1">Advisory Editor</h4>
+                <div className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50">
+                  <h4 className="text-sm font-black uppercase tracking-wider text-zinc-400 mb-2">Advisory Editor</h4>
                   <p className="text-base text-zinc-800 font-semibold mb-2">Thrivikraman T.</p>
                   <div className="text-sm text-zinc-600 space-y-1">
                     <p>Thekkedathu Mana,</p>
                     <p>Perole-Palakkattu Link Road,</p>
                     <p>Nileshwar 671314, Kasaragod District, Kerala, India</p>
-                    <p className="text-black font-semibold">thekkedathumana@gmail.com</p>
+                    <p className="text-black font-semibold pt-1">thekkedathumana@gmail.com</p>
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="text-lg font-bold text-black mb-1">Chief Editor</h4>
+                <div className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50">
+                  <h4 className="text-sm font-black uppercase tracking-wider text-zinc-400 mb-2">Chief Editor</h4>
                   <p className="text-base text-zinc-800 font-semibold mb-2">Krishnamoorthy A.</p>
                   <div className="text-sm text-zinc-600 space-y-1">
                     <p>Department of Mathematics,</p>
                     <p>Cochin University of Science &amp; Technology,</p>
                     <p>Cochin - 682 022, Kerala, India</p>
-                    <p className="text-black font-semibold">akc@cusat.ac.in, akcusat@yahoo.com</p>
+                    <p className="text-black font-semibold pt-1">akc@cusat.ac.in, akcusat@yahoo.com</p>
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="text-lg font-bold text-black mb-1">Executive Editor</h4>
+                <div className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50">
+                  <h4 className="text-sm font-black uppercase tracking-wider text-zinc-400 mb-2">Executive Editor</h4>
                   <p className="text-base text-zinc-800 font-semibold mb-2">Samuel M.S.</p>
                   <div className="text-sm text-zinc-600 space-y-1">
                     <p>Mattathil, 15/64, Powath Road, Muttambalm,</p>
                     <p>Kottayam - 686 004, Kerala, India</p>
-                    <p className="text-black font-semibold">ktmsamuelms@gmail.com</p>
+                    <p className="text-black font-semibold pt-1">ktmsamuelms@gmail.com</p>
                   </div>
                 </div>
               </div>
@@ -197,23 +197,23 @@ const AboutUs: React.FC = () => {
             <div className="mb-10">
               <h3 className="text-xl font-bold text-zinc-800 mb-6 pb-2 border-b border-zinc-100">Academic Editors</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div>
+                <div className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50">
                   <p className="text-base text-zinc-800 font-semibold mb-2">Manigalambalam N.R.</p>
                   <div className="text-sm text-zinc-600 space-y-1">
                     <p>Department of Mathematics,</p>
                     <p>St. Joseph's College, Irinjalakuda - 680 121,</p>
                     <p>Kerala, India</p>
-                    <p className="text-black font-semibold">thottuvai@sancharnet.in</p>
+                    <p className="text-black font-semibold pt-1">thottuvai@sancharnet.in</p>
                   </div>
                 </div>
 
-                <div>
+                <div className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50">
                   <p className="text-base text-zinc-800 font-semibold mb-2">Vinod Kumar P.B.</p>
                   <div className="text-sm text-zinc-600 space-y-1">
                     <p>Department of Mathematics,</p>
                     <p>Rajagiri School of Engineering &amp; Technology,</p>
                     <p>Rajagiri Valley, Kakkanad, Cochin - 682 039</p>
-                    <p className="text-black font-semibold">vinod_kumar@rajagiritech.ac.in</p>
+                    <p className="text-black font-semibold pt-1">vinod_kumar@rajagiritech.ac.in</p>
                   </div>
                 </div>
 
