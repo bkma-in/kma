@@ -73,35 +73,32 @@ function App() {
 
   if (loading || roleLoading) {
     const path = window.location.pathname;
-    if (path.startsWith('/admin')) {
-      return <AdminLayout isLoadingSkeleton={true} />;
-    }
-    if (path.startsWith('/author')) {
-      return <AuthorLayout isLoadingSkeleton={true} />;
-    }
-    if (path.startsWith('/reviewer')) {
-      return <ReviewerLayout isLoadingSkeleton={true} />;
-    }
-    if (path.startsWith('/reader')) {
-      return <ReaderLayout isLoadingSkeleton={true} />;
-    }
-    if (path.startsWith('/dev')) {
-      return <DeveloperLayout isLoadingSkeleton={true} />;
-    }
-    if (path.startsWith('/auth') || path.startsWith('/login') || path.startsWith('/signin') || path.startsWith('/register')) {
+    const isPublicRoute = (p: string): boolean => {
+      const protectedPrefixes = ['/admin', '/author', '/reviewer', '/reader', '/dev'];
+      const authPaths = ['/auth', '/login', '/signin', '/register'];
+      if (protectedPrefixes.some(prefix => p.startsWith(prefix))) return false;
+      if (authPaths.some(ap => p.startsWith(ap))) return false;
+      return true;
+    };
+
+    if (!isPublicRoute(path)) {
+      if (path.startsWith('/admin')) {
+        return <AdminLayout isLoadingSkeleton={true} />;
+      }
+      if (path.startsWith('/author')) {
+        return <AuthorLayout isLoadingSkeleton={true} />;
+      }
+      if (path.startsWith('/reviewer')) {
+        return <ReviewerLayout isLoadingSkeleton={true} />;
+      }
+      if (path.startsWith('/reader')) {
+        return <ReaderLayout isLoadingSkeleton={true} />;
+      }
+      if (path.startsWith('/dev')) {
+        return <DeveloperLayout isLoadingSkeleton={true} />;
+      }
       return <Auth />;
     }
-
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-zinc-300" size={48} />
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
-            {loading ? 'Initializing BKMA Portal' : 'Verifying Access'}
-          </p>
-        </div>
-      </div>
-    );
   }
 
   if (roleError) {
