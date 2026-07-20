@@ -22,16 +22,11 @@ const GlobalFooter = ({ showSocials = false, showTaglines = true }: GlobalFooter
               <Mail size={11} className="shrink-0 group-hover:scale-110 transition-transform" />
               keralamathsasso@gmail.com
             </a>
-            {/* Map */}
-            <a
-              href="https://maps.google.com/?q=Kerala+Mathematical+Association+Kerala+India"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-white transition-colors group"
-            >
-              <MapPin size={11} className="shrink-0 group-hover:scale-110 transition-transform" />
-              Kerala, India — View on Map
-            </a>
+            {/* Location */}
+            <span className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+              <MapPin size={11} className="shrink-0" />
+              Kerala, India
+            </span>
 
             {/* Taglines (optional) */}
             {showTaglines && (
