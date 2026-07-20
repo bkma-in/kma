@@ -55,11 +55,11 @@ import ReaderSavedArticles from './pages/reader/ReaderSavedArticles';
 import GetSubscription from './pages/reader/GetSubscription';
 
 function ScrollToTop() {
-  const { pathname } = useLocation();
+  const { pathname, key } = useLocation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [pathname]);
+  }, [pathname, key]);
 
   return null;
 }

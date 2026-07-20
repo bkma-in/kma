@@ -1,13 +1,12 @@
+// --- Types & Imports ---
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import logo from '../assets/logo.png';
 import GlobalFooter from './GlobalFooter';
-import EditorialBoardModal from './EditorialBoardModal';
 import PricingModal from './PricingModal';
 
 const PublicFooter: React.FC = () => {
-  const [isEditorialBoardOpen, setIsEditorialBoardOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
 
   return (
@@ -64,7 +63,7 @@ const PublicFooter: React.FC = () => {
                 <ul className="space-y-2">
                   <li><Link to="/pricing" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Pricing</Link></li>
                   <li><Link to="/service-description" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Service Description</Link></li>
-                  <li><button onClick={() => setIsEditorialBoardOpen(true)} className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Editorial Board</button></li>
+                  <li><Link to="/about-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Editorial Board</Link></li>
                   <li><Link to="/terms" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Terms & Conditions</Link></li>
                 </ul>
               </div>
@@ -148,15 +147,12 @@ const PublicFooter: React.FC = () => {
                       <Link to="/service-description" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
                         {link}
                       </Link>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          if (link === 'Editorial Board') setIsEditorialBoardOpen(true);
-                        }}
-                        className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors"
-                      >
+                    ) : link === 'Editorial Board' ? (
+                      <Link to="/about-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">
                         {link}
-                      </button>
+                      </Link>
+                    ) : (
+                      <button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">{link}</button>
                     )}
                   </li>
                 ))}
@@ -188,10 +184,6 @@ const PublicFooter: React.FC = () => {
       </footer>
 
       {/* Shared Modals */}
-      <EditorialBoardModal
-        isOpen={isEditorialBoardOpen}
-        onClose={() => setIsEditorialBoardOpen(false)}
-      />
       <PricingModal
         isOpen={isPricingOpen}
         onClose={() => setIsPricingOpen(false)}
