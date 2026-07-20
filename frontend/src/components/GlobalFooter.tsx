@@ -4,9 +4,14 @@ import { Mail, MapPin } from 'lucide-react';
 interface GlobalFooterProps {
   showSocials?: boolean;
   showTaglines?: boolean;
+  showContactDetails?: boolean;
 }
 
-const GlobalFooter = ({ showSocials = false, showTaglines = true }: GlobalFooterProps) => {
+const GlobalFooter = ({ 
+  showSocials = false, 
+  showTaglines = true,
+  showContactDetails = false
+}: GlobalFooterProps) => {
   return (
     <footer className="w-full bg-black text-white py-5 md:py-8 px-4 sm:px-6 border-t border-white/5 mt-auto">
       <div className="max-w-7xl mx-auto w-full">
@@ -14,19 +19,23 @@ const GlobalFooter = ({ showSocials = false, showTaglines = true }: GlobalFooter
 
           {/* Left — Logo + Email + Map */}
           <div className="flex flex-col items-center md:items-start gap-2.5 text-center md:text-left">
-            {/* Email */}
-            <a
-              href="mailto:keralamathsasso@gmail.com"
-              className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-white transition-colors group"
-            >
-              <Mail size={11} className="shrink-0 group-hover:scale-110 transition-transform" />
-              keralamathsasso@gmail.com
-            </a>
-            {/* Location */}
-            <span className="flex items-center gap-1.5 text-[11px] text-zinc-400">
-              <MapPin size={11} className="shrink-0" />
-              Kerala, India
-            </span>
+            {showContactDetails && (
+              <>
+                {/* Email */}
+                <a
+                  href="mailto:keralamathsasso@gmail.com"
+                  className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-white transition-colors group"
+                >
+                  <Mail size={11} className="shrink-0 group-hover:scale-110 transition-transform" />
+                  keralamathsasso@gmail.com
+                </a>
+                {/* Location */}
+                <span className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                  <MapPin size={11} className="shrink-0" />
+                  Kerala, India
+                </span>
+              </>
+            )}
 
             {/* Taglines (optional) */}
             {showTaglines && (

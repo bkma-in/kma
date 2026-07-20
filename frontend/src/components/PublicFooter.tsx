@@ -179,7 +179,7 @@ const PublicFooter: React.FC = () => {
           </div>
 
           {/* Bottom Row: Global Footer Component */}
-          <GlobalFooter showSocials={false} showTaglines={false} />
+          <GlobalFooter showSocials={false} showTaglines={false} showContactDetails={true} />
         </div>
       </footer>
 
