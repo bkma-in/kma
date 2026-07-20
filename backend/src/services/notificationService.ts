@@ -430,8 +430,11 @@ export const sendReviewerAssignedNotifications = async (articleId: string, revie
     const title = article.title || 'Untitled Manuscript';
 
     const batch = db.batch();
-    for (const revId of reviewerIds) {
-      const revDoc = await db.collection('users').doc(revId).get();
+    const revDocs = await Promise.all(reviewerIds.map(revId => db.collection('users').doc(revId).get()));
+
+    for (let i = 0; i < reviewerIds.length; i++) {
+      const revId = reviewerIds[i];
+      const revDoc = revDocs[i];
       if (!revDoc.exists) continue;
       const reviewer = revDoc.data()!;
 
@@ -774,8 +777,11 @@ export const checkAndSendReviewReminders = async () => {
       const title = article.title || 'Untitled Manuscript';
       const batch = db.batch();
 
-      for (const revId of article.reviewerIds) {
-        const revDoc = await db.collection('users').doc(revId).get();
+      const revDocs = await Promise.all((article.reviewerIds || []).map((revId: string) => db.collection('users').doc(revId).get()));
+
+      for (let i = 0; i < (article.reviewerIds || []).length; i++) {
+        const revId = article.reviewerIds[i];
+        const revDoc = revDocs[i];
         if (!revDoc.exists) continue;
         const reviewer = revDoc.data()!;
 

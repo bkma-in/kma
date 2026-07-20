@@ -34,8 +34,8 @@ router.post('/verify', requireAuth, async (req: AuthRequest, res) => {
         await db.collection('users').doc(uid).update({ firstLoginLogged: true });
         await logAuditEvent('Reviewer First Login', uid);
       }
-    } else {
-      // Check other users
+    } else if (role === 'admin' || role === 'dev') {
+      // Check admin/dev password change status
       const userDoc = await db.collection('users').doc(uid).get();
       const userData = userDoc.exists ? userDoc.data() : null;
       mustChangePassword = userData?.mustChangePassword === true;

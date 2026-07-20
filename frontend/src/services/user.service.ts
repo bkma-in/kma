@@ -1,8 +1,29 @@
 import api from './api';
 
+let cachedProfilePromise: Promise<any> | null = null;
+let cachedProfileData: any = null;
+
 export const getProfile = async () => {
-  const response = await api.get('/users/profile');
-  return response.data;
+  if (cachedProfileData) {
+    return { success: true, profile: cachedProfileData };
+  }
+  if (!cachedProfilePromise) {
+    cachedProfilePromise = api.get('/users/profile').then(res => {
+      if (res.data && res.data.success) {
+        cachedProfileData = res.data.profile;
+      }
+      return res.data;
+    }).catch(err => {
+      cachedProfilePromise = null;
+      throw err;
+    });
+  }
+  return cachedProfilePromise;
+};
+
+export const clearProfileCache = () => {
+  cachedProfilePromise = null;
+  cachedProfileData = null;
 };
 
 export const updateProfile = async (formData: FormData) => {
@@ -11,6 +32,9 @@ export const updateProfile = async (formData: FormData) => {
       'Content-Type': 'multipart/form-data',
     },
   });
+  if (response.data && response.data.success) {
+    cachedProfileData = response.data.profile;
+  }
   return response.data;
 };
 

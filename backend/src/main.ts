@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import { config } from './config/env';
 import { runMigrations } from './services/migrationService';
 import { checkAndSendReviewReminders } from './services/notificationService';
@@ -29,6 +30,7 @@ import archiveRoutes from './routes/archiveRoutes';
 
 const app = express();
 
+app.use(compression());
 app.use(cors());
 
 // Use express.raw for webhooks to verify signatures
