@@ -123,12 +123,16 @@ router.post('/', requireAuth, requireRole(['author']), upload.fields([
     // Create invitations if any
     if (invitees.length > 0) {
       const invitationsBatch = db.batch();
-      for (const inviteeId of invitees) {
-        if (inviteeId === authorId) continue; // Prevent self-invite
+      const validInviteeIds = invitees.filter(id => id !== authorId);
+      
+      // Fetch all invitee details in parallel
+      const inviteeDocs = await Promise.all(
+        validInviteeIds.map(inviteeId => db.collection('users').doc(inviteeId).get())
+      );
 
-        // Fetch invitee details
-        const inviteeDoc = await db.collection('users').doc(inviteeId).get();
-        if (!inviteeDoc.exists) continue;
+      inviteeDocs.forEach((inviteeDoc, index) => {
+        if (!inviteeDoc.exists) return;
+        const inviteeId = validInviteeIds[index];
         const inviteeData = inviteeDoc.data()!;
 
         const inviteRef = articleRef.collection('invitations').doc();
@@ -173,7 +177,7 @@ router.post('/', requireAuth, requireRole(['author']), upload.fields([
           accepted: false,
           invitedAt: new Date()
         });
-      }
+      });
       await invitationsBatch.commit();
       
       // Update article with pending authors
@@ -217,7 +221,16 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       const snapshot = await db.collection('articles').where('status', '==', 'accepted').get();
       articles = snapshot.docs.map(doc => doc.data());
     } else if (role === 'admin') {
-      const snapshot = await db.collection('articles').get();
+      let q = db.collection('articles').orderBy('createdAt', 'desc');
+      const { limit: queryLimit, startAfter } = req.query;
+      const limitNum = parseInt(queryLimit as string) || 100;
+      if (startAfter) {
+        const startDoc = await db.collection('articles').doc(startAfter as string).get();
+        if (startDoc.exists) {
+          q = q.startAfter(startDoc);
+        }
+      }
+      const snapshot = await q.limit(limitNum).get();
       articles = snapshot.docs.map(doc => doc.data());
     }
 

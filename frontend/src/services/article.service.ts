@@ -25,14 +25,40 @@ export const submitArticle = async (formData: FormData) => {
   return response.data;
 };
 
+const pdfUrlCache: { [cacheKey: string]: { url: string; expiresAt: number } } = {};
+
 export const getPdfUrl = async (articleId: string, key?: string) => {
-  const url = key ? `/articles/${articleId}/pdf?key=${encodeURIComponent(key)}` : `/articles/${articleId}/pdf`;
-  const response = await api.get(url);
+  const urlPath = key ? `/articles/${articleId}/pdf?key=${encodeURIComponent(key)}` : `/articles/${articleId}/pdf`;
+  const cacheKey = `pdf_${articleId}_${key || 'default'}`;
+  const cached = pdfUrlCache[cacheKey];
+  if (cached && cached.expiresAt > Date.now()) {
+    return { success: true, pdfUrl: cached.url };
+  }
+
+  const response = await api.get(urlPath);
+  if (response.data && response.data.success && response.data.pdfUrl) {
+    pdfUrlCache[cacheKey] = {
+      url: response.data.pdfUrl,
+      expiresAt: Date.now() + 45 * 60 * 1000
+    };
+  }
   return response.data;
 };
 
 export const getPublicPdfUrl = async (articleId: string) => {
+  const cacheKey = `pdf_public_${articleId}`;
+  const cached = pdfUrlCache[cacheKey];
+  if (cached && cached.expiresAt > Date.now()) {
+    return { success: true, pdfUrl: cached.url };
+  }
+
   const response = await api.get(`/articles/${articleId}/pdf-public`);
+  if (response.data && response.data.success && response.data.pdfUrl) {
+    pdfUrlCache[cacheKey] = {
+      url: response.data.pdfUrl,
+      expiresAt: Date.now() + 45 * 60 * 1000
+    };
+  }
   return response.data;
 };
 
