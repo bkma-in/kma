@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, Mail, Users, Info } from 'lucide-react';
+import { Mail, MapPin } from 'lucide-react';
 
 interface GlobalFooterProps {
   showSocials?: boolean;
@@ -11,10 +11,26 @@ const GlobalFooter = ({ showSocials = false, showTaglines = true }: GlobalFooter
     <footer className="w-full bg-black text-white py-5 md:py-8 px-4 sm:px-6 border-t border-white/5 mt-auto">
       <div className="max-w-7xl mx-auto w-full">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-center gap-5 md:gap-8 lg:gap-6">
-          {/* Brand Tagline & Social Icons (Left) */}
-          <div className="flex flex-col items-center md:items-start gap-2 text-center md:text-left">
+
+          {/* Left — Logo + Email + Map */}
+          <div className="flex flex-col items-center md:items-start gap-2.5 text-center md:text-left">
+            {/* Email */}
+            <a
+              href="mailto:keralamathsasso@gmail.com"
+              className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-white transition-colors group"
+            >
+              <Mail size={11} className="shrink-0 group-hover:scale-110 transition-transform" />
+              keralamathsasso@gmail.com
+            </a>
+            {/* Location */}
+            <span className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+              <MapPin size={11} className="shrink-0" />
+              Kerala, India
+            </span>
+
+            {/* Taglines (optional) */}
             {showTaglines && (
-              <div className="text-xs sm:text-sm text-gray-400 font-medium tracking-wide leading-relaxed hover:text-zinc-200 transition-colors duration-300 space-y-1 w-full md:w-fit">
+              <div className="text-xs sm:text-sm text-gray-400 font-medium tracking-wide leading-relaxed hover:text-zinc-200 transition-colors duration-300 space-y-1 w-full md:w-fit mt-1">
                 <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
                   <span>• Connecting Researchers</span>
                   <span>• Publishing Knowledge</span>
@@ -22,25 +38,6 @@ const GlobalFooter = ({ showSocials = false, showTaglines = true }: GlobalFooter
                 <div className="flex items-center justify-center gap-2">
                   <span>• Building Innovation</span>
                 </div>
-              </div>
-            )}
-            {showSocials && (
-              <div className="flex justify-center md:justify-start gap-2 pt-1">
-                {[
-                  { Icon: Globe, url: "#", label: "Website" },
-                  { Icon: Mail, url: "#", label: "Email" },
-                  { Icon: Users, url: "#", label: "Team" },
-                  { Icon: Info, url: "#", label: "About" }
-                ].map((social, i) => (
-                  <a 
-                    key={i} 
-                    href={social.url}
-                    aria-label={social.label}
-                    className="w-7 h-7 rounded-full border border-white/10 flex items-center justify-center text-zinc-500 hover:text-white hover:border-white transition-all duration-300 bg-white/5 hover:bg-black group"
-                  >
-                    <social.Icon size={12} className="group-hover:scale-110 transition-transform" />
-                  </a>
-                ))}
               </div>
             )}
           </div>
@@ -60,7 +57,7 @@ const GlobalFooter = ({ showSocials = false, showTaglines = true }: GlobalFooter
             <h4 className="text-[10px] font-semibold tracking-wider uppercase text-zinc-500">
               Designed And Developed By
             </h4>
-            <a 
+            <a
               href="https://chetanbschool.org/"
               target="_blank"
               rel="noopener noreferrer"
@@ -69,18 +66,18 @@ const GlobalFooter = ({ showSocials = false, showTaglines = true }: GlobalFooter
               Chetan Business School <span className="text-zinc-500 font-normal">| Hubballi-580031</span>
             </a>
             <div className="flex items-center gap-2 text-[11px] tracking-wide text-zinc-400">
-              <a 
-                href="https://nandeeshmn.vercel.app/" 
-                target="_blank" 
+              <a
+                href="https://nandeeshmn.vercel.app/"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium hover:text-white transition-colors"
               >
                 Nandeesh MN
               </a>
               <span className="text-zinc-600 font-normal">•</span>
-              <a 
-                href="https://shivanandvn.vercel.app/" 
-                target="_blank" 
+              <a
+                href="https://shivanandvn.vercel.app/"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium hover:text-white transition-colors"
               >
@@ -88,6 +85,7 @@ const GlobalFooter = ({ showSocials = false, showTaglines = true }: GlobalFooter
               </a>
             </div>
           </div>
+
         </div>
       </div>
     </footer>
