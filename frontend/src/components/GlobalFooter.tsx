@@ -1,6 +1,5 @@
 import React from 'react';
 import { Mail, MapPin } from 'lucide-react';
-import logo from '../assets/logo.png';
 
 interface GlobalFooterProps {
   showSocials?: boolean;
@@ -15,12 +14,6 @@ const GlobalFooter = ({ showSocials = false, showTaglines = true }: GlobalFooter
 
           {/* Left — Logo + Email + Map */}
           <div className="flex flex-col items-center md:items-start gap-2.5 text-center md:text-left">
-            {/* Logo */}
-            <img
-              src={logo}
-              alt="BKMA Logo"
-              className="h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity"
-            />
             {/* Email */}
             <a
               href="mailto:keralamathsasso@gmail.com"
