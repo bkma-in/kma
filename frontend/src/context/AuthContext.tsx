@@ -64,6 +64,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ─── Fetch and set role (idempotent, never defaults to reader) ────
   const loadRole = useCallback(async (user: User, isTokenRefresh = false) => {
     console.log(`[AUTH-DIAGNOSTIC] loadRole invoked for UID: ${user.uid}, isTokenRefresh: ${isTokenRefresh}`);
+
+    
+    const cachedRole = localStorage.getItem(ROLE_CACHE_KEY) as Role | null;
+    const cachedName = localStorage.getItem(NAME_CACHE_KEY);
+    const hasCache = cachedRole && VALID_ROLES.includes(cachedRole) && cachedName;
+
+    if (hasCache) {
+      console.log(`[AUTH-DIAGNOSTIC] Optimistically setting currentUser from cache: "${cachedRole}" for UID: ${user.uid}`);
+      setCurrentUser(prev => {
+        if (prev && prev.uid === user.uid && prev.role === cachedRole && prev.name === cachedName) {
+          return prev;
+        }
+        return { ...user, role: cachedRole!, name: cachedName! };
+      });
+    }
+
+    // Only set roleLoading to true if there is no cache to display the full page layout loader/skeletons
+    if (!hasCache) {
+      setRoleLoading(true);
+    }
+    setRoleError(null); // Reset role error at start of attempt
+
     setRoleError(null);
 
     const cachedRole = localStorage.getItem(ROLE_CACHE_KEY) as Role | null;
@@ -81,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       setRoleLoading(true);
     }
+
 
     try {
       console.log(`[AUTH-DIAGNOSTIC] Verifying role from backend for UID: ${user.uid}...`);
