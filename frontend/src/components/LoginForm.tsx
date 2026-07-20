@@ -31,6 +31,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     setError('');
     setSuccess('');
@@ -43,13 +44,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
         localStorage.setItem('userName', response.user.name);
         localStorage.setItem('userEmail', response.user.email);
         localStorage.setItem('is_temp_password', response.user.mustChangePassword ? 'true' : 'false'); 
+        localStorage.setItem('__kma_cached_role', response.user.role);
+        localStorage.setItem('__kma_cached_name', response.user.name);
         
         console.log('[LoginForm] Login successful. Navigating to dashboard for role:', response.user.role);
         navigate(getDashboardByRole(response.user.role), { replace: true });
       }
     } catch (err: any) {
       setError(err.message || 'Invalid email or password');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -152,41 +154,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
 
   const passwordCheck = validatePassword(newPassword);
 
-  if (isAuthLoading) {
-    return (
-      <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 bg-white animate-pulse">
-        <div className="max-w-md mx-auto w-full space-y-6">
-          {/* Header */}
-          <div className="space-y-2 text-center md:text-left">
-            <div className="h-8 bg-zinc-200 rounded w-1/2 mx-auto md:mx-0" />
-            <div className="h-4 bg-zinc-200 rounded w-2/3 mx-auto md:mx-0" />
-          </div>
-
-          <div className="space-y-4">
-            {/* Input 1 */}
-            <div className="space-y-2">
-              <div className="h-4 bg-zinc-200 rounded w-12" />
-              <div className="h-11 bg-zinc-100 rounded-xl w-full" />
-            </div>
-
-            {/* Input 2 */}
-            <div className="space-y-2">
-              <div className="h-4 bg-zinc-200 rounded w-16" />
-              <div className="h-11 bg-zinc-100 rounded-xl w-full" />
-            </div>
-
-            {/* Button */}
-            <div className="h-12 bg-zinc-200 rounded-xl w-full" />
-
-            {/* Links */}
-            <div className="h-3 bg-zinc-200 rounded w-24 mx-auto" />
-            <div className="h-4 bg-zinc-200 rounded w-48 mx-auto" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 bg-white">
       <div className="max-w-md mx-auto w-full">
@@ -219,6 +186,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -236,6 +204,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
