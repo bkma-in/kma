@@ -90,22 +90,8 @@ function App() {
   const dashboardPath = currentUser ? getDashboardByRole(currentUser.role) : '';
   const hasValidDashboard = !!currentUser && !dashboardPath.startsWith('/auth');
 
-  // Firebase initial initialization check
-  if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-zinc-300" size={48} />
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
-            Initializing BKMA Portal
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Dashboard skeleton layout loading check (bypass for auth paths to avoid component unmounting/flicker)
-  if (roleLoading) {
+  // Initial auth & role verification skeleton loading check
+  if (loading || roleLoading) {
     const path = window.location.pathname;
     if (path.startsWith('/admin')) {
       return <AdminLayout isLoadingSkeleton={true} />;
@@ -122,6 +108,7 @@ function App() {
     if (path.startsWith('/dev')) {
       return <DeveloperLayout isLoadingSkeleton={true} />;
     }
+    return <PageSkeletonFallback />;
   }
 
   if (roleError) {
