@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud, ChevronDown, ChevronUp, UserCheck, BookOpen, User } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud, ChevronDown, ChevronUp, UserCheck, BookOpen, User, CheckCircle2 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
 import GlobalHeader from '../components/GlobalHeader';
@@ -157,6 +157,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
     },
     { name: 'Articles', path: '/admin/articles', icon: FileText },
     { name: 'Ready to Publish', path: '/admin/ready-to-publish', icon: UploadCloud },
+    { name: 'Published Articles', path: '/admin/published-articles', icon: CheckCircle2 },
     { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: formatBadgeCount(unreadCount) },
   ];
 

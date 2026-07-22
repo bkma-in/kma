@@ -44,6 +44,7 @@ const AdminAuthorsList = lazy(() => import('./pages/admin/AdminAuthorsList'));
 const AdminArticles = lazy(() => import('./pages/admin/AdminArticles'));
 const AdminReadyToPublish = lazy(() => import('./pages/admin/AdminReadyToPublish'));
 const AdminReadersList = lazy(() => import('./pages/admin/AdminReadersList'));
+const AdminPublishedArticles = lazy(() => import('./pages/admin/AdminPublishedArticles'));
 
 // Reviewer pages
 const ReviewerDashboard = lazy(() => import('./pages/reviewer/ReviewerDashboard'));
@@ -270,6 +271,7 @@ function AdminRoutes() {
         <Route path="readers" element={lazyRoute(AdminReadersList)} />
         <Route path="articles" element={lazyRoute(AdminArticles)} />
         <Route path="ready-to-publish" element={lazyRoute(AdminReadyToPublish)} />
+        <Route path="published-articles" element={lazyRoute(AdminPublishedArticles)} />
         <Route path="notifications" element={lazyRoute(Notifications)} />
       </Route>
     </Routes>
