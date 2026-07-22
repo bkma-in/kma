@@ -31,53 +31,7 @@ const DeveloperNotifications = () => {
   const { confirm, showToast } = useNotification();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'ALL' | 'UNREAD' | 'READ'>('ALL');
-  const [notifications, setNotifications] = useState<DevNotification[]>([
-    {
-      id: '1',
-      type: 'new_issue',
-      title: 'New Issue Reported',
-      subject: 'UI Bug — Article submission form crashes on Safari',
-      message: 'A new frontend bug has been submitted by an Author. Priority: High. Please assess and triage the report.',
-      timestamp: '12 min ago',
-      read: false,
-    },
-    {
-      id: '2',
-      type: 'alert',
-      title: 'Multiple Reports Detected',
-      subject: 'Notification bell badge not clearing on mobile',
-      message: 'This issue has been reported by 3 different users across different roles. Escalation recommended.',
-      timestamp: '1 hour ago',
-      read: false,
-    },
-    {
-      id: '3',
-      type: 'in_progress',
-      title: 'Issue Status Updated',
-      subject: 'PDF viewer not rendering on Reviewer portal',
-      message: 'Issue #IRQ-012 has been moved to In Progress by your team. ETA for resolution: 2 hours.',
-      timestamp: '3 hours ago',
-      read: false,
-    },
-    {
-      id: '4',
-      type: 'resolved',
-      title: 'Issue Resolved',
-      subject: 'Sidebar collapse animation broken on tablet',
-      message: 'Issue #IRQ-008 has been successfully resolved and deployed. Closing from the active queue.',
-      timestamp: 'Yesterday',
-      read: true,
-    },
-    {
-      id: '5',
-      type: 'system',
-      title: 'System Maintenance Window',
-      subject: 'BKMA Platform — Scheduled Downtime',
-      message: 'A maintenance window is scheduled for Saturday 02:00–04:00 IST. Backend services will be temporarily unavailable.',
-      timestamp: '2 days ago',
-      read: true,
-    },
-  ]);
+  const [notifications, setNotifications] = useState<DevNotification[]>([]);
 
   const markAsRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
