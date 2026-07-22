@@ -77,11 +77,11 @@ const lazyRoute = (Component: ComponentType<any>) => (
 );
 
 function ScrollToTop() {
-  const { pathname } = useLocation();
+  const { pathname, key } = useLocation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [pathname]);
+  }, [pathname, key]);
 
   return null;
 }
@@ -93,33 +93,37 @@ function App() {
   const dashboardPath = currentUser ? getDashboardByRole(currentUser.role) : '';
   const hasValidDashboard = !!currentUser && !dashboardPath.startsWith('/auth');
 
-  if (loading || roleLoading) {
-    const path = window.location.pathname;
-    const isPublicRoute = (p: string): boolean => {
-      const protectedPrefixes = ['/admin', '/author', '/reviewer', '/reader', '/dev'];
-      const authPaths = ['/auth', '/login', '/signin', '/register'];
-      if (protectedPrefixes.some(prefix => p.startsWith(prefix))) return false;
-      if (authPaths.some(ap => p.startsWith(ap))) return false;
-      return true;
-    };
+  // Firebase initial initialization check
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin text-zinc-300" size={48} />
+          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
+            Initializing BKMA Portal
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-    if (!isPublicRoute(path)) {
-      if (path.startsWith('/admin')) {
-        return <AdminLayout isLoadingSkeleton={true} />;
-      }
-      if (path.startsWith('/author')) {
-        return <AuthorLayout isLoadingSkeleton={true} />;
-      }
-      if (path.startsWith('/reviewer')) {
-        return <ReviewerLayout isLoadingSkeleton={true} />;
-      }
-      if (path.startsWith('/reader')) {
-        return <ReaderLayout isLoadingSkeleton={true} />;
-      }
-      if (path.startsWith('/dev')) {
-        return <DeveloperLayout isLoadingSkeleton={true} />;
-      }
-      return lazyRoute(Auth);
+  // Dashboard skeleton layout loading check (bypass for auth paths to avoid component unmounting/flicker)
+  if (roleLoading) {
+    const path = window.location.pathname;
+    if (path.startsWith('/admin')) {
+      return <AdminLayout isLoadingSkeleton={true} />;
+    }
+    if (path.startsWith('/author')) {
+      return <AuthorLayout isLoadingSkeleton={true} />;
+    }
+    if (path.startsWith('/reviewer')) {
+      return <ReviewerLayout isLoadingSkeleton={true} />;
+    }
+    if (path.startsWith('/reader')) {
+      return <ReaderLayout isLoadingSkeleton={true} />;
+    }
+    if (path.startsWith('/dev')) {
+      return <DeveloperLayout isLoadingSkeleton={true} />;
     }
   }
 
