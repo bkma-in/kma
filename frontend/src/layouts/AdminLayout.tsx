@@ -30,32 +30,65 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
 
   const renderSkeletonContent = () => {
     const path = location.pathname;
-    if (path.endsWith('/dashboard')) {
+    if (path.includes('/dashboard')) {
       return (
-        <div className="space-y-8">
+        <div className="space-y-8 max-w-7xl mx-auto">
           <div className="space-y-2">
-            <div className="h-8 bg-zinc-200 rounded w-1/4" />
-            <div className="h-4 bg-zinc-200 rounded w-1/3" />
+            <div className="h-8 skeleton-box rounded-xl w-64" />
+            <div className="h-4 skeleton-box rounded-lg w-96" />
           </div>
-          <SkeletonStatistics />
-          <div className="space-y-4">
-            <div className="h-6 bg-zinc-200 rounded w-1/6" />
-            <SkeletonArticleCard count={3} />
+          <SkeletonStatistics count={5} />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-4">
+            <div className="lg:col-span-2 space-y-4">
+              <div className="h-6 skeleton-box rounded-lg w-48 mb-4" />
+              <SkeletonArticleCard count={3} />
+            </div>
+            <div className="space-y-4">
+              <div className="h-6 skeleton-box rounded-lg w-36 mb-4" />
+              <div className="bg-white border border-zinc-100 rounded-3xl p-6 h-[320px] skeleton-box" />
+            </div>
           </div>
+        </div>
+      );
+    }
+    if (
+      path.includes('/published') || 
+      path.includes('/ready-to-publish') || 
+      path.includes('/articles')
+    ) {
+      return (
+        <div className="space-y-8 max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-2">
+              <div className="h-8 skeleton-box rounded-xl w-64" />
+              <div className="h-4 skeleton-box rounded-lg w-80" />
+            </div>
+            <div className="h-10 skeleton-box rounded-xl w-64" />
+          </div>
+          <SkeletonArticleCard count={6} />
         </div>
       );
     }
     if (path.includes('/notifications')) {
       return (
-        <div className="space-y-6">
-          <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
+        <div className="space-y-6 max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <div className="h-8 skeleton-box rounded-xl w-48" />
+            <div className="h-8 skeleton-box rounded-lg w-32" />
+          </div>
           <SkeletonNotification count={5} />
         </div>
       );
     }
     return (
-      <div className="space-y-6">
-        <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="space-y-2">
+            <div className="h-8 skeleton-box rounded-xl w-48" />
+            <div className="h-4 skeleton-box rounded-lg w-72" />
+          </div>
+          <div className="h-10 skeleton-box rounded-xl w-64" />
+        </div>
         <SkeletonTable />
       </div>
     );
