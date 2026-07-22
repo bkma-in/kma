@@ -157,7 +157,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
     },
     { name: 'Articles', path: '/admin/articles', icon: FileText },
     { name: 'Ready to Publish', path: '/admin/ready-to-publish', icon: UploadCloud },
-    { name: 'Archive Ingestion', path: '/admin/archive-management', icon: UploadCloud },
     { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: formatBadgeCount(unreadCount) },
   ];
 
