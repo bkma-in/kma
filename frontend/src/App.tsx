@@ -64,15 +64,11 @@ const DeveloperDashboard = lazy(() => import('./pages/developer/DeveloperDashboa
 const DeveloperIssues = lazy(() => import('./pages/developer/DeveloperIssues'));
 const DeveloperNotifications = lazy(() => import('./pages/developer/DeveloperNotifications'));
 
-// Dynamic route boundary spinner wrapper
+import PageSkeletonFallback from './components/skeletons/PageSkeletonFallback';
+
+// Dynamic route boundary skeleton wrapper
 const lazyRoute = (Component: ComponentType<any>) => (
-  <Suspense
-    fallback={
-      <div className="flex min-h-[400px] w-full items-center justify-center p-8 bg-transparent">
-        <Loader2 className="animate-spin text-black" size={32} />
-      </div>
-    }
-  >
+  <Suspense fallback={<PageSkeletonFallback />}>
     <Component />
   </Suspense>
 );
