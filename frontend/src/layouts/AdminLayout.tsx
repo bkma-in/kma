@@ -146,7 +146,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', end: true, icon: LayoutDashboard },
     {
-      name: 'User Directory',
+      name: 'Users',
       icon: Users,
       isDropdown: true,
       children: [

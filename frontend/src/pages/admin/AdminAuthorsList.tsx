@@ -189,7 +189,7 @@ const AdminAuthorsList = () => {
             <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
               <Users size={18} />
             </div>
-            <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase font-['Outfit']">User Directory</h2>
+            <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase font-['Outfit']">Users</h2>
           </div>
           <h1 className="text-4xl font-bold tracking-tighter text-black font-['Outfit']">Author Directory</h1>
           <p className="text-zinc-500 mt-2 text-sm max-w-xl leading-relaxed">Browse researchers, audit academic affiliations, and inspect active submitting contributors.</p>
