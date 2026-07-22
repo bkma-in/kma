@@ -24,7 +24,8 @@ import {
   Send,
   User,
   Calendar,
-  UserPlus
+  UserPlus,
+  Plus
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
@@ -573,10 +574,10 @@ const MyArticles = () => {
   };
 
   return (
-    <div className="animate-in fade-in duration-500 max-w-7xl mx-auto px-4">
+    <div className="animate-in fade-in duration-500 w-full">
       {/* Header section */}
       <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
+        <div className="pl-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white shadow-lg shadow-black/10">
               <FileText size={18} />
@@ -584,10 +585,21 @@ const MyArticles = () => {
             <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase font-['Outfit']">Archive Management</h2>
           </div>
           <h1 className="text-4xl font-bold tracking-tighter text-black font-['Outfit']">My Articles</h1>
-          <p className="text-zinc-500 mt-2 text-sm leading-relaxed max-w-xl">Track your submissions, respond to revisions, and manage your published research with real-time workflow status.</p>
+          <p className="text-zinc-500 mt-2 text-sm leading-relaxed max-w-xl">
+            Track your submissions, respond to revisions, and <br className="hidden sm:inline" />
+            manage your published research with real-time workflow status.
+          </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto md:mr-10">
+          <button 
+            onClick={() => navigate('/author/submit')}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-black outline-none transition-all shadow-sm w-full sm:w-auto text-center shrink-0 cursor-pointer"
+          >
+            <Plus size={14} />
+            <span>Submit New</span>
+          </button>
+
           <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
             <input 
@@ -595,7 +607,7 @@ const MyArticles = () => {
               placeholder="Search by title..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium w-full sm:w-64 focus:ring-2 focus:ring-black outline-none transition-all shadow-sm"
+              className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium w-full sm:w-48 focus:ring-2 focus:ring-black outline-none transition-all shadow-sm"
             />
           </div>
           <div className="relative flex-1 sm:flex-initial">
@@ -667,7 +679,7 @@ const MyArticles = () => {
           <p className="text-zinc-500 font-medium text-sm">Synchronizing with BKMA Archive...</p>
         </div>
       ) : filteredArticles.length > 0 ? (
-        <div className="space-y-5">
+        <div className="space-y-5 w-full">
           {filteredArticles.map((article) => {
             return (
               <div 
@@ -790,7 +802,7 @@ const MyArticles = () => {
           })}
         </div>
       ) : (
-        <div className="p-20 text-center flex flex-col items-center gap-4 bg-white rounded-3xl border border-zinc-200 shadow-sm">
+        <div className="p-20 text-center flex flex-col items-center gap-4 bg-white rounded-3xl border border-zinc-200 shadow-sm w-full">
           <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-300">
             <FileText size={32} />
           </div>
