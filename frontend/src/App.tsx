@@ -93,23 +93,33 @@ function App() {
   // Initial auth & role verification skeleton loading check
   if (loading || roleLoading) {
     const path = window.location.pathname;
-    const userRole = currentUser?.role || (localStorage.getItem('role') as any) || (localStorage.getItem('__kma_cached_role') as any);
 
-    if (path.startsWith('/admin') || userRole === 'admin') {
+    if (path.startsWith('/admin')) {
       return <AdminLayout isLoadingSkeleton={true} />;
     }
-    if (path.startsWith('/author') || userRole === 'author') {
+    if (path.startsWith('/author')) {
       return <AuthorLayout isLoadingSkeleton={true} />;
     }
-    if (path.startsWith('/reviewer') || userRole === 'reviewer') {
+    if (path.startsWith('/reviewer')) {
       return <ReviewerLayout isLoadingSkeleton={true} />;
     }
-    if (path.startsWith('/reader') || userRole === 'reader') {
+    if (path.startsWith('/reader')) {
       return <ReaderLayout isLoadingSkeleton={true} />;
     }
-    if (path.startsWith('/dev') || userRole === 'dev' || userRole === 'developer') {
+    if (path.startsWith('/dev')) {
       return <DeveloperLayout isLoadingSkeleton={true} />;
     }
+
+    // If on /auth during credential verification / role loading, show target role's dashboard skeleton if role is known
+    if (path === '/auth') {
+      const userRole = currentUser?.role || (localStorage.getItem('role') as any) || (localStorage.getItem('__kma_cached_role') as any);
+      if (userRole === 'admin') return <AdminLayout isLoadingSkeleton={true} />;
+      if (userRole === 'author') return <AuthorLayout isLoadingSkeleton={true} />;
+      if (userRole === 'reviewer') return <ReviewerLayout isLoadingSkeleton={true} />;
+      if (userRole === 'reader') return <ReaderLayout isLoadingSkeleton={true} />;
+      if (userRole === 'dev' || userRole === 'developer') return <DeveloperLayout isLoadingSkeleton={true} />;
+    }
+
     return <PageSkeletonFallback />;
   }
 

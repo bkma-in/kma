@@ -11,56 +11,36 @@ import {
   AuthorDashboardSkeleton, 
   ReviewerDashboardSkeleton, 
   ReaderDashboardSkeleton, 
-  DeveloperDashboardSkeleton,
-  ArticlesSkeleton,
-  NotificationsSkeleton
+  DeveloperDashboardSkeleton
 } from './PageSkeletons';
 
 export const PageSkeletonFallback: React.FC = () => {
   const path = window.location.pathname;
   const userRole = localStorage.getItem('role') || localStorage.getItem('__kma_cached_role');
 
-  // Role-based Layout Skeletons for portals & auth transitions
-  if (path.startsWith('/admin') || userRole === 'admin') {
+  // Role-based Layout Skeletons ONLY for portal routes or /auth login transitions
+  if (path.startsWith('/admin') || (path === '/auth' && userRole === 'admin')) {
     return <AdminLayout isLoadingSkeleton={true} />;
   }
 
-  if (path.startsWith('/author') || userRole === 'author') {
+  if (path.startsWith('/author') || (path === '/auth' && userRole === 'author')) {
     return <AuthorLayout isLoadingSkeleton={true} />;
   }
 
-  if (path.startsWith('/reviewer') || userRole === 'reviewer') {
+  if (path.startsWith('/reviewer') || (path === '/auth' && userRole === 'reviewer')) {
     return <ReviewerLayout isLoadingSkeleton={true} />;
   }
 
-  if (path.startsWith('/reader') || userRole === 'reader') {
+  if (path.startsWith('/reader') || (path === '/auth' && userRole === 'reader')) {
     return <ReaderLayout isLoadingSkeleton={true} />;
   }
 
-  if (path.startsWith('/dev') || userRole === 'dev' || userRole === 'developer') {
+  if (path.startsWith('/dev') || (path === '/auth' && (userRole === 'dev' || userRole === 'developer'))) {
     return <DeveloperLayout isLoadingSkeleton={true} />;
   }
 
-  // Check if it's a public marketing page route
-  const isPublicRoute = 
-    path === '/' || 
-    path === '/about-us' || 
-    path === '/pricing' || 
-    path === '/contact-us' || 
-    path === '/contact' ||
-    path === '/refund-policy' || 
-    path === '/privacy-policy' || 
-    path === '/terms-and-conditions' || 
-    path === '/copyright' || 
-    path === '/service-description';
-
-  if (isPublicRoute) {
-    return <LandingPageSkeleton />;
-  }
-
-  // Fallback for /auth or in-flight auth verification:
-  // Render AdminLayout skeleton instead of LandingPageSkeleton!
-  return <AdminLayout isLoadingSkeleton={true} />;
+  // For public routes (like '/' landing page, '/about-us', etc.), ALWAYS return LandingPageSkeleton
+  return <LandingPageSkeleton />;
 };
 
 export default PageSkeletonFallback;
