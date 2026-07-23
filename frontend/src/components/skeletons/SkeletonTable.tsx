@@ -7,13 +7,13 @@ interface SkeletonTableProps {
 
 export const SkeletonTable: React.FC<SkeletonTableProps> = ({ rowsCount = 5, colsCount = 6 }) => {
   return (
-    <div className="bg-white border border-zinc-100 rounded-3xl overflow-hidden shadow-sm animate-pulse">
+    <div className="bg-white border border-zinc-100 rounded-3xl overflow-hidden shadow-sm">
       {/* Table Header skeleton */}
       <div className="bg-zinc-50 border-b border-zinc-100 px-6 py-4 flex items-center justify-between gap-4">
         {Array.from({ length: colsCount }).map((_, idx) => (
           <div 
             key={idx} 
-            className={`h-4 bg-zinc-200 rounded ${
+            className={`h-4 skeleton-box rounded ${
               idx === 0 ? 'w-8' : idx === 1 ? 'w-1/3' : 'w-20'
             }`} 
           />
@@ -29,16 +29,16 @@ export const SkeletonTable: React.FC<SkeletonTableProps> = ({ rowsCount = 5, col
                 key={cIdx} 
                 className={`rounded ${
                   cIdx === 0 
-                    ? 'w-5 h-5 bg-zinc-200' // Checkbox
+                    ? 'w-5 h-5 skeleton-box' // Checkbox
                     : cIdx === 1 
-                      ? 'h-4 bg-zinc-200 w-1/3' // Title
+                      ? 'h-4 skeleton-box w-1/3' // Title
                       : cIdx === 2
-                        ? 'h-4 bg-zinc-200 w-24' // Author
+                        ? 'h-4 skeleton-box w-24' // Author
                         : cIdx === 3
-                          ? 'h-6 bg-zinc-200 w-16 rounded-full' // Status badge
+                          ? 'h-6 skeleton-box w-16 rounded-full' // Status badge
                           : cIdx === 4
-                            ? 'h-4 bg-zinc-200 w-20' // Date
-                            : 'h-8 bg-zinc-200 w-16' // Actions button
+                            ? 'h-4 skeleton-box w-20' // Date
+                            : 'h-8 skeleton-box w-16' // Actions button
                 }`} 
               />
             ))}
