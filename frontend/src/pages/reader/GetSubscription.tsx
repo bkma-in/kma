@@ -13,11 +13,18 @@ import {
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { useSubscription } from '../../utils/SubscriptionContext';
+import { useAuth } from '../../context/AuthContext';
+import { 
+  createSubscriptionOrder, 
+  openRazorpayModal, 
+  verifyRazorpayPayment 
+} from '../../services/razorpay.service';
 
 const GetSubscription = () => {
   const navigate = useNavigate();
   const { showToast } = useNotification();
-  const { subscribe } = useSubscription();
+  const { refreshSubscriptionStatus } = useSubscription();
+  const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'annual' | 'lifetime'>('annual');
 
@@ -53,31 +60,74 @@ const GetSubscription = () => {
     }
   ];
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async (planId: 'annual' | 'lifetime') => {
     setIsLoading(true);
 
-    // Simulate payment gateway
-    setTimeout(() => {
-      // Temporary session-only activation
-      subscribe();
+    try {
+      // 1. Create order on backend
+      const orderData = await createSubscriptionOrder(planId);
+
+      if (!orderData.success || !orderData.orderId) {
+        throw new Error(orderData.error || 'Failed to create Razorpay order');
+      }
+
+      // 2. Open Razorpay modal
+      await openRazorpayModal({
+        orderId: orderData.orderId,
+        keyId: orderData.keyId,
+        amount: orderData.amount,
+        name: 'BKMA Research Pass',
+        description: `${planId === 'lifetime' ? 'Life Member' : 'Annual Pass'} Subscription`,
+        userEmail: currentUser?.email || '',
+        userName: currentUser?.name || '',
+        onSuccess: async (paymentResponse) => {
+          try {
+            // 3. Verify payment signature on backend
+            const verifyRes = await verifyRazorpayPayment({
+              razorpay_order_id: paymentResponse.razorpay_order_id,
+              razorpay_payment_id: paymentResponse.razorpay_payment_id,
+              razorpay_signature: paymentResponse.razorpay_signature,
+            });
+
+            if (verifyRes.success) {
+              await refreshSubscriptionStatus();
+              showToast('Subscription activated successfully!', 'success');
+              navigate('/reader/dashboard');
+            } else {
+              showToast(verifyRes.error || 'Payment verification failed', 'error');
+            }
+          } catch (err: any) {
+            console.error('Payment verification error:', err);
+            showToast(err?.response?.data?.error || 'Payment verification failed', 'error');
+          } finally {
+            setIsLoading(false);
+          }
+        },
+        onDismiss: () => {
+          setIsLoading(false);
+          showToast('Payment checkout cancelled', 'info');
+        }
+      });
+
+    } catch (error: any) {
+      console.error('Razorpay subscription error:', error);
+      showToast(error?.response?.data?.error || error.message || 'Failed to initiate Razorpay payment', 'error');
       setIsLoading(false);
-      showToast('Subscription activated temporarily for this session!', 'success');
-      navigate('/reader/dashboard');
-    }, 1500);
+    }
   };
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="text-center mb-12">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-100 mb-4">
-          <Clock size={12} /> Temporary Demo Mode
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200 mb-4">
+          <ShieldCheck size={12} className="text-emerald-600" /> Razorpay Test Gateway Active
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-black tracking-tight font-['Outfit'] mb-4">
           Upgrade Your Research Access
         </h1>
         <p className="text-zinc-500 text-lg max-w-2xl mx-auto">
-          Choose a membership plan to unlock full articles. <br />
-          <span className="text-rose-500 font-bold text-sm">Note: For demo purposes, access resets on page refresh.</span>
+          Choose a membership plan to unlock full journal access and features. <br />
+          <span className="text-emerald-600 font-bold text-sm">Official Razorpay Sandbox Enabled for Testing</span>
         </p>
       </div>
 
@@ -131,11 +181,11 @@ const GetSubscription = () => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleSubscribe();
+                handleSubscribe(plan.id as 'annual' | 'lifetime');
               }}
               disabled={isLoading}
               className={cn(
-                "w-full py-5 rounded-2xl font-bold text-sm tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase",
+                "w-full py-5 rounded-2xl font-bold text-sm tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase cursor-pointer",
                 selectedPlan === plan.id
                   ? "bg-black text-white shadow-xl shadow-black/20 hover:bg-zinc-800"
                   : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
@@ -146,7 +196,7 @@ const GetSubscription = () => {
               ) : (
                 <>
                   <CreditCard size={18} />
-                  Subscribe Now
+                  Subscribe with Razorpay
                 </>
               )}
             </button>
@@ -157,8 +207,8 @@ const GetSubscription = () => {
       {/* Trust Badges */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 px-4">
         {[
-          { icon: ShieldCheck, text: "Secure Payments" },
-          { icon: Clock, text: "Instant Access" },
+          { icon: ShieldCheck, text: "Secure Razorpay Gateway" },
+          { icon: Clock, text: "Instant Verification" },
           { icon: Award, text: "Verified Research" },
           { icon: ArrowRight, text: "No Hidden Costs" }
         ].map((item, i) => (
@@ -173,3 +223,4 @@ const GetSubscription = () => {
 };
 
 export default GetSubscription;
+

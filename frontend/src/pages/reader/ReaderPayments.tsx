@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   CreditCard, 
   Search, 
@@ -9,12 +9,14 @@ import {
   XCircle,
   FileText,
   Printer,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { ReceiptTemplate } from '../../components/ReceiptTemplate';
+import { getUserSubscriptions } from '../../services/razorpay.service';
 
 type PaymentStatus = 'Paid' | 'Pending' | 'Failed';
 
@@ -31,14 +33,26 @@ const ReaderPayments = () => {
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'All'>('All');
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [payments] = useState<Payment[]>([
-    { id: 'PAY-8821', amount: '₹499', date: '2024-03-15', status: 'Paid', article: 'On the Homotopy Type of Certain Spaces' },
-    { id: 'PAY-7712', amount: '₹499', date: '2024-03-10', status: 'Paid', article: 'Prime Distribution in Arithmetic Progressions' },
-    { id: 'PAY-6654', amount: '₹499', date: '2024-03-05', status: 'Failed', article: 'Fluid Dynamics in Porous Media' },
-    { id: 'PAY-5543', amount: '₹499', date: '2024-02-28', status: 'Paid', article: 'Neural Networks in Modern Medicine' },
-    { id: 'PAY-4432', amount: '₹499', date: '2024-02-20', status: 'Pending', article: 'Advanced Cryptography Protocols' },
-  ]);
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        setLoading(true);
+        const data = await getUserSubscriptions();
+        if (data && data.success && Array.isArray(data.subscriptions)) {
+          setPayments(data.subscriptions);
+        }
+      } catch (err: any) {
+        console.error('Failed to load payment history:', err);
+        showToast('Failed to load payment history', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPayments();
+  }, []);
 
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -184,16 +198,25 @@ const ReaderPayments = () => {
                   </td>
                 </tr>
               ))}
-              {filteredPayments.length === 0 && (
+              {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center gap-4 opacity-10">
-                      <FileText size={48} />
-                      <p className="text-xs font-bold uppercase tracking-widest text-black">No transactions found</p>
+                  <td colSpan={6} className="px-6 py-16 text-center">
+                    <div className="flex flex-col items-center gap-3 text-zinc-400">
+                      <Loader2 size={28} className="animate-spin text-black" />
+                      <p className="text-xs font-bold uppercase tracking-widest">Loading transactions...</p>
                     </div>
                   </td>
                 </tr>
-              )}
+              ) : filteredPayments.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center gap-4 opacity-30">
+                      <FileText size={48} className="text-zinc-400" />
+                      <p className="text-xs font-bold uppercase tracking-widest text-zinc-600">No transactions found</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
