@@ -93,19 +93,21 @@ function App() {
   // Initial auth & role verification skeleton loading check
   if (loading || roleLoading) {
     const path = window.location.pathname;
-    if (path.startsWith('/admin')) {
+    const userRole = currentUser?.role || (localStorage.getItem('role') as any) || (localStorage.getItem('__kma_cached_role') as any);
+
+    if (path.startsWith('/admin') || userRole === 'admin') {
       return <AdminLayout isLoadingSkeleton={true} />;
     }
-    if (path.startsWith('/author')) {
+    if (path.startsWith('/author') || userRole === 'author') {
       return <AuthorLayout isLoadingSkeleton={true} />;
     }
-    if (path.startsWith('/reviewer')) {
+    if (path.startsWith('/reviewer') || userRole === 'reviewer') {
       return <ReviewerLayout isLoadingSkeleton={true} />;
     }
-    if (path.startsWith('/reader')) {
+    if (path.startsWith('/reader') || userRole === 'reader') {
       return <ReaderLayout isLoadingSkeleton={true} />;
     }
-    if (path.startsWith('/dev')) {
+    if (path.startsWith('/dev') || userRole === 'dev' || userRole === 'developer') {
       return <DeveloperLayout isLoadingSkeleton={true} />;
     }
     return <PageSkeletonFallback />;

@@ -1,5 +1,10 @@
 import React from 'react';
 import PublicHeader from '../PublicHeader';
+import AdminLayout from '../../layouts/AdminLayout';
+import AuthorLayout from '../../layouts/AuthorLayout';
+import ReviewerLayout from '../../layouts/ReviewerLayout';
+import ReaderLayout from '../../layouts/ReaderLayout';
+import DeveloperLayout from '../../layouts/DeveloperLayout';
 import { 
   LandingPageSkeleton, 
   AdminDashboardSkeleton, 
@@ -13,8 +18,30 @@ import {
 
 export const PageSkeletonFallback: React.FC = () => {
   const path = window.location.pathname;
+  const userRole = localStorage.getItem('role') || localStorage.getItem('__kma_cached_role');
 
-  // Check if it's a public/landing page route
+  // Role-based Layout Skeletons for portals & auth transitions
+  if (path.startsWith('/admin') || userRole === 'admin') {
+    return <AdminLayout isLoadingSkeleton={true} />;
+  }
+
+  if (path.startsWith('/author') || userRole === 'author') {
+    return <AuthorLayout isLoadingSkeleton={true} />;
+  }
+
+  if (path.startsWith('/reviewer') || userRole === 'reviewer') {
+    return <ReviewerLayout isLoadingSkeleton={true} />;
+  }
+
+  if (path.startsWith('/reader') || userRole === 'reader') {
+    return <ReaderLayout isLoadingSkeleton={true} />;
+  }
+
+  if (path.startsWith('/dev') || userRole === 'dev' || userRole === 'developer') {
+    return <DeveloperLayout isLoadingSkeleton={true} />;
+  }
+
+  // Check if it's a public marketing page route
   const isPublicRoute = 
     path === '/' || 
     path === '/about-us' || 
@@ -31,62 +58,9 @@ export const PageSkeletonFallback: React.FC = () => {
     return <LandingPageSkeleton />;
   }
 
-  if (path.startsWith('/admin')) {
-    return (
-      <div className="min-h-screen bg-zinc-50 font-['Outfit']">
-        <PublicHeader />
-        <main className="pt-28 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full animate-fade-in">
-          {path.includes('/dashboard') ? <AdminDashboardSkeleton /> : path.includes('/notifications') ? <NotificationsSkeleton /> : <ArticlesSkeleton />}
-        </main>
-      </div>
-    );
-  }
-
-  if (path.startsWith('/author')) {
-    return (
-      <div className="min-h-screen bg-zinc-50 font-['Outfit']">
-        <PublicHeader />
-        <main className="pt-28 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full animate-fade-in">
-          {path.includes('/dashboard') ? <AuthorDashboardSkeleton /> : path.includes('/notifications') ? <NotificationsSkeleton /> : <ArticlesSkeleton />}
-        </main>
-      </div>
-    );
-  }
-
-  if (path.startsWith('/reviewer')) {
-    return (
-      <div className="min-h-screen bg-zinc-50 font-['Outfit']">
-        <PublicHeader />
-        <main className="pt-28 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full animate-fade-in">
-          {path.includes('/dashboard') ? <ReviewerDashboardSkeleton /> : path.includes('/notifications') ? <NotificationsSkeleton /> : <ArticlesSkeleton />}
-        </main>
-      </div>
-    );
-  }
-
-  if (path.startsWith('/reader')) {
-    return (
-      <div className="min-h-screen bg-zinc-50 font-['Outfit']">
-        <PublicHeader />
-        <main className="pt-28 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full animate-fade-in">
-          {path.includes('/dashboard') ? <ReaderDashboardSkeleton /> : path.includes('/notifications') ? <NotificationsSkeleton /> : <ArticlesSkeleton />}
-        </main>
-      </div>
-    );
-  }
-
-  if (path.startsWith('/dev')) {
-    return (
-      <div className="min-h-screen bg-zinc-50 font-['Outfit']">
-        <PublicHeader />
-        <main className="pt-28 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full animate-fade-in">
-          <DeveloperDashboardSkeleton />
-        </main>
-      </div>
-    );
-  }
-
-  return <LandingPageSkeleton />;
+  // Fallback for /auth or in-flight auth verification:
+  // Render AdminLayout skeleton instead of LandingPageSkeleton!
+  return <AdminLayout isLoadingSkeleton={true} />;
 };
 
 export default PageSkeletonFallback;
