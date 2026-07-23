@@ -19,6 +19,8 @@ import { SkeletonArticleCard } from '../components/skeletons/SkeletonArticleCard
 import { SkeletonTable } from '../components/skeletons/SkeletonTable';
 import { SkeletonNotification } from '../components/skeletons/SkeletonNotification';
 
+import { DeveloperDashboardSkeleton, NotificationsSkeleton } from '../components/skeletons/PageSkeletons';
+
 interface DeveloperLayoutProps {
   isLoadingSkeleton?: boolean;
 }
@@ -34,31 +36,14 @@ const DeveloperLayout: React.FC<DeveloperLayoutProps> = ({ isLoadingSkeleton = f
   const renderSkeletonContent = () => {
     const path = location.pathname;
     if (path.endsWith('/dashboard')) {
-      return (
-        <div className="space-y-8 animate-pulse">
-          <div className="space-y-2">
-            <div className="h-8 bg-zinc-200 rounded w-1/4" />
-            <div className="h-4 bg-zinc-200 rounded w-1/3" />
-          </div>
-          <SkeletonStatistics />
-          <div className="space-y-4">
-            <div className="h-6 bg-zinc-200 rounded w-1/6" />
-            <SkeletonArticleCard count={3} />
-          </div>
-        </div>
-      );
+      return <DeveloperDashboardSkeleton />;
     }
     if (path.includes('/notifications')) {
-      return (
-        <div className="space-y-6 animate-pulse">
-          <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
-          <SkeletonNotification count={5} />
-        </div>
-      );
+      return <NotificationsSkeleton />;
     }
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="h-8 skeleton-box rounded w-1/4 mb-6" />
         <SkeletonTable />
       </div>
     );
@@ -164,10 +149,10 @@ const DeveloperLayout: React.FC<DeveloperLayoutProps> = ({ isLoadingSkeleton = f
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName={isLoadingSkeleton ? '' : userName}
-          userInitials={isLoadingSkeleton ? '' : userInitials}
+          userName={userName}
+          userInitials={userInitials}
           portalName="DEV PORTAL"
-          showProfile={!isLoadingSkeleton}
+          showProfile={true}
         />
 
         {/* Page Content */}

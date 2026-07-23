@@ -133,14 +133,14 @@ const AdminPublishedArticles: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="space-y-8 animate-pulse max-w-7xl mx-auto px-4">
+      <div className="space-y-8 animate-fade-in max-w-7xl mx-auto px-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
           <div className="space-y-2">
-            <div className="h-8 bg-zinc-200 rounded w-48 animate-pulse" />
-            <div className="h-4 bg-zinc-200 rounded w-64 animate-pulse" />
+            <div className="h-8 skeleton-box rounded w-48" />
+            <div className="h-4 skeleton-box rounded w-64" />
           </div>
           <div className="flex gap-3">
-            <div className="h-10 bg-zinc-200 rounded-xl w-64 animate-pulse" />
+            <div className="h-10 skeleton-box rounded-xl w-64" />
           </div>
         </div>
         <SkeletonArticleCard count={6} />

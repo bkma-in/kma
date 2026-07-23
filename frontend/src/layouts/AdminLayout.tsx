@@ -16,6 +16,7 @@ import { SkeletonStatistics } from '../components/skeletons/SkeletonStatistics';
 import { SkeletonArticleCard } from '../components/skeletons/SkeletonArticleCard';
 import { SkeletonTable } from '../components/skeletons/SkeletonTable';
 import { SkeletonNotification } from '../components/skeletons/SkeletonNotification';
+import { AdminDashboardSkeleton, ArticlesSkeleton, NotificationsSkeleton } from '../components/skeletons/PageSkeletons';
 
 interface AdminLayoutProps {
   isLoadingSkeleton?: boolean;
@@ -31,57 +32,20 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
   const renderSkeletonContent = () => {
     const path = location.pathname;
     if (path.includes('/dashboard')) {
-      return (
-        <div className="space-y-8 max-w-7xl mx-auto">
-          <div className="space-y-2">
-            <div className="h-8 skeleton-box rounded-xl w-64" />
-            <div className="h-4 skeleton-box rounded-lg w-96" />
-          </div>
-          <SkeletonStatistics count={5} />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-4">
-            <div className="lg:col-span-2 space-y-4">
-              <div className="h-6 skeleton-box rounded-lg w-48 mb-4" />
-              <SkeletonArticleCard count={3} />
-            </div>
-            <div className="space-y-4">
-              <div className="h-6 skeleton-box rounded-lg w-36 mb-4" />
-              <div className="bg-white border border-zinc-100 rounded-3xl p-6 h-[320px] skeleton-box" />
-            </div>
-          </div>
-        </div>
-      );
+      return <AdminDashboardSkeleton />;
     }
     if (
       path.includes('/published') || 
       path.includes('/ready-to-publish') || 
       path.includes('/articles')
     ) {
-      return (
-        <div className="space-y-8 max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-2">
-              <div className="h-8 skeleton-box rounded-xl w-64" />
-              <div className="h-4 skeleton-box rounded-lg w-80" />
-            </div>
-            <div className="h-10 skeleton-box rounded-xl w-64" />
-          </div>
-          <SkeletonArticleCard count={6} />
-        </div>
-      );
+      return <ArticlesSkeleton />;
     }
     if (path.includes('/notifications')) {
-      return (
-        <div className="space-y-6 max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <div className="h-8 skeleton-box rounded-xl w-48" />
-            <div className="h-8 skeleton-box rounded-lg w-32" />
-          </div>
-          <SkeletonNotification count={5} />
-        </div>
-      );
+      return <NotificationsSkeleton />;
     }
     return (
-      <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="space-y-2">
             <div className="h-8 skeleton-box rounded-xl w-48" />
@@ -345,24 +309,20 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName={isLoadingSkeleton ? '' : userName}
-          userInitials={isLoadingSkeleton ? '' : userInitials}
+          userName={userName}
+          userInitials={userInitials}
           portalName="ADMIN PORTAL"
-          showProfile={!isLoadingSkeleton}
+          showProfile={true}
           rightActions={
             <div className="flex items-center gap-4">
-              {isLoadingSkeleton ? (
-                <div className="w-8 h-8 rounded-full bg-zinc-200 animate-pulse" />
-              ) : (
-                <div className="relative hidden md:block">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-                  <input 
-                    type="text" 
-                    placeholder="SEARCH ARCHIVE..." 
-                    className="pl-10 pr-4 py-2 bg-black/5 border-none rounded-lg text-xs font-medium w-48 lg:w-64 focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
-              )}
+              <div className="relative hidden md:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="SEARCH ARCHIVE..." 
+                  className="pl-10 pr-4 py-2 bg-black/5 border-none rounded-lg text-xs font-medium w-48 lg:w-64 focus:ring-1 focus:ring-black outline-none"
+                />
+              </div>
             </div>
           }
         />
