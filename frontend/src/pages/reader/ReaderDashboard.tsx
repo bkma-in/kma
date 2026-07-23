@@ -177,6 +177,31 @@ const ReaderDashboard = () => {
         </div>
       </div>
 
+      {/* System Under Development Notice Card */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 rounded-[2rem] p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-600 mt-0.5">
+            <AlertCircle size={24} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-500 text-white">
+                Under Active Development
+              </span>
+              <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">
+                System Maintenance Notice
+              </span>
+            </div>
+            <h3 className="text-lg font-bold text-black mt-1 font-['Outfit']">
+              Reader Portal Upgrades in Progress
+            </h3>
+            <p className="text-zinc-600 text-sm mt-1 max-w-2xl leading-relaxed">
+              This reader module is currently under active development. Article summaries and metadata remain accessible, but full article reading and manuscript PDF downloads are temporarily restricted during this period.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat, i) => (

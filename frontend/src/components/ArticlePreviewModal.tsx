@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Calendar,
   Hash,
+  ShieldCheck,
 } from 'lucide-react';
 import { getPdfUrl, getPublicPdfUrl } from '../services/article.service';
 
@@ -273,32 +274,30 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-8 py-6 border-t border-zinc-100 shrink-0 bg-white">
-          {pdfError && (
-            <p className="text-xs text-red-500 font-bold mb-3 text-center">{pdfError}</p>
-          )}
-          <button
-            onClick={handleReadPdf}
-            disabled={pdfLoading}
-            className="w-full py-4 bg-black text-white rounded-[1rem] font-black text-sm tracking-[0.2em] uppercase hover:bg-zinc-800 transition-all shadow-xl shadow-black/20 active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
-          >
-            {pdfLoading ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                LOADING PDF…
-              </>
-            ) : (
-              <>
-                <Download size={18} />
-                {isTribute ? 'KNOW MORE' : isLoggedIn ? 'READ FULL PDF' : 'READ'}
-              </>
-            )}
-          </button>
-          {!isTribute && (
-            <p className="text-center text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-3">
-              Open Access · No Subscription Required
+        <div className="px-8 py-6 border-t border-zinc-100 shrink-0 bg-white space-y-3">
+          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800">
+            <ShieldCheck size={18} className="shrink-0 text-amber-600" />
+            <p className="text-xs font-semibold leading-snug">
+              <strong>Module Under Active Development:</strong> Full PDF reading and manuscript downloads are temporarily restricted while system upgrades are in progress.
             </p>
+          </div>
+
+          {pdfError && (
+            <p className="text-xs text-red-500 font-bold text-center">{pdfError}</p>
           )}
+
+          <button
+            onClick={() => setPdfError('Full article reading and downloads are currently disabled for system maintenance and active development.')}
+            disabled={true}
+            className="w-full py-4 bg-zinc-200 text-zinc-500 rounded-[1rem] font-black text-sm tracking-[0.2em] uppercase flex items-center justify-center gap-3 cursor-not-allowed opacity-75 shadow-none"
+          >
+            <Download size={18} />
+            FULL ARTICLE READ / DOWNLOAD RESTRICTED
+          </button>
+          
+          <p className="text-center text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
+            BKMA Archive · Feature Under Development
+          </p>
         </div>
       </div>
     </div>
