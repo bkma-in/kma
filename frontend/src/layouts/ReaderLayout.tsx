@@ -29,6 +29,8 @@ import { SkeletonArticleCard } from '../components/skeletons/SkeletonArticleCard
 import { SkeletonTable } from '../components/skeletons/SkeletonTable';
 import { SkeletonNotification } from '../components/skeletons/SkeletonNotification';
 
+import { ReaderDashboardSkeleton, NotificationsSkeleton, ArticlesSkeleton } from '../components/skeletons/PageSkeletons';
+
 interface ReaderLayoutProps {
   isLoadingSkeleton?: boolean;
 }
@@ -46,34 +48,12 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({ isLoadingSkeleton = false }
   const renderSkeletonContent = () => {
     const path = location.pathname;
     if (path.endsWith('/dashboard')) {
-      return (
-        <div className="space-y-8 animate-pulse">
-          <div className="space-y-2">
-            <div className="h-8 bg-zinc-200 rounded w-1/4" />
-            <div className="h-4 bg-zinc-200 rounded w-1/3" />
-          </div>
-          <SkeletonStatistics />
-          <div className="space-y-4">
-            <div className="h-6 bg-zinc-200 rounded w-1/6" />
-            <SkeletonArticleCard count={3} />
-          </div>
-        </div>
-      );
+      return <ReaderDashboardSkeleton />;
     }
     if (path.includes('/notifications')) {
-      return (
-        <div className="space-y-6 animate-pulse">
-          <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
-          <SkeletonNotification count={5} />
-        </div>
-      );
+      return <NotificationsSkeleton />;
     }
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
-        <SkeletonTable />
-      </div>
-    );
+    return <ArticlesSkeleton />;
   };
 
   const getTimestamp = (val: any) => {
@@ -253,9 +233,9 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({ isLoadingSkeleton = false }
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName={isLoadingSkeleton ? '' : (profile?.name || "Premium Reader")}
-          userInitials={isLoadingSkeleton ? '' : (profile?.name ? (profile.name.trim().split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || "R") : "R")}
-          showProfile={!isLoadingSkeleton}
+          userName={profile?.name || "Premium Reader"}
+          userInitials={profile?.name ? (profile.name.trim().split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || "R") : "R"}
+          showProfile={true}
         />
 
         {/* Page Content */}
