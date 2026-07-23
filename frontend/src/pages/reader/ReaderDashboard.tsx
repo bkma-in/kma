@@ -22,6 +22,7 @@ import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import ArticlePreviewModal from '../../components/ArticlePreviewModal';
 import { getIssueDetailsString, ArticleScrollRow, parseMonthYear } from '../LandingPage';
 import { SkeletonArticleCard } from '../../components/skeletons/SkeletonArticleCard';
+import { ReaderDashboardSkeleton } from '../../components/skeletons/PageSkeletons';
 
 const ReaderDashboard = () => {
   const navigate = useNavigate();
@@ -123,21 +124,7 @@ const ReaderDashboard = () => {
   });
 
   if (loading) {
-    return (
-      <div className="space-y-8 animate-pulse max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
-          <div className="space-y-2">
-            <div className="h-8 bg-zinc-200 rounded w-48 animate-pulse" />
-            <div className="h-4 bg-zinc-200 rounded w-64 animate-pulse" />
-          </div>
-          <div className="flex gap-3">
-            <div className="h-10 bg-zinc-200 rounded-xl w-64 animate-pulse" />
-            <div className="h-10 bg-zinc-200 rounded-xl w-36 animate-pulse" />
-          </div>
-        </div>
-        <SkeletonArticleCard count={6} />
-      </div>
-    );
+    return <ReaderDashboardSkeleton />;
   }
 
   return (
