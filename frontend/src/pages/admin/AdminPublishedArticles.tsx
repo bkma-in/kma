@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
-  BookOpen,
   Users,
   ChevronRight,
   ShieldCheck,
@@ -121,13 +120,11 @@ const AdminPublishedArticles: React.FC = () => {
     const total = articles.length;
     const legacyCount = articles.filter(a => a.isOld).length;
     const recentCount = total - legacyCount;
-    const volumes = new Set(articles.map(a => a.vol || a.volume).filter(Boolean)).size;
 
     return [
       { label: 'Published Papers', value: total.toString(), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
       { label: 'Recent Submissions', value: recentCount.toString(), icon: Sparkles, color: 'text-blue-600', bg: 'bg-blue-50' },
-      { label: 'Legacy Archives', value: legacyCount.toString(), icon: Layers, color: 'text-amber-600', bg: 'bg-amber-50' },
-      { label: 'Journal Volumes', value: volumes.toString(), icon: BookOpen, color: 'text-purple-600', bg: 'bg-purple-50' }
+      { label: 'Legacy Archives', value: legacyCount.toString(), icon: Layers, color: 'text-amber-600', bg: 'bg-amber-50' }
     ];
   }, [articles]);
 
@@ -181,7 +178,7 @@ const AdminPublishedArticles: React.FC = () => {
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         {stats.map((stat, i) => (
           <div key={i} className="bg-white border border-zinc-100 p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
             <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-4 shadow-inner", stat.bg)}>
