@@ -45,6 +45,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
   const [otpVerified, setOtpVerified] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [showOtp, setShowOtp] = useState(false);
+  const [isOtpFocused, setIsOtpFocused] = useState(false);
+  const [hasRequestedOtp, setHasRequestedOtp] = useState(false);
+  const [attemptsRemaining, setAttemptsRemaining] = useState(3);
 
   // Countdown timer for Get OTP resend
   React.useEffect(() => {
@@ -56,6 +59,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
   }, [countdown]);
 
   const handleGetOtp = async () => {
+    if (attemptsRemaining <= 0) return;
     const emailV = validateEmail(formData.email);
     if (!emailV.isValid) {
       setErrors((prev) => ({ ...prev, email: emailV.message! }));
@@ -71,6 +75,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     try {
       await sendVerificationCode(formData.email);
       setCountdown(60);
+      setHasRequestedOtp(true);
       setErrors((prev) => {
         const { otp: _, ...rest } = prev;
         return rest;
@@ -86,7 +91,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     const val = e.target.value.replace(/\D/g, '').slice(0, 6);
     setOtp(val);
 
-    if (val.length === 6) {
+    if (val.length === 6 && attemptsRemaining > 0) {
       setIsVerifyingOtp(true);
       setErrors((prev) => {
         const { otp: _, ...rest } = prev;
@@ -96,7 +101,21 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
         await verifyEmailCode(val, formData.email);
         setOtpVerified(true);
       } catch (err: any) {
-        setErrors((prev) => ({ ...prev, otp: err.message || 'Invalid OTP. Please try again.' }));
+        setAttemptsRemaining((prev) => {
+          const nextVal = prev - 1;
+          if (nextVal <= 0) {
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              otp: 'Verification attempts exceeded. OTP verification has been disabled.'
+            }));
+          } else {
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              otp: `${err.message || 'Invalid OTP.'} Please try again.`
+            }));
+          }
+          return nextVal;
+        });
       } finally {
         setIsVerifyingOtp(false);
       }
@@ -421,7 +440,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
               {/* Email OTP Verification */}
               <div className="space-y-1.5 animate-in fade-in duration-300">
                 <label className="form-label" htmlFor="reg-otp">
-                  Email OTP <span className="text-[10px] text-zinc-400 font-normal lowercase ml-1.5">(only 3 attempts per day)</span>
+                  Email OTP{' '}
+                  <span className="text-[10px] text-zinc-400 font-normal lowercase ml-1.5">
+                    {attemptsRemaining === 3 && "(only 3 attempts per day)"}
+                    {attemptsRemaining === 2 && "(2 attempts remaining)"}
+                    {attemptsRemaining === 1 && "(1 attempt remaining)"}
+                    {attemptsRemaining <= 0 && "(verification disabled)"}
+                  </span>
                 </label>
                 <div className="flex items-center gap-3">
                   {/* Modern 6-slot OTP Input Wrapper */}
@@ -434,14 +459,16 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                       className="absolute inset-0 w-full h-full opacity-0 cursor-text z-20 disabled:cursor-not-allowed"
                       value={otp}
                       onChange={handleOtpChange}
-                      disabled={otpVerified || isSendingOtp || isVerifyingOtp || isLoading || !formData.name.trim() || !formData.email.trim()}
+                      onFocus={() => setIsOtpFocused(true)}
+                      onBlur={() => setIsOtpFocused(false)}
+                      disabled={otpVerified || isSendingOtp || isVerifyingOtp || isLoading || !formData.name.trim() || !formData.email.trim() || attemptsRemaining <= 0}
                     />
                     
                     {/* Visual slots representation */}
                     <div className="grid grid-cols-6 gap-2 w-full">
                       {Array.from({ length: 6 }).map((_, index) => {
                         const digit = otp[index] || "";
-                        const isActive = index === otp.length && !otpVerified && formData.name.trim() && formData.email.trim();
+                        const isActive = index === otp.length && isOtpFocused && !otpVerified && formData.name.trim() && formData.email.trim() && attemptsRemaining > 0;
                         
                         return (
                           <div
@@ -475,7 +502,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                   </div>
 
                   {/* Eye Toggle Action */}
-                  {otp.length > 0 && !otpVerified && (
+                  {otp.length > 0 && !otpVerified && attemptsRemaining > 0 && (
                     <button
                       type="button"
                       onClick={() => setShowOtp(!showOtp)}
@@ -490,10 +517,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                   <button
                     type="button"
                     onClick={handleGetOtp}
-                    disabled={countdown > 0 || isSendingOtp || otpVerified || isLoading || !formData.name.trim() || !formData.email.trim()}
+                    disabled={countdown > 0 || isSendingOtp || otpVerified || isLoading || !formData.name.trim() || !formData.email.trim() || attemptsRemaining <= 0}
                     className={cn(
                       "px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border h-11 flex items-center justify-center",
-                      (countdown > 0 || otpVerified || !formData.name.trim() || !formData.email.trim())
+                      (countdown > 0 || otpVerified || !formData.name.trim() || !formData.email.trim() || attemptsRemaining <= 0)
                         ? "bg-zinc-50 border-zinc-200 text-zinc-400 cursor-not-allowed"
                         : "bg-black text-white border-black hover:bg-zinc-800"
                     )}
@@ -502,6 +529,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                       <Loader2 className="animate-spin h-4 w-4 mx-auto" />
                     ) : countdown > 0 ? (
                       `Resend in ${countdown}s`
+                    ) : hasRequestedOtp ? (
+                      "Resend OTP"
                     ) : (
                       "Get OTP"
                     )}
