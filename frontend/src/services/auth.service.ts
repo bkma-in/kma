@@ -167,3 +167,23 @@ export const resetPassword = async (email: string, resetToken: string, newPasswo
     throw new Error(error.response?.data?.error || 'Failed to reset password.');
   }
 };
+
+export const sendRegistrationOtp = async (email: string) => {
+  try {
+    const response = await api.post('/auth/registration/send-otp', { email });
+    return response.data;
+  } catch (error: any) {
+    console.error('[Auth Service] Send Registration OTP error:', error);
+    throw new Error(error.response?.data?.error || 'Failed to send verification OTP.');
+  }
+};
+
+export const verifyRegistrationOtp = async (email: string, otp: string) => {
+  try {
+    const response = await api.post('/auth/registration/verify-otp', { email, otp });
+    return response.data;
+  } catch (error: any) {
+    console.error('[Auth Service] Verify Registration OTP error:', error);
+    throw new Error(error.response?.data?.error || 'Failed to verify OTP.');
+  }
+};
