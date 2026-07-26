@@ -7,12 +7,13 @@ const uploadService_1 = require("../services/archive/uploadService");
 const storageService_1 = require("../services/archive/storageService");
 const firestoreService_1 = require("../services/archive/firestoreService");
 const queueService_1 = require("../services/archive/queueService");
+const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
 /**
  * POST /api/archive/upload
  * Starts an archive ingestion job (Non-blocking, background processed).
  */
-router.post('/upload', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), uploadService_1.archiveUpload.fields([
+router.post('/upload', authMiddleware_1.requireAuth, rateLimiter_1.archiveRateLimiter, (0, authMiddleware_1.requireRole)(['admin']), uploadService_1.archiveUpload.fields([
     { name: 'journal', maxCount: 1 },
     { name: 'segment_images' }
 ]), async (req, res) => {
@@ -110,7 +111,7 @@ router.get('/jobs/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requi
  * POST /api/archive/jobs/:id/publish
  * Commits the verified articles to the main accepted queue database.
  */
-router.post('/jobs/:id/publish', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
+router.post('/jobs/:id/publish', authMiddleware_1.requireAuth, rateLimiter_1.archiveRateLimiter, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
     try {
         const jobId = req.params.id;
         const { articles } = req.body;
