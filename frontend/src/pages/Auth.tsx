@@ -39,7 +39,13 @@ const Auth: React.FC = () => {
                 }`}
               >
                 {/* Front: Registration Form */}
-                <div className="flip-face w-full h-full bg-white md:rounded-tr-3xl md:rounded-br-3xl">
+                <div 
+                  className="flip-face w-full h-full bg-white md:rounded-tr-3xl md:rounded-br-3xl"
+                  style={{ 
+                    pointerEvents: isFlipped ? 'none' : 'auto',
+                    zIndex: isFlipped ? 0 : 10
+                  }}
+                >
                   <RegistrationForm
                     isAuthLoading={loading}
                     onSuccess={handleRegistrationSuccess}
@@ -48,7 +54,13 @@ const Auth: React.FC = () => {
                 </div>
 
                 {/* Back: Login Form */}
-                <div className="flip-face flip-back w-full h-full bg-white md:rounded-tr-3xl md:rounded-br-3xl">
+                <div 
+                  className="flip-face flip-back w-full h-full bg-white md:rounded-tr-3xl md:rounded-br-3xl"
+                  style={{ 
+                    pointerEvents: isFlipped ? 'auto' : 'none',
+                    zIndex: isFlipped ? 10 : 0
+                  }}
+                >
                   <LoginForm
                     isAuthLoading={loading}
                     prefilledEmail={prefilledEmail}

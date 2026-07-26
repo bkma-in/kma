@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Search,
   Users,
@@ -18,6 +18,91 @@ import { getIssueDetailsString, parseMonthYear } from '../LandingPage';
 import ArticlePreviewModal from '../../components/ArticlePreviewModal';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import { SkeletonArticleCard } from '../../components/skeletons/SkeletonArticleCard';
+
+interface ArticleScrollRowProps {
+  rowArticles: any[];
+  setPreviewArticle: (art: any) => void;
+  getIssueDetailsString: (art: any) => string;
+}
+
+const ArticleScrollRow: React.FC<ArticleScrollRowProps> = ({ rowArticles, setPreviewArticle, getIssueDetailsString }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeDot, setActiveDot] = useState(0);
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const el = scrollRef.current;
+    const cardWidth = 280 + 24; // card width (280px) + gap (24px = gap-6)
+    const idx = Math.round(el.scrollLeft / cardWidth);
+    setActiveDot(Math.min(idx, rowArticles.length - 1));
+  };
+
+  return (
+    <div className="mb-8">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex gap-6 overflow-x-auto pb-4 scrollbar-none snap-x snap-mandatory -mx-4 px-4 sm:-mx-6 sm:px-6"
+      >
+        {rowArticles.map((art: any, i: number) => {
+          const isTribute = /obituary|tribute|in memoriam/i.test(art.title || '') || /obituary|tribute/i.test(art.tag || '');
+          return (
+            <div
+              key={i}
+              onClick={() => setPreviewArticle(art)}
+              className="w-[280px] shrink-0 bg-white p-6 rounded-[1.5rem] border border-zinc-200 shadow-sm snap-start cursor-pointer hover:shadow-md transition-all flex flex-col justify-between min-h-[280px] snap-always"
+            >
+              <div>
+                <div className="flex items-center gap-2 mb-4 flex-wrap">
+                  {isTribute ? (
+                    <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                      Tribute & Memorial
+                    </span>
+                  ) : art.isOld ? (
+                    <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                      Legacy Archive
+                    </span>
+                  ) : (
+                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                      Published
+                    </span>
+                  )}
+                  <span className="text-zinc-500 text-[10px] font-medium">
+                    {getIssueDetailsString(art)}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold mb-2 leading-tight line-clamp-2 font-['Outfit']">
+                  {art.title}
+                </h3>
+                <p className="text-zinc-500 text-xs mb-4 line-clamp-3 leading-relaxed">
+                  {art.abstract || 'No abstract preview available.'}
+                </p>
+              </div>
+              <div className="mt-auto border-t border-zinc-100 pt-3">
+                <span className="text-[10px] font-bold text-zinc-600 block truncate">
+                  {art.authors && art.authors.length > 0
+                    ? art.authors.map((au: any) => au.name).join(', ')
+                    : art.author || 'Author'}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex justify-center gap-1.5 mt-1">
+        {rowArticles.map((_, idx) => (
+          <div
+            key={idx}
+            className={cn(
+              "w-1.5 h-1.5 rounded-full transition-all duration-300",
+              activeDot === idx ? "bg-black w-3" : "bg-zinc-200"
+            )}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const AdminPublishedArticles: React.FC = () => {
   const [articles, setArticles] = useState<any[]>([]);
@@ -116,15 +201,33 @@ const AdminPublishedArticles: React.FC = () => {
     });
   }, [articles, searchQuery]);
 
+  const { regularArticles, tributeArticles } = useMemo(() => {
+    const regular: any[] = [];
+    const tributes: any[] = [];
+    
+    filteredArticles.forEach((art) => {
+      const isTribute = /obituary|tribute|in memoriam/i.test(art.title || '') || /obituary|tribute/i.test(art.tag || '');
+      if (isTribute) {
+        tributes.push(art);
+      } else {
+        regular.push(art);
+      }
+    });
+
+    return { regularArticles: regular, tributeArticles: tributes };
+  }, [filteredArticles]);
+
   const stats = useMemo(() => {
     const total = articles.length;
     const legacyCount = articles.filter(a => a.isOld).length;
+    const tributeCount = articles.filter(a => /obituary|tribute|in memoriam/i.test(a.title || '') || /obituary|tribute/i.test(a.tag || '')).length;
     const recentCount = total - legacyCount;
 
     return [
       { label: 'Published Papers', value: total.toString(), icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
       { label: 'Recent Submissions', value: recentCount.toString(), icon: Sparkles, color: 'text-blue-600', bg: 'bg-blue-50' },
-      { label: 'Legacy Archives', value: legacyCount.toString(), icon: Layers, color: 'text-amber-600', bg: 'bg-amber-50' }
+      { label: 'Legacy Archives', value: legacyCount.toString(), icon: Layers, color: 'text-amber-600', bg: 'bg-amber-50' },
+      { label: 'Tributes & Memorials', value: tributeCount.toString(), icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' }
     ];
   }, [articles]);
 
@@ -178,7 +281,7 @@ const AdminPublishedArticles: React.FC = () => {
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat, i) => (
           <div key={i} className="bg-white border border-zinc-100 p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
             <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-4 shadow-inner", stat.bg)}>
@@ -198,11 +301,11 @@ const AdminPublishedArticles: React.FC = () => {
             All Published Manuscripts
           </h2>
           <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-            {filteredArticles.length} {filteredArticles.length === 1 ? 'Article' : 'Articles'} Found
+            {regularArticles.length} {regularArticles.length === 1 ? 'Article' : 'Articles'} Found
           </span>
         </div>
 
-        {filteredArticles.length === 0 ? (
+        {regularArticles.length === 0 ? (
           <div className="text-center py-20 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4">
             {searchQuery.trim() ? (
               <>
@@ -219,63 +322,186 @@ const AdminPublishedArticles: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredArticles.map((art) => (
-              <div
-                key={art.id}
-                onClick={() => setPreviewArticle(art)}
-                className="bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 mb-5 flex-wrap">
-                  {art.isOld ? (
-                    <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
-                      Legacy Archive
-                    </span>
-                  ) : (
-                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
-                      Published
-                    </span>
-                  )}
-                  <span className="text-zinc-500 text-[11px] font-semibold">
-                    {getIssueDetailsString(art)}
-                  </span>
-                </div>
+          <>
+            {/* Mobile view with horizontal scroll rows */}
+            <div className="md:hidden space-y-6">
+              {(() => {
+                const chunkArticles = (arr: any[], size: number) => {
+                  const chunks = [];
+                  for (let i = 0; i < arr.length; i += size) {
+                    chunks.push(arr.slice(i, i + size));
+                  }
+                  return chunks;
+                };
+                const rows = chunkArticles(regularArticles, 3);
+                return rows.map((rowArticles, rowIndex) => (
+                  <ArticleScrollRow
+                    key={rowIndex}
+                    rowArticles={rowArticles}
+                    setPreviewArticle={setPreviewArticle}
+                    getIssueDetailsString={getIssueDetailsString}
+                  />
+                ));
+              })()}
+            </div>
 
-                <h3 className="text-xl font-bold mb-4 leading-tight min-h-[3.5rem] group-hover:text-blue-600 transition-colors font-['Outfit']">
-                  {art.title}
-                </h3>
-
-                <p className="text-zinc-500 text-sm mb-8 leading-relaxed line-clamp-3 flex-1">
-                  {art.abstract || 'No abstract preview available.'}
-                </p>
-
-                <div className="mt-auto">
-                  <div className="flex items-center justify-between mb-5 pt-5 border-t border-zinc-100">
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAuthorClick(art);
-                      }}
-                      className="flex items-center gap-2 hover:text-blue-600 transition-colors cursor-pointer group/auth min-w-0"
-                    >
-                      <div className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400 shrink-0 group-hover/auth:bg-blue-50 group-hover/auth:text-blue-500 transition-colors">
-                        <Users size={13} />
-                      </div>
-                      <span className="text-xs font-bold truncate group-hover/auth:underline">
-                        {art.authors && art.authors.length > 0
-                          ? art.authors.map((au: any) => au.name).join(', ')
-                          : art.author || 'Author'}
+            {/* Desktop / Tablet view */}
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {regularArticles.map((art) => (
+                <div
+                  key={art.id}
+                  onClick={() => setPreviewArticle(art)}
+                  className="bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col cursor-pointer group"
+                >
+                  <div className="flex items-center gap-2 mb-5 flex-wrap">
+                    {art.isOld ? (
+                      <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                        Legacy Archive
                       </span>
-                    </div>
+                    ) : (
+                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                        Published
+                      </span>
+                    )}
+                    <span className="text-zinc-500 text-[11px] font-semibold">
+                      {getIssueDetailsString(art)}
+                    </span>
                   </div>
 
-                  <button className="w-full py-3 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10">
-                    VIEW ARTICLE <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                  </button>
+                  <h3 className="text-xl font-bold mb-4 leading-tight min-h-[3.5rem] group-hover:text-blue-600 transition-colors font-['Outfit']">
+                    {art.title}
+                  </h3>
+
+                  <p className="text-zinc-500 text-sm mb-8 leading-relaxed line-clamp-3 flex-1">
+                    {art.abstract || 'No abstract preview available.'}
+                  </p>
+
+                  <div className="mt-auto">
+                    <div className="flex items-center justify-between mb-5 pt-5 border-t border-zinc-100">
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAuthorClick(art);
+                        }}
+                        className="flex items-center gap-2 hover:text-blue-600 transition-colors cursor-pointer group/auth min-w-0"
+                      >
+                        <div className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400 shrink-0 group-hover/auth:bg-blue-50 group-hover/auth:text-blue-500 transition-colors">
+                          <Users size={13} />
+                        </div>
+                        <span className="text-xs font-bold truncate group-hover/auth:underline">
+                          {art.authors && art.authors.length > 0
+                            ? art.authors.map((au: any) => au.name).join(', ')
+                            : art.author || 'Author'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button className="w-full py-3 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10">
+                      VIEW ARTICLE <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Tributes & Memorials Section */}
+      <div className="bg-white border border-zinc-100 rounded-[2.5rem] p-8 shadow-sm">
+        <div className="flex items-center justify-between gap-6 mb-8 border-b border-zinc-100 pb-6">
+          <h2 className="text-xl font-bold text-black font-['Outfit'] flex items-center gap-2">
+            <Users size={20} className="text-purple-500" />
+            Tributes & Memorials
+          </h2>
+          <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+            {tributeArticles.length} {tributeArticles.length === 1 ? 'Entry' : 'Entries'} Found
+          </span>
+        </div>
+
+        {tributeArticles.length === 0 ? (
+          <div className="text-center py-12 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4">
+            <AlertCircle size={40} className="text-zinc-300 animate-pulse" />
+            <h3 className="text-lg font-bold text-black uppercase tracking-widest font-['Outfit']">No tributes yet</h3>
+            <p className="text-sm text-zinc-500 max-w-sm">There are no tributes or memorials recorded in the system yet.</p>
           </div>
+        ) : (
+          <>
+            {/* Mobile view with horizontal scroll rows */}
+            <div className="md:hidden space-y-6">
+              {(() => {
+                const chunkArticles = (arr: any[], size: number) => {
+                  const chunks = [];
+                  for (let i = 0; i < arr.length; i += size) {
+                    chunks.push(arr.slice(i, i + size));
+                  }
+                  return chunks;
+                };
+                const rows = chunkArticles(tributeArticles, 3);
+                return rows.map((rowArticles, rowIndex) => (
+                  <ArticleScrollRow
+                    key={rowIndex}
+                    rowArticles={rowArticles}
+                    setPreviewArticle={setPreviewArticle}
+                    getIssueDetailsString={getIssueDetailsString}
+                  />
+                ));
+              })()}
+            </div>
+
+            {/* Desktop / Tablet view */}
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {tributeArticles.map((art) => (
+                <div
+                  key={art.id}
+                  onClick={() => setPreviewArticle(art)}
+                  className="bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col cursor-pointer group"
+                >
+                  <div className="flex items-center gap-2 mb-5 flex-wrap">
+                    <span className="bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">
+                      Tribute & Memorial
+                    </span>
+                    <span className="text-zinc-500 text-[11px] font-semibold">
+                      {getIssueDetailsString(art)}
+                    </span>
+                  </div>
+
+                  <h3 className="text-xl font-bold mb-4 leading-tight min-h-[3.5rem] group-hover:text-blue-600 transition-colors font-['Outfit']">
+                    {art.title}
+                  </h3>
+
+                  <p className="text-zinc-500 text-sm mb-8 leading-relaxed line-clamp-3 flex-1">
+                    {art.abstract || 'No abstract preview available.'}
+                  </p>
+
+                  <div className="mt-auto">
+                    <div className="flex items-center justify-between mb-5 pt-5 border-t border-zinc-100">
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAuthorClick(art);
+                        }}
+                        className="flex items-center gap-2 hover:text-blue-600 transition-colors cursor-pointer group/auth min-w-0"
+                      >
+                        <div className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400 shrink-0 group-hover/auth:bg-blue-50 group-hover/auth:text-blue-500 transition-colors">
+                          <Users size={13} />
+                        </div>
+                        <span className="text-xs font-bold truncate group-hover/auth:underline">
+                          {art.authors && art.authors.length > 0
+                            ? art.authors.map((au: any) => au.name).join(', ')
+                            : art.author || 'Author'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button className="w-full py-3 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 bg-black text-white hover:bg-zinc-800 shadow-lg shadow-black/10">
+                      VIEW ARTICLE <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
