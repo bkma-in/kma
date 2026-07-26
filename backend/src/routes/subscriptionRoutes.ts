@@ -4,6 +4,7 @@ import { db } from '../config/firebase';
 import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
 import Razorpay from 'razorpay';
 import { config } from '../config/env';
+import { paymentRateLimiter } from '../middleware/rateLimiter';
 
 const razorpay = new Razorpay({
   key_id: config.payments.razorpay.keyId,
@@ -75,7 +76,7 @@ router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res: Respo
 });
 
 // Create Razorpay Order for Subscription
-router.post('/create-order', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/create-order', requireAuth, paymentRateLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { uid, email } = req.user!;
     const { issueId, type = 'annual' } = req.body; // type: "annual" (2000) or "lifetime" (1000)
@@ -130,7 +131,7 @@ router.post('/create-order', requireAuth, async (req: AuthRequest, res: Response
 });
 
 // Create Razorpay Order for Single Article Purchase
-router.post('/create-article-order', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/create-article-order', requireAuth, paymentRateLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { uid, email } = req.user!;
     const { articleId } = req.body;
@@ -189,7 +190,7 @@ router.post('/create-article-order', requireAuth, async (req: AuthRequest, res: 
 });
 
 // Verify Razorpay Payment Signature
-router.post('/verify-payment', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/verify-payment', requireAuth, paymentRateLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
