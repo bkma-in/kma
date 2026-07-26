@@ -8,7 +8,6 @@ import {
   type Role
 } from '../utils/validation';
 import { register, sendVerificationCode, verifyEmailCode } from '../services/auth.service';
-import { register, sendRegistrationOtp, verifyRegistrationOtp } from '../services/auth.service';
 
 interface RegistrationFormProps {
   onSuccess: (email: string) => void;
@@ -70,7 +69,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
 
     setIsSendingOtp(true);
     try {
-      await sendRegistrationOtp(formData.email);
+      await sendVerificationCode(formData.email);
       setCountdown(60);
       setErrors((prev) => {
         const { otp: _, ...rest } = prev;
@@ -94,7 +93,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
         return rest;
       });
       try {
-        await verifyRegistrationOtp(formData.email, val);
+        await verifyEmailCode(val, formData.email);
         setOtpVerified(true);
       } catch (err: any) {
         setErrors((prev) => ({ ...prev, otp: err.message || 'Invalid OTP. Please try again.' }));
