@@ -374,3 +374,36 @@ export const webhookRateLimiter = rateLimit({
     'Too many webhook requests.'
   )
 });
+
+/**
+ * 10. Send Verification Email Rate Limiter (5 requests / 15 minutes / UID or IP)
+ * Protects email sending API against verification email spam and email bombing.
+ */
+export const sendVerificationRateLimiter = rateLimit({
+  windowMs: config.rateLimit.sendVerificationWindowMs,
+  max: config.rateLimit.sendVerificationMax,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator,
+  handler: createRateLimiterHandler(
+    'Send Verification Email',
+    'Too many verification email requests. Please wait a few minutes before requesting another email.'
+  )
+});
+
+/**
+ * 11. Verify Code Rate Limiter (10 attempts / 15 minutes / UID or IP)
+ * Protects code verification endpoint against brute-force code guessing attacks.
+ */
+export const verifyCodeRateLimiter = rateLimit({
+  windowMs: config.rateLimit.verifyCodeWindowMs,
+  max: config.rateLimit.verifyCodeMax,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator,
+  handler: createRateLimiterHandler(
+    'Verify Email Code',
+    'Too many verification attempts. Please wait 15 minutes before trying again.'
+  )
+});
+

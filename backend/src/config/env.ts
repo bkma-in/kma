@@ -59,6 +59,10 @@ export const config = {
     archiveMax: Number(process.env.ARCHIVE_RATE_LIMIT_MAX_REQUESTS) || 5,
     webhookWindowMs: Number(process.env.WEBHOOK_RATE_LIMIT_WINDOW_MS) || 60 * 1000,
     webhookMax: Number(process.env.WEBHOOK_RATE_LIMIT_MAX_REQUESTS) || 100,
+    sendVerificationWindowMs: Number(process.env.SEND_VERIFICATION_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    sendVerificationMax: Number(process.env.SEND_VERIFICATION_RATE_LIMIT_MAX_REQUESTS) || 5,
+    verifyCodeWindowMs: Number(process.env.VERIFY_CODE_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    verifyCodeMax: Number(process.env.VERIFY_CODE_RATE_LIMIT_MAX_REQUESTS) || 10,
   }
 };
 
