@@ -12,6 +12,7 @@ const storageService_1 = require("../services/storageService");
 const legacyImportService_1 = require("../services/legacyImportService");
 const cloudinaryService_1 = require("../services/cloudinaryService");
 const notificationService_1 = require("../services/notificationService");
+const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
 const normalizeRecommendation = (recommendation) => {
     if (!recommendation)
@@ -26,7 +27,7 @@ const normalizeRecommendation = (recommendation) => {
     return recommendation;
 };
 // Get signed URL for staged PDF or split article in archive jobs
-router.get('/staged/pdf', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
+router.get('/staged/pdf', authMiddleware_1.requireAuth, rateLimiter_1.signedUrlRateLimiter, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
     try {
         const { key } = req.query;
         if (!key || typeof key !== 'string') {
@@ -48,7 +49,7 @@ router.get('/staged/pdf', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
     }
 });
 // Submit Article or Save Draft (Author only)
-router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['author']), uploadMiddleware_1.upload.fields([
+router.post('/', authMiddleware_1.requireAuth, rateLimiter_1.uploadRateLimiter, (0, authMiddleware_1.requireRole)(['author']), uploadMiddleware_1.upload.fields([
     { name: 'pdf', maxCount: 1 },
     { name: 'thumbnail', maxCount: 1 }
 ]), async (req, res) => {
@@ -114,13 +115,13 @@ router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)
         // Create invitations if any
         if (invitees.length > 0) {
             const invitationsBatch = firebase_1.db.batch();
-            for (const inviteeId of invitees) {
-                if (inviteeId === authorId)
-                    continue; // Prevent self-invite
-                // Fetch invitee details
-                const inviteeDoc = await firebase_1.db.collection('users').doc(inviteeId).get();
+            const validInviteeIds = invitees.filter(id => id !== authorId);
+            // Fetch all invitee details in parallel
+            const inviteeDocs = await Promise.all(validInviteeIds.map(inviteeId => firebase_1.db.collection('users').doc(inviteeId).get()));
+            inviteeDocs.forEach((inviteeDoc, index) => {
                 if (!inviteeDoc.exists)
-                    continue;
+                    return;
+                const inviteeId = validInviteeIds[index];
                 const inviteeData = inviteeDoc.data();
                 const inviteRef = articleRef.collection('invitations').doc();
                 const token = crypto_1.default.randomBytes(32).toString('hex');
@@ -160,7 +161,7 @@ router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)
                     accepted: false,
                     invitedAt: new Date()
                 });
-            }
+            });
             await invitationsBatch.commit();
             // Update article with pending authors
             await articleRef.update({ authors: newArticle.authors });
@@ -202,7 +203,16 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
             articles = snapshot.docs.map(doc => doc.data());
         }
         else if (role === 'admin') {
-            const snapshot = await firebase_1.db.collection('articles').get();
+            let q = firebase_1.db.collection('articles').orderBy('createdAt', 'desc');
+            const { limit: queryLimit, startAfter } = req.query;
+            const limitNum = parseInt(queryLimit) || 100;
+            if (startAfter) {
+                const startDoc = await firebase_1.db.collection('articles').doc(startAfter).get();
+                if (startDoc.exists) {
+                    q = q.startAfter(startDoc);
+                }
+            }
+            const snapshot = await q.limit(limitNum).get();
             articles = snapshot.docs.map(doc => doc.data());
         }
         // Standard mapping and sorting
@@ -556,7 +566,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 // Get Signed PDF URL for public Tribute/Obituary articles (no auth required)
-router.get('/:id/pdf-public', async (req, res) => {
+router.get('/:id/pdf-public', rateLimiter_1.downloadRateLimiter, async (req, res) => {
     try {
         const id = req.params.id;
         const articleDoc = await firebase_1.db.collection('articles').doc(id).get();
@@ -583,7 +593,7 @@ router.get('/:id/pdf-public', async (req, res) => {
     }
 });
 // Get Signed PDF URL (requires active subscription or purchase)
-router.get('/:id/pdf', authMiddleware_1.requireAuth, async (req, res) => {
+router.get('/:id/pdf', authMiddleware_1.requireAuth, rateLimiter_1.downloadRateLimiter, async (req, res) => {
     try {
         const id = req.params.id;
         const { role, uid } = req.user;
@@ -663,7 +673,7 @@ router.get('/:id/pdf', authMiddleware_1.requireAuth, async (req, res) => {
 // - draft: full editing allowed (title, abstract, category, pdf, thumbnail)
 // - revision_requested: only abstract and pdf can be updated; title is locked
 // - all other statuses: editing is blocked entirely
-router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['author']), uploadMiddleware_1.upload.fields([
+router.put('/:id', authMiddleware_1.requireAuth, rateLimiter_1.uploadRateLimiter, (0, authMiddleware_1.requireRole)(['author']), uploadMiddleware_1.upload.fields([
     { name: 'pdf', maxCount: 1 },
     { name: 'thumbnail', maxCount: 1 }
 ]), async (req, res) => {
@@ -820,7 +830,7 @@ router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRol
     }
 });
 // Admin Extract Metadata from Full PDF for Legacy Import
-router.post('/import-extract', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), uploadMiddleware_1.upload.single('pdf'), async (req, res) => {
+router.post('/import-extract', authMiddleware_1.requireAuth, rateLimiter_1.pdfRateLimiter, (0, authMiddleware_1.requireRole)(['admin']), uploadMiddleware_1.upload.single('pdf'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'PDF file is required' });
@@ -875,7 +885,7 @@ router.post('/import-extract', authMiddleware_1.requireAuth, (0, authMiddleware_
     }
 });
 // Admin Import & Split Legacy Issue
-router.post('/import-split', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), uploadMiddleware_1.upload.single('pdf'), async (req, res) => {
+router.post('/import-split', authMiddleware_1.requireAuth, rateLimiter_1.pdfRateLimiter, (0, authMiddleware_1.requireRole)(['admin']), uploadMiddleware_1.upload.single('pdf'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'PDF file is required' });
@@ -974,7 +984,7 @@ router.post('/import-split', authMiddleware_1.requireAuth, (0, authMiddleware_1.
     }
 });
 // Admin Bulk Publish Articles
-router.patch('/bulk-publish', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
+router.patch('/bulk-publish', authMiddleware_1.requireAuth, rateLimiter_1.archiveRateLimiter, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
     try {
         const { articleIds, volumeNo, monthYear, issueNumber, issn } = req.body;
         if (!articleIds || !Array.isArray(articleIds) || articleIds.length === 0) {
