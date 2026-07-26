@@ -44,6 +44,12 @@ app.use(express_1.default.json({ limit: '1mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '1mb' }));
 // Global API Rate Limiter
 app.use('/api/', rateLimiter_1.globalRateLimiter);
+app.use((0, compression_1.default)());
+app.use((0, cors_1.default)());
+// Use express.raw for webhooks to verify signatures
+app.use('/api/webhooks', express_1.default.raw({ type: 'application/json' }), webhookRoutes_1.default);
+// General JSON parsing
+app.use(express_1.default.json());
 // Routes
 app.use('/api/auth', authRoutes_1.default);
 app.use('/api/articles', articleRoutes_1.default);
