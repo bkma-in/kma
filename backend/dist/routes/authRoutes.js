@@ -18,30 +18,46 @@ function hashVerificationCode(code) {
     return crypto_1.default.createHash('sha256').update(code.trim()).digest('hex');
 }
 // Helper function to generate and dispatch email verification OTP via Brevo
-async function generateAndSendVerificationOTP(uid, email, name) {
+async function generateAndSendVerificationOTP(docId, email, name) {
     const normEmail = email.toLowerCase().trim();
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const codeHash = hashVerificationCode(otp);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes validity
     const now = new Date();
-    // Save to emailVerifications collection doc keyed by UID
-    const verificationRef = firebase_1.db.collection('emailVerifications').doc(uid);
+    // Save to emailVerifications collection doc keyed by docId (UID or email)
+    const verificationRef = firebase_1.db.collection('emailVerifications').doc(docId);
     await verificationRef.set({
-        uid,
+        uid: docId.includes('@') ? '' : docId,
         email: normEmail,
         codeHash,
+        otp,
         expiresAt,
         attempts: 0,
         lastSentAt: now,
         verified: false,
-        updatedAt: now
+        used: false,
+        updatedAt: now,
+        createdAt: now
     });
+    // Also update registrationOTPs for backward compatibility
+    const regOtpRef = firebase_1.db.collection('registrationOTPs').doc(docId);
+    await regOtpRef.set({
+        id: docId,
+        email: normEmail,
+        codeHash,
+        otp,
+        expiresAt,
+        verified: false,
+        used: false,
+        attempts: 0,
+        createdAt: now
+    }).catch(() => { });
     const emailHtml = (0, notificationService_1.buildHtmlEmail)(name || 'User', 'Verify Your Email Address', 'Thank you for registering with the Bulletin of Kerala Mathematical Association. Please enter the following 6-digit verification code to complete your registration and verify your email address. This code will expire in 10 minutes.', 'Verification Code', [
         { label: 'VERIFICATION CODE', value: `<span style="font-family: monospace; font-size: 18px; font-weight: 800; letter-spacing: 0.2em; color: #000000;">${otp}</span>` },
         { label: 'VALIDITY', value: '10 Minutes' }
     ], '', '', 'Security Notice', 'If you did not create an account with KMA, you can safely ignore this email. Never share your verification code with anyone.', '🔒', 'Keep your code secure', '⏳', 'Expires in 10 minutes');
     await (0, emailService_1.sendTransactionalEmail)(normEmail, name || 'User', 'KMA Platform - Verify Your Email Address', emailHtml);
-    console.log(`[AUTH-VERIFICATION] Verification OTP sent successfully to ${normEmail} (UID: ${uid})`);
+    console.log(`[AUTH-VERIFICATION] Verification OTP sent successfully to ${normEmail} (DocID: ${docId})`);
     return { success: true };
 }
 // Endpoint for frontend to send token and get their role/profile back
@@ -195,28 +211,29 @@ router.post('/send-verification-code', rateLimiter_1.sendVerificationRateLimiter
                 // Token verification fallback
             }
         }
-        if (!uid && req.body.email) {
-            const normEmail = req.body.email.toLowerCase().trim();
+        if (!email && req.body.email) {
+            email = req.body.email.toLowerCase().trim();
+            name = req.body.name || name;
+        }
+        if (!email) {
+            return res.status(400).json({ error: 'A valid email address is required.' });
+        }
+        const normEmail = email.toLowerCase().trim();
+        // Determine target document ID: use UID if available or user exists in DB, else email address
+        let targetDocId = uid;
+        if (!targetDocId) {
             const usersSnap = await firebase_1.db.collection('users').where('emailLower', '==', normEmail).limit(1).get();
             if (!usersSnap.empty) {
                 const uDoc = usersSnap.docs[0];
-                uid = uDoc.id;
-                email = normEmail;
-                name = uDoc.data().name || 'User';
+                targetDocId = uDoc.id;
+                name = uDoc.data().name || name;
             }
             else {
-                // Prevent email enumeration: return generic response
-                return res.json({
-                    success: true,
-                    message: 'If the registration request can be processed, a verification email has been sent.'
-                });
+                targetDocId = normEmail;
             }
         }
-        if (!uid || !email) {
-            return res.status(400).json({ error: 'Valid authenticated session or email address is required.' });
-        }
         // Enforce 60-second resend cooldown
-        const verDocRef = firebase_1.db.collection('emailVerifications').doc(uid);
+        const verDocRef = firebase_1.db.collection('emailVerifications').doc(targetDocId);
         const verDoc = await verDocRef.get();
         if (verDoc.exists) {
             const vData = verDoc.data();
@@ -233,15 +250,30 @@ router.post('/send-verification-code', rateLimiter_1.sendVerificationRateLimiter
                 });
             }
         }
-        await generateAndSendVerificationOTP(uid, email, name);
+        await generateAndSendVerificationOTP(targetDocId, normEmail, name);
         res.json({
             success: true,
-            message: 'A new 6-digit verification code has been sent to your email address.'
+            message: 'A 6-digit verification code has been sent to your email address.'
         });
     }
     catch (error) {
         console.error('Send verification code error:', error);
         res.status(500).json({ error: error.message || 'Failed to send verification code.' });
+    }
+});
+// Alias /registration/send-otp to send verification code
+router.post('/registration/send-otp', rateLimiter_1.sendVerificationRateLimiter, async (req, res) => {
+    try {
+        const { email, name } = req.body;
+        if (!email || typeof email !== 'string' || email.trim() === '') {
+            return res.status(400).json({ error: 'A valid email address is required.' });
+        }
+        const normEmail = email.toLowerCase().trim();
+        await generateAndSendVerificationOTP(normEmail, normEmail, name || 'User');
+        res.json({ success: true, message: 'A 6-digit verification code has been sent to your email address.' });
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message || 'Failed to send verification code.' });
     }
 });
 // Dedicated endpoint to verify 6-digit email OTP
@@ -262,21 +294,30 @@ router.post('/verify-email-code', rateLimiter_1.verifyCodeRateLimiter, async (re
                 // Token fallback
             }
         }
-        if (!uid && email) {
-            const normEmail = email.toLowerCase().trim();
-            const usersSnap = await firebase_1.db.collection('users').where('emailLower', '==', normEmail).limit(1).get();
-            if (!usersSnap.empty) {
-                uid = usersSnap.docs[0].id;
-            }
-        }
-        if (!uid) {
-            return res.status(400).json({ error: 'Valid session or email address is required.' });
-        }
         if (!code || typeof code !== 'string' || code.trim().length !== 6) {
             return res.status(400).json({ error: 'Please enter a valid 6-digit verification code.' });
         }
-        const verRef = firebase_1.db.collection('emailVerifications').doc(uid);
-        const verDoc = await verRef.get();
+        if (!email && !uid) {
+            return res.status(400).json({ error: 'Email address or valid session is required.' });
+        }
+        const normEmail = (email || '').toLowerCase().trim();
+        let targetDocId = uid;
+        if (!targetDocId && normEmail) {
+            const usersSnap = await firebase_1.db.collection('users').where('emailLower', '==', normEmail).limit(1).get();
+            if (!usersSnap.empty) {
+                targetDocId = usersSnap.docs[0].id;
+            }
+            else {
+                targetDocId = normEmail;
+            }
+        }
+        let verRef = firebase_1.db.collection('emailVerifications').doc(targetDocId);
+        let verDoc = await verRef.get();
+        // Fallback to checking by email if doc by UID wasn't found
+        if (!verDoc.exists && normEmail) {
+            verRef = firebase_1.db.collection('emailVerifications').doc(normEmail);
+            verDoc = await verRef.get();
+        }
         if (!verDoc.exists) {
             return res.status(400).json({ error: 'Invalid or expired verification code.' });
         }
@@ -298,8 +339,10 @@ router.post('/verify-email-code', rateLimiter_1.verifyCodeRateLimiter, async (re
             return res.status(400).json({ error: 'Verification code has expired. Please request a new code.' });
         }
         // Hash user-submitted code and compare with stored codeHash
-        const submittedHash = hashVerificationCode(code);
-        if (!vData.codeHash || submittedHash !== vData.codeHash) {
+        const cleanCode = code.trim();
+        const submittedHash = hashVerificationCode(cleanCode);
+        const isMatch = (vData.codeHash && submittedHash === vData.codeHash) || (vData.otp && vData.otp === cleanCode);
+        if (!isMatch) {
             const newAttempts = attempts + 1;
             await verRef.update({ attempts: newAttempts });
             if (newAttempts >= 5) {
@@ -318,18 +361,37 @@ router.post('/verify-email-code', rateLimiter_1.verifyCodeRateLimiter, async (re
             verifiedAt: now,
             updatedAt: now
         });
-        // Update Firestore User Document
-        await firebase_1.db.collection('users').doc(uid).update({
-            emailVerified: true,
+        // Also update registrationOTPs doc for backward compatibility
+        await firebase_1.db.collection('registrationOTPs').doc(targetDocId).update({
+            verified: true,
+            codeHash: null,
             updatedAt: now
-        });
-        // Update Firebase Authentication User Record
-        await firebase_1.auth.updateUser(uid, { emailVerified: true }).catch(fbErr => {
-            console.warn('[AUTH-VERIFICATION] Firebase Auth emailVerified update warning:', fbErr);
-        });
-        // Audit Log
-        await (0, auditService_1.logAuditEvent)('Email Verified', uid);
-        console.log(`[AUTH-VERIFICATION] Successfully verified email for UID: ${uid}`);
+        }).catch(() => { });
+        if (normEmail) {
+            const snap = await firebase_1.db.collection('registrationOTPs').where('email', '==', normEmail).get();
+            const batch = firebase_1.db.batch();
+            snap.docs.forEach(d => batch.update(d.ref, { verified: true }));
+            await batch.commit().catch(() => { });
+        }
+        // If user document already exists in Firestore, update it
+        let realUid = uid || (targetDocId.includes('@') ? '' : targetDocId);
+        if (!realUid && normEmail) {
+            const uSnap = await firebase_1.db.collection('users').where('emailLower', '==', normEmail).limit(1).get();
+            if (!uSnap.empty) {
+                realUid = uSnap.docs[0].id;
+            }
+        }
+        if (realUid) {
+            await firebase_1.db.collection('users').doc(realUid).update({
+                emailVerified: true,
+                updatedAt: now
+            }).catch(() => { });
+            await firebase_1.auth.updateUser(realUid, { emailVerified: true }).catch(fbErr => {
+                console.warn('[AUTH-VERIFICATION] Firebase Auth emailVerified update warning:', fbErr);
+            });
+            await (0, auditService_1.logAuditEvent)('Email Verified', realUid).catch(() => { });
+        }
+        console.log(`[AUTH-VERIFICATION] Successfully verified email for: ${normEmail || targetDocId}`);
         res.json({
             success: true,
             verified: true,
@@ -339,6 +401,42 @@ router.post('/verify-email-code', rateLimiter_1.verifyCodeRateLimiter, async (re
     catch (error) {
         console.error('Verify email code error:', error);
         res.status(500).json({ error: error.message || 'Failed to verify code.' });
+    }
+});
+// Alias /registration/verify-otp to /verify-email-code
+router.post('/registration/verify-otp', rateLimiter_1.verifyCodeRateLimiter, async (req, res) => {
+    try {
+        const code = req.body.otp || req.body.code;
+        const email = req.body.email;
+        if (!code || typeof code !== 'string' || code.trim().length !== 6) {
+            return res.status(400).json({ error: 'Please enter a valid 6-digit verification code.' });
+        }
+        if (!email) {
+            return res.status(400).json({ error: 'A valid email address is required.' });
+        }
+        const normEmail = email.toLowerCase().trim();
+        let verRef = firebase_1.db.collection('emailVerifications').doc(normEmail);
+        let verDoc = await verRef.get();
+        if (!verDoc.exists) {
+            verRef = firebase_1.db.collection('registrationOTPs').doc(normEmail);
+            verDoc = await verRef.get();
+        }
+        if (!verDoc.exists) {
+            return res.status(400).json({ error: 'Invalid or expired verification code.' });
+        }
+        const vData = verDoc.data();
+        const cleanCode = code.trim();
+        const submittedHash = hashVerificationCode(cleanCode);
+        const isMatch = (vData.codeHash && submittedHash === vData.codeHash) || (vData.otp && vData.otp === cleanCode);
+        if (!isMatch) {
+            return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
+        }
+        const now = new Date();
+        await verRef.update({ verified: true, verifiedAt: now, updatedAt: now });
+        res.json({ success: true, verified: true, message: 'Your email address has been verified successfully!' });
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message || 'Failed to verify code.' });
     }
 });
 // Endpoint to change password securely and clear mustChangePassword status
