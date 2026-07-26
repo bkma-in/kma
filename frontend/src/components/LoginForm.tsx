@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, ArrowLeft, CheckCircle2, Check, X } from 'lucide-react';
-import { login, sendOtp, verifyOtp, resetPassword } from '../services/auth.service';
+import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, ArrowLeft, CheckCircle2, Check, X, ShieldCheck, RefreshCw } from 'lucide-react';
+import { login, sendOtp, verifyOtp, resetPassword, sendVerificationCode, verifyEmailCode } from '../services/auth.service';
 import { getDashboardByRole } from '../utils/auth';
 
 interface LoginFormProps {
@@ -11,7 +11,7 @@ interface LoginFormProps {
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRegister, isAuthLoading }) => {
-  const [view, setView] = useState<'login' | 'forgot-email' | 'forgot-otp' | 'forgot-reset'>('login');
+  const [view, setView] = useState<'login' | 'forgot-email' | 'forgot-otp' | 'forgot-reset' | 'verify-email'>('login');
   const [email, setEmail] = useState(prefilledEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -19,6 +19,18 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUnverified, setIsUnverified] = useState(false);
+  const [verifyEmailCodeVal, setVerifyEmailCodeVal] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer: any;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => setResendCooldown(prev => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
 
   // Forgot Password flow states
   const [forgotEmail, setForgotEmail] = useState('');
@@ -35,6 +47,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
     setIsLoading(true);
     setError('');
     setSuccess('');
+    setIsUnverified(false);
     
     try {
       const response = await login(email, password);
@@ -51,10 +64,47 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
         navigate(getDashboardByRole(response.user.role), { replace: true });
       }
     } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
+      const msg = err.message || 'Invalid email or password';
+      setError(msg);
+      if (msg.toLowerCase().includes('not verified')) {
+        setIsUnverified(true);
+      }
       setIsLoading(false);
     }
   };
+
+  const handleStartVerificationFromLogin = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      await sendVerificationCode(email);
+      setResendCooldown(60);
+      setView('verify-email');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send verification code.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyEmailCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (verifyEmailCodeVal.length !== 6 || isLoading) return;
+    setIsLoading(true);
+    setError('');
+    try {
+      await verifyEmailCode(verifyEmailCodeVal, email);
+      setSuccess('Your email address has been verified successfully! You can now log in.');
+      setView('login');
+      setIsUnverified(false);
+      setVerifyEmailCodeVal('');
+    } catch (err: any) {
+      setError(err.message || 'Invalid or expired verification code.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,13 +267,27 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
               </div>
 
               {error && (
-                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 shadow-sm">
-                  <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
-                    <AlertCircle size={16} />
+                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex flex-col gap-2 text-rose-600 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                      <AlertCircle size={16} />
+                    </div>
+                    <p className="text-xs font-bold tracking-tight">{error}</p>
                   </div>
-                  <p className="text-xs font-bold tracking-tight">{error}</p>
+                  {isUnverified && (
+                    <button
+                      type="button"
+                      onClick={handleStartVerificationFromLogin}
+                      disabled={isLoading}
+                      className="mt-1 w-full py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <ShieldCheck size={14} />
+                      Verify Email Address Now
+                    </button>
+                  )}
                 </div>
               )}
+
 
               {/* Login Button */}
               <button
@@ -513,6 +577,66 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
                 {isLoading && <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                 {isLoading ? 'Resetting password...' : 'Reset Password'}
               </button>
+            </form>
+          </>
+        )}
+        {view === 'verify-email' && (
+          <>
+            <header className="mb-8 sm:mb-10 text-center md:text-left">
+              <button 
+                type="button" 
+                onClick={() => { setView('login'); setError(''); }} 
+                className="flex items-center gap-2 text-zinc-400 hover:text-black font-bold text-xs uppercase tracking-wider mb-4 transition-colors"
+              >
+                <ArrowLeft size={14} /> Back to Login
+              </button>
+              <h2 className="text-2xl sm:text-3xl font-bold text-black mb-1.5 font-['Outfit']">Verify Email</h2>
+              <p className="text-zinc-500 text-sm">We sent a 6-digit verification code to <strong className="text-black font-semibold">{email}</strong>.</p>
+            </header>
+
+            <form className="space-y-6" onSubmit={handleVerifyEmailCodeSubmit}>
+              <div className="space-y-1.5">
+                <label className="form-label" htmlFor="verify-login-code">6-Digit Code</label>
+                <input
+                  id="verify-login-code"
+                  type="text"
+                  maxLength={6}
+                  pattern="\d{6}"
+                  className="input-field text-center font-mono text-xl tracking-[0.5em] !border-zinc-200"
+                  placeholder="000000"
+                  value={verifyEmailCodeVal}
+                  onChange={(e) => setVerifyEmailCodeVal(e.target.value.replace(/\D/g, ''))}
+                  required
+                />
+              </div>
+
+              {error && (
+                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 shadow-sm animate-in fade-in duration-300">
+                  <AlertCircle size={16} className="shrink-0" />
+                  <p className="text-xs font-bold tracking-tight">{error}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading || verifyEmailCodeVal.length !== 6}
+                className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isLoading && <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {isLoading ? 'Verifying...' : 'Verify & Continue'}
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={handleStartVerificationFromLogin}
+                  disabled={resendCooldown > 0 || isLoading}
+                  className="flex items-center justify-center gap-1.5 text-xs font-bold text-zinc-400 hover:text-black uppercase tracking-wider transition-colors disabled:opacity-50 mx-auto"
+                >
+                  <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} />
+                  {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : 'Resend Code'}
+                </button>
+              </div>
             </form>
           </>
         )}

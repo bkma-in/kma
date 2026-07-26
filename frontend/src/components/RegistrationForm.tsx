@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User, Mail, Lock, Eye, EyeOff, ChevronRight, Loader2, CheckCircle2, GraduationCap, Briefcase, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Lock, Eye, EyeOff, ChevronRight, Loader2, CheckCircle2, GraduationCap, Briefcase, AlertCircle, ShieldCheck, ArrowLeft, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../utils/cn';
 import {
@@ -7,7 +7,7 @@ import {
   validateEmail,
   type Role
 } from '../utils/validation';
-import { register } from '../services/auth.service';
+import { register, sendVerificationCode, verifyEmailCode } from '../services/auth.service';
 
 interface RegistrationFormProps {
   onSuccess: (email: string) => void;
@@ -26,6 +26,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     experience: ''
   });
 
+  const [step, setStep] = useState<'form' | 'verify' | 'success'>('form');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,6 +50,23 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     formData.password.length >= 8 && 
     passwordsMatch &&
     (formData.role !== 'reviewer' || (formData.qualification.length > 0 && formData.experience.length > 0));
+
+  const maskEmail = (emailStr: string) => {
+    if (!emailStr || !emailStr.includes('@')) return emailStr;
+    const [local, domain] = emailStr.split('@');
+    if (local.length <= 2) return `${local[0]}*@${domain}`;
+    return `${local[0]}${'*'.repeat(Math.min(local.length - 2, 4))}${local[local.length - 1]}@${domain}`;
+  };
+
+  useEffect(() => {
+    let timer: any;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -67,18 +91,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
         email: formData.email,
         password: formData.password,
         name: formData.name,
-        role: formData.role
+        role: formData.role,
+        qualification: formData.qualification,
+        experience: formData.experience
       });
-      
-      let msg = "Registration successful! Flipping to login...";
-      if (formData.role === 'reviewer') {
-        msg = "Your account is under admin approval. You can log in after approval.";
-      }
-      setSuccessMsg(msg);
 
-      setTimeout(() => {
-        onSuccess(formData.email);
-      }, 2000);
+      setStep('verify');
+      setResendCooldown(60);
     } catch (err: any) {
       localStorage.removeItem('registration_in_progress');
       setErrors({ form: err.message || 'Registration failed' });
@@ -87,30 +106,65 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     }
   };
 
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (verificationCode.length !== 6 || isVerifying) return;
+    setIsVerifying(true);
+    setVerifyError(null);
+    try {
+      await verifyEmailCode(verificationCode, formData.email);
+      
+      let msg = "Email verified successfully! Flipping to login...";
+      if (formData.role === 'reviewer') {
+        msg = "Email verified! Your reviewer account is under admin approval. You can log in after approval.";
+      }
+      setSuccessMsg(msg);
+      setStep('success');
+
+      setTimeout(() => {
+        onSuccess(formData.email);
+      }, 2500);
+    } catch (err: any) {
+      setVerifyError(err.message || 'Invalid or expired verification code.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (resendCooldown > 0 || isResending) return;
+    setIsResending(true);
+    setVerifyError(null);
+    try {
+      await sendVerificationCode(formData.email);
+      setResendCooldown(60);
+    } catch (err: any) {
+      setVerifyError(err.message || 'Failed to resend verification code.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   if (isAuthLoading) {
     return (
       <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 bg-white animate-pulse">
         <div className="max-w-md mx-auto w-full space-y-6">
-          {/* Header */}
           <div className="space-y-2 text-center md:text-left">
             <div className="h-8 bg-zinc-200 rounded w-1/2 mx-auto md:mx-0" />
             <div className="h-4 bg-zinc-200 rounded w-2/3 mx-auto md:mx-0" />
           </div>
 
           <div className="space-y-4">
-            {/* Input 1 */}
             <div className="space-y-2">
               <div className="h-4 bg-zinc-200 rounded w-12" />
               <div className="h-11 bg-zinc-100 rounded-xl w-full" />
             </div>
 
-            {/* Input 2 */}
             <div className="space-y-2">
               <div className="h-4 bg-zinc-200 rounded w-12" />
               <div className="h-11 bg-zinc-100 rounded-xl w-full" />
             </div>
 
-            {/* Role buttons */}
             <div className="space-y-2">
               <div className="h-4 bg-zinc-200 rounded w-12" />
               <div className="grid grid-cols-3 gap-2">
@@ -120,16 +174,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
               </div>
             </div>
 
-            {/* Input 3 */}
             <div className="space-y-2">
               <div className="h-4 bg-zinc-200 rounded w-16" />
               <div className="h-11 bg-zinc-100 rounded-xl w-full" />
             </div>
 
-            {/* Button */}
             <div className="h-12 bg-zinc-200 rounded-xl w-full" />
 
-            {/* Links */}
             <div className="h-4 bg-zinc-200 rounded w-48 mx-auto" />
           </div>
         </div>
@@ -140,15 +191,106 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
   return (
     <div className="w-full h-full flex flex-col justify-center p-6 sm:p-8 overflow-y-auto custom-scrollbar bg-white">
       <div className="max-w-md mx-auto w-full py-1 sm:py-2">
-        {/* Header */}
         <header className="mb-3 sm:mb-4">
-          <h2 className="text-2xl sm:text-3xl font-bold text-black mb-1.5 font-['Outfit']">Create Account</h2>
-          <p className="text-zinc-500 text-sm">Join the Kerala Mathematical Association</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-black mb-1.5 font-['Outfit']">
+            {step === 'verify' ? 'Verify Email' : step === 'success' ? 'Verified!' : 'Create Account'}
+          </h2>
+          <p className="text-zinc-500 text-sm">
+            {step === 'verify'
+              ? `Verification code sent to ${maskEmail(formData.email)}`
+              : step === 'success'
+              ? 'Your account is ready.'
+              : 'Join the Kerala Mathematical Association'}
+          </p>
         </header>
 
         <AnimatePresence mode="wait">
-          {successMsg ? (
+          {step === 'verify' && (
+            <motion.form
+              key="verify-form"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              onSubmit={handleVerifyCode}
+              className="space-y-5"
+            >
+              <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center shrink-0">
+                  <ShieldCheck size={20} />
+                </div>
+                <div className="text-xs">
+                  <p className="font-bold text-zinc-900">Check your inbox</p>
+                  <p className="text-zinc-500">We sent a 6-digit code to <strong className="text-black font-semibold">{maskEmail(formData.email)}</strong>. Code expires in 10 minutes.</p>
+                </div>
+              </div>
+
+              {verifyError && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 shadow-sm"
+                >
+                  <AlertCircle size={16} className="shrink-0" />
+                  <p className="text-xs font-bold tracking-tight">{verifyError}</p>
+                </motion.div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="form-label" htmlFor="verification-code-input">6-Digit Verification Code</label>
+                <input
+                  id="verification-code-input"
+                  type="text"
+                  maxLength={6}
+                  pattern="\d{6}"
+                  className="input-field text-center font-mono text-xl tracking-[0.5em] !border-zinc-200"
+                  placeholder="000000"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                  required
+                  disabled={isVerifying}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isVerifying || verificationCode.length !== 6}
+                className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isVerifying ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  <>
+                    <span>Verify Code</span>
+                    <ChevronRight size={18} />
+                  </>
+                )}
+              </button>
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('form')}
+                  className="flex items-center gap-1 text-xs font-bold text-zinc-400 hover:text-black uppercase tracking-wider transition-colors"
+                >
+                  <ArrowLeft size={14} /> Back
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resendCooldown > 0 || isResending}
+                  className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-black uppercase tracking-wider transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw size={12} className={isResending ? 'animate-spin' : ''} />
+                  {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}
+                </button>
+              </div>
+            </motion.form>
+          )}
+
+          {step === 'success' && (
             <motion.div
+              key="success-card"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               className="p-6 sm:p-8 bg-zinc-50 border border-zinc-200 rounded-2xl flex flex-col items-center text-center space-y-4"
@@ -157,11 +299,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                 <CheckCircle2 size={36} />
               </div>
               <div className="space-y-2">
-                <p className="text-black font-bold text-lg">Registration Success</p>
+                <p className="text-black font-bold text-lg">Verification Complete</p>
                 <p className="text-zinc-600 text-sm leading-relaxed">{successMsg}</p>
               </div>
             </motion.div>
-          ) : (
+          )}
+
+          {step === 'form' && (
             <form onSubmit={handleSubmit} className="space-y-4">
               {errors.form && (
                 <motion.div 
