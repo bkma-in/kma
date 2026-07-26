@@ -43,5 +43,26 @@ exports.config = {
     },
     gemini: {
         apiKey: process.env.GEMINI_API_KEY || '',
+    },
+    trustProxy: process.env.TRUST_PROXY || 2,
+    rateLimit: {
+        globalWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+        globalMax: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+        authWindowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+        authMax: Number(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS) || 5,
+        pdfWindowMs: Number(process.env.PDF_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+        pdfMax: Number(process.env.PDF_RATE_LIMIT_MAX_REQUESTS) || 5,
+        uploadWindowMs: Number(process.env.UPLOAD_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+        uploadMax: Number(process.env.UPLOAD_RATE_LIMIT_MAX_REQUESTS) || 5,
+        signedUrlWindowMs: Number(process.env.SIGNED_URL_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+        signedUrlMax: Number(process.env.SIGNED_URL_RATE_LIMIT_MAX_REQUESTS) || 15,
+        downloadWindowMs: Number(process.env.DOWNLOAD_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+        downloadMax: Number(process.env.DOWNLOAD_RATE_LIMIT_MAX_REQUESTS) || 30,
+        paymentWindowMs: Number(process.env.PAYMENT_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+        paymentMax: Number(process.env.PAYMENT_RATE_LIMIT_MAX_REQUESTS) || 10,
+        archiveWindowMs: Number(process.env.ARCHIVE_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+        archiveMax: Number(process.env.ARCHIVE_RATE_LIMIT_MAX_REQUESTS) || 5,
+        webhookWindowMs: Number(process.env.WEBHOOK_RATE_LIMIT_WINDOW_MS) || 60 * 1000,
+        webhookMax: Number(process.env.WEBHOOK_RATE_LIMIT_MAX_REQUESTS) || 100,
     }
 };
