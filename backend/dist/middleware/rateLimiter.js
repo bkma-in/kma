@@ -185,6 +185,20 @@ const ipKeyGenerator = (req) => {
     return (0, exports.getClientIp)(req);
 };
 /**
+ * Admin Rate-Limit Skip Evaluator:
+ * Exempts authenticated Admin users from operational rate limiters.
+ *
+ * Security & Performance Rules:
+ * 1. Uses pre-verified req.user object attached by authenticateOptional / requireAuth middleware.
+ * 2. Does NOT trigger duplicate Firebase token verification or Firestore reads.
+ * 3. Client-supplied headers, query parameters, request body roles, or localStorage values are NEVER trusted.
+ * 4. Non-admin users (authors, reviewers, readers) and unauthenticated visitors remain fully rate-limited.
+ */
+const skipAdmin = (req) => {
+    const authReq = req;
+    return Boolean(authReq.user && authReq.user.role === 'admin');
+};
+/**
  * Security Event Logger:
  * Logs rate limit violations safely without exposing sensitive data (tokens, passwords, OTPs, secrets).
  */
@@ -218,8 +232,9 @@ const createRateLimiterHandler = (category, defaultMessage) => {
     };
 };
 /**
- * 1. Global API Abuse Protection (300 requests / 15 minutes / IP)
+ * 1. Global API Abuse Protection (100 requests / 15 minutes / IP)
  * Prevents general layer-7 flooding without blocking users on shared NAT networks.
+ * Exempts verified Admin users to allow high-volume dashboard operations.
  */
 exports.globalRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: env_1.config.rateLimit.globalWindowMs,
@@ -227,11 +242,13 @@ exports.globalRateLimiter = (0, express_rate_limit_1.default)({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: ipKeyGenerator,
+    skip: skipAdmin,
     handler: createRateLimiterHandler('Global API', 'Too many requests. Please wait a moment and try again.')
 });
 /**
- * 2. Authentication Rate Limiter (10 requests / 15 minutes / UID or IP)
- * Protects login, registration, OTP, password reset, and password change endpoints.
+ * 2. Authentication Rate Limiter (5 requests / 15 minutes / UID or IP)
+ * Protects login, registration, password reset, and password change endpoints.
+ * Active for ALL users (no Admin skip) to protect sensitive account security actions.
  */
 exports.authRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: env_1.config.rateLimit.authWindowMs,
@@ -242,8 +259,9 @@ exports.authRateLimiter = (0, express_rate_limit_1.default)({
     handler: createRateLimiterHandler('Authentication', 'Too many attempts. Please wait a few minutes before trying again.')
 });
 /**
- * 3. PDF Generation Rate Limiter (10 requests / 15 minutes / UID or IP)
+ * 3. PDF Generation Rate Limiter (5 requests / 15 minutes / UID or IP)
  * Protects CPU/Memory intensive PDF generation endpoints.
+ * Exempts verified Admin users to allow issue splitting & publishing operations.
  */
 exports.pdfRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: env_1.config.rateLimit.pdfWindowMs,
@@ -251,11 +269,13 @@ exports.pdfRateLimiter = (0, express_rate_limit_1.default)({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator,
+    skip: skipAdmin,
     handler: createRateLimiterHandler('PDF Generation', 'PDF generation limit reached. Please wait a few minutes before requesting more documents.')
 });
 /**
- * 4. File Upload Rate Limiter (15 requests / 15 minutes / UID or IP)
+ * 4. File Upload Rate Limiter (5 requests / 15 minutes / UID or IP)
  * Protects article file uploads, Cloudflare R2 storage, and Cloudinary operations.
+ * Exempts verified Admin users for journal administration & archive uploads.
  */
 exports.uploadRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: env_1.config.rateLimit.uploadWindowMs,
@@ -263,11 +283,13 @@ exports.uploadRateLimiter = (0, express_rate_limit_1.default)({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator,
+    skip: skipAdmin,
     handler: createRateLimiterHandler('File Upload', 'File upload limit reached. Please wait a few minutes before uploading more files.')
 });
 /**
- * 5. Signed URL Generation Rate Limiter (30 requests / 15 minutes / UID or IP)
+ * 5. Signed URL Generation Rate Limiter (15 requests / 15 minutes / UID or IP)
  * Protects presigned R2 preview URL generation and staging endpoints.
+ * Exempts verified Admin users for manuscript review workflows.
  */
 exports.signedUrlRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: env_1.config.rateLimit.signedUrlWindowMs,
@@ -275,11 +297,13 @@ exports.signedUrlRateLimiter = (0, express_rate_limit_1.default)({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator,
+    skip: skipAdmin,
     handler: createRateLimiterHandler('Signed URL', 'Too many file preview requests. Please wait a moment and try again.')
 });
 /**
- * 6. File Download Rate Limiter (60 requests / 15 minutes / UID or IP)
+ * 6. File Download Rate Limiter (30 requests / 15 minutes / UID or IP)
  * Protects article downloads against scraping while accommodating legitimate readers.
+ * Exempts verified Admin users for downloading submitted manuscripts for review.
  */
 exports.downloadRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: env_1.config.rateLimit.downloadWindowMs,
@@ -287,11 +311,13 @@ exports.downloadRateLimiter = (0, express_rate_limit_1.default)({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator,
+    skip: skipAdmin,
     handler: createRateLimiterHandler('File Download', 'Download request limit reached. Please try again in a few minutes.')
 });
 /**
- * 7. Payment Order Rate Limiter (30 requests / 15 minutes / UID or IP)
+ * 7. Payment Order Rate Limiter (10 requests / 15 minutes / UID or IP)
  * Protects payment order creation & verification endpoints against fraud/abuse.
+ * Active for ALL users (no Admin skip) to prevent payment gateway order flooding.
  */
 exports.paymentRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: env_1.config.rateLimit.paymentWindowMs,
@@ -302,8 +328,9 @@ exports.paymentRateLimiter = (0, express_rate_limit_1.default)({
     handler: createRateLimiterHandler('Payment Order', 'Too many payment creation requests. Please wait a moment and try again.')
 });
 /**
- * 8. Archive & Bulk Operations Rate Limiter (10 requests / 15 minutes / UID)
+ * 8. Archive & Bulk Operations Rate Limiter (5 requests / 15 minutes / UID)
  * Protects heavy archive extraction, chunking, and administrative batch processing.
+ * Exempts verified Admin users for legitimate archive ingestion tasks.
  */
 exports.archiveRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: env_1.config.rateLimit.archiveWindowMs,
@@ -311,12 +338,13 @@ exports.archiveRateLimiter = (0, express_rate_limit_1.default)({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator,
+    skip: skipAdmin,
     handler: createRateLimiterHandler('Archive Operations', 'Too many archive processing requests. Please try again later.')
 });
 /**
  * 9. Razorpay Webhook Dedicated Rate Limiter (100 requests / 1 minute / IP)
- * Provides dedicated IP-based rate limiting for Razorpay webhooks to prevent HTTP flooding
- * without interfering with valid payment events.
+ * Dedicated IP-based rate limiting for Razorpay webhooks.
+ * Active for ALL webhook traffic (no Admin skip).
  */
 exports.webhookRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: env_1.config.rateLimit.webhookWindowMs,
@@ -328,7 +356,8 @@ exports.webhookRateLimiter = (0, express_rate_limit_1.default)({
 });
 /**
  * 10. Send Verification Email Rate Limiter (5 requests / 15 minutes / UID or IP)
- * Protects email sending API against verification email spam and email bombing.
+ * Protects email sending API against verification email spam and Brevo quota exhaustion.
+ * Active for ALL users (no Admin skip).
  */
 exports.sendVerificationRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: env_1.config.rateLimit.sendVerificationWindowMs,
@@ -340,7 +369,8 @@ exports.sendVerificationRateLimiter = (0, express_rate_limit_1.default)({
 });
 /**
  * 11. Verify Code Rate Limiter (10 attempts / 15 minutes / UID or IP)
- * Protects code verification endpoint against brute-force code guessing attacks.
+ * Protects code verification endpoint against 6-digit brute-force code guessing attacks.
+ * Active for ALL users (no Admin skip).
  */
 exports.verifyCodeRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: env_1.config.rateLimit.verifyCodeWindowMs,

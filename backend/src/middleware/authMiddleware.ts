@@ -15,7 +15,57 @@ export interface AuthRequest extends Request {
   query: any;
 }
 
+/**
+ * Optional Authentication Resolver:
+ * Pre-verifies Firebase Auth Bearer tokens on top-level routes (/api/) if present.
+ * Populates req.user once so that rate limiters and route guards reuse the verified identity
+ * without duplicating Firebase token verification logic.
+ */
+export const authenticateOptional = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split('Bearer ')[1];
+  try {
+    const decodedToken = await auth.verifyIdToken(token);
+    let role = decodedToken.role as string | undefined;
+    let name = decodedToken.name as string | undefined;
+
+    if (!role) {
+      const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        role = userData?.role;
+        name = name || userData?.name;
+      }
+    }
+
+    req.user = {
+      uid: decodedToken.uid,
+      email: decodedToken.email || '',
+      role: (role || '') as string,
+      name: (name || decodedToken.email?.split('@')[0] || 'User') as string
+    };
+  } catch (error) {
+    // Continue without setting req.user on token verification error; requireAuth handles strict enforcement
+  }
+  next();
+};
+
 export const requireAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  // If authenticateOptional has already verified the token and populated req.user:
+  if (req.user && req.user.uid) {
+    const isRegistering = req.originalUrl.endsWith('/register') || req.path === '/register';
+    const validRoles = ['admin', 'reviewer', 'author', 'reader', 'dev'];
+    if (!isRegistering && (!req.user.role || !validRoles.includes(req.user.role))) {
+      console.error(`[AUTH-DIAGNOSTIC] ❌ Access Denied: User ${req.user.uid} has invalid or missing role: "${req.user.role}"`);
+      return res.status(403).json({ error: 'Unauthorized: User has no valid role assigned.' });
+    }
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     console.log('[AUTH-DIAGNOSTIC] Auth Middleware: No token provided');
@@ -27,12 +77,10 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     const decodedToken = await auth.verifyIdToken(token);
     console.log(`[AUTH-DIAGNOSTIC] Token successfully verified for UID: ${decodedToken.uid}`);
     
-    // 1. Authoritative Source: Check Custom User Claims first
     let role = decodedToken.role as string | undefined;
     let name = decodedToken.name as string | undefined;
     let source = 'Custom Claims';
 
-    // 2. Fallback Source: Fetch user details from Firestore if missing from claims
     if (!role) {
       console.log(`[AUTH-DIAGNOSTIC] Role not found in Custom Claims for UID: ${decodedToken.uid}. Fetching from Firestore.`);
       const userDoc = await db.collection('users').doc(decodedToken.uid).get();
@@ -46,7 +94,6 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
       }
     }
 
-    // 3. Validation
     const isRegistering = req.originalUrl.endsWith('/register') || req.path === '/register';
     const validRoles = ['admin', 'reviewer', 'author', 'reader', 'dev'];
     if (!isRegistering && (!role || !validRoles.includes(role))) {

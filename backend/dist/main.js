@@ -28,6 +28,8 @@ const webhookRoutes_1 = __importDefault(require("./routes/webhookRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const notificationRoutes_1 = __importDefault(require("./routes/notificationRoutes"));
 const archiveRoutes_1 = __importDefault(require("./routes/archiveRoutes"));
+// Import Auth Middleware
+const authMiddleware_1 = require("./middleware/authMiddleware");
 // Import Rate Limiters and IP Trust Validator
 const rateLimiter_1 = require("./middleware/rateLimiter");
 const app = (0, express_1.default)();
@@ -42,6 +44,8 @@ app.use('/api/webhooks', rateLimiter_1.webhookRateLimiter, express_1.default.raw
 // General Request Payload Size Limits (1MB for JSON and URL-encoded data)
 app.use(express_1.default.json({ limit: '1mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '1mb' }));
+// Pre-verify token context once for global rate limiting & route guards
+app.use('/api/', authMiddleware_1.authenticateOptional);
 // Global API Rate Limiter
 app.use('/api/', rateLimiter_1.globalRateLimiter);
 // Routes

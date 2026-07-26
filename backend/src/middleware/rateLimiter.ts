@@ -191,6 +191,21 @@ const ipKeyGenerator = (req: Request): string => {
 };
 
 /**
+ * Admin Rate-Limit Skip Evaluator:
+ * Exempts authenticated Admin users from operational rate limiters.
+ *
+ * Security & Performance Rules:
+ * 1. Uses pre-verified req.user object attached by authenticateOptional / requireAuth middleware.
+ * 2. Does NOT trigger duplicate Firebase token verification or Firestore reads.
+ * 3. Client-supplied headers, query parameters, request body roles, or localStorage values are NEVER trusted.
+ * 4. Non-admin users (authors, reviewers, readers) and unauthenticated visitors remain fully rate-limited.
+ */
+const skipAdmin = (req: Request): boolean => {
+  const authReq = req as AuthRequest;
+  return Boolean(authReq.user && authReq.user.role === 'admin');
+};
+
+/**
  * Security Event Logger:
  * Logs rate limit violations safely without exposing sensitive data (tokens, passwords, OTPs, secrets).
  */
@@ -231,8 +246,9 @@ const createRateLimiterHandler = (category: string, defaultMessage: string) => {
 };
 
 /**
- * 1. Global API Abuse Protection (300 requests / 15 minutes / IP)
+ * 1. Global API Abuse Protection (100 requests / 15 minutes / IP)
  * Prevents general layer-7 flooding without blocking users on shared NAT networks.
+ * Exempts verified Admin users to allow high-volume dashboard operations.
  */
 export const globalRateLimiter = rateLimit({
   windowMs: config.rateLimit.globalWindowMs,
@@ -240,6 +256,7 @@ export const globalRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: ipKeyGenerator,
+  skip: skipAdmin,
   handler: createRateLimiterHandler(
     'Global API',
     'Too many requests. Please wait a moment and try again.'
@@ -247,8 +264,9 @@ export const globalRateLimiter = rateLimit({
 });
 
 /**
- * 2. Authentication Rate Limiter (10 requests / 15 minutes / UID or IP)
- * Protects login, registration, OTP, password reset, and password change endpoints.
+ * 2. Authentication Rate Limiter (5 requests / 15 minutes / UID or IP)
+ * Protects login, registration, password reset, and password change endpoints.
+ * Active for ALL users (no Admin skip) to protect sensitive account security actions.
  */
 export const authRateLimiter = rateLimit({
   windowMs: config.rateLimit.authWindowMs,
@@ -263,8 +281,9 @@ export const authRateLimiter = rateLimit({
 });
 
 /**
- * 3. PDF Generation Rate Limiter (10 requests / 15 minutes / UID or IP)
+ * 3. PDF Generation Rate Limiter (5 requests / 15 minutes / UID or IP)
  * Protects CPU/Memory intensive PDF generation endpoints.
+ * Exempts verified Admin users to allow issue splitting & publishing operations.
  */
 export const pdfRateLimiter = rateLimit({
   windowMs: config.rateLimit.pdfWindowMs,
@@ -272,6 +291,7 @@ export const pdfRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
+  skip: skipAdmin,
   handler: createRateLimiterHandler(
     'PDF Generation',
     'PDF generation limit reached. Please wait a few minutes before requesting more documents.'
@@ -279,8 +299,9 @@ export const pdfRateLimiter = rateLimit({
 });
 
 /**
- * 4. File Upload Rate Limiter (15 requests / 15 minutes / UID or IP)
+ * 4. File Upload Rate Limiter (5 requests / 15 minutes / UID or IP)
  * Protects article file uploads, Cloudflare R2 storage, and Cloudinary operations.
+ * Exempts verified Admin users for journal administration & archive uploads.
  */
 export const uploadRateLimiter = rateLimit({
   windowMs: config.rateLimit.uploadWindowMs,
@@ -288,6 +309,7 @@ export const uploadRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
+  skip: skipAdmin,
   handler: createRateLimiterHandler(
     'File Upload',
     'File upload limit reached. Please wait a few minutes before uploading more files.'
@@ -295,8 +317,9 @@ export const uploadRateLimiter = rateLimit({
 });
 
 /**
- * 5. Signed URL Generation Rate Limiter (30 requests / 15 minutes / UID or IP)
+ * 5. Signed URL Generation Rate Limiter (15 requests / 15 minutes / UID or IP)
  * Protects presigned R2 preview URL generation and staging endpoints.
+ * Exempts verified Admin users for manuscript review workflows.
  */
 export const signedUrlRateLimiter = rateLimit({
   windowMs: config.rateLimit.signedUrlWindowMs,
@@ -304,6 +327,7 @@ export const signedUrlRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
+  skip: skipAdmin,
   handler: createRateLimiterHandler(
     'Signed URL',
     'Too many file preview requests. Please wait a moment and try again.'
@@ -311,8 +335,9 @@ export const signedUrlRateLimiter = rateLimit({
 });
 
 /**
- * 6. File Download Rate Limiter (60 requests / 15 minutes / UID or IP)
+ * 6. File Download Rate Limiter (30 requests / 15 minutes / UID or IP)
  * Protects article downloads against scraping while accommodating legitimate readers.
+ * Exempts verified Admin users for downloading submitted manuscripts for review.
  */
 export const downloadRateLimiter = rateLimit({
   windowMs: config.rateLimit.downloadWindowMs,
@@ -320,6 +345,7 @@ export const downloadRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
+  skip: skipAdmin,
   handler: createRateLimiterHandler(
     'File Download',
     'Download request limit reached. Please try again in a few minutes.'
@@ -327,8 +353,9 @@ export const downloadRateLimiter = rateLimit({
 });
 
 /**
- * 7. Payment Order Rate Limiter (30 requests / 15 minutes / UID or IP)
+ * 7. Payment Order Rate Limiter (10 requests / 15 minutes / UID or IP)
  * Protects payment order creation & verification endpoints against fraud/abuse.
+ * Active for ALL users (no Admin skip) to prevent payment gateway order flooding.
  */
 export const paymentRateLimiter = rateLimit({
   windowMs: config.rateLimit.paymentWindowMs,
@@ -343,8 +370,9 @@ export const paymentRateLimiter = rateLimit({
 });
 
 /**
- * 8. Archive & Bulk Operations Rate Limiter (10 requests / 15 minutes / UID)
+ * 8. Archive & Bulk Operations Rate Limiter (5 requests / 15 minutes / UID)
  * Protects heavy archive extraction, chunking, and administrative batch processing.
+ * Exempts verified Admin users for legitimate archive ingestion tasks.
  */
 export const archiveRateLimiter = rateLimit({
   windowMs: config.rateLimit.archiveWindowMs,
@@ -352,6 +380,7 @@ export const archiveRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator,
+  skip: skipAdmin,
   handler: createRateLimiterHandler(
     'Archive Operations',
     'Too many archive processing requests. Please try again later.'
@@ -360,8 +389,8 @@ export const archiveRateLimiter = rateLimit({
 
 /**
  * 9. Razorpay Webhook Dedicated Rate Limiter (100 requests / 1 minute / IP)
- * Provides dedicated IP-based rate limiting for Razorpay webhooks to prevent HTTP flooding
- * without interfering with valid payment events.
+ * Dedicated IP-based rate limiting for Razorpay webhooks.
+ * Active for ALL webhook traffic (no Admin skip).
  */
 export const webhookRateLimiter = rateLimit({
   windowMs: config.rateLimit.webhookWindowMs,
@@ -377,7 +406,8 @@ export const webhookRateLimiter = rateLimit({
 
 /**
  * 10. Send Verification Email Rate Limiter (5 requests / 15 minutes / UID or IP)
- * Protects email sending API against verification email spam and email bombing.
+ * Protects email sending API against verification email spam and Brevo quota exhaustion.
+ * Active for ALL users (no Admin skip).
  */
 export const sendVerificationRateLimiter = rateLimit({
   windowMs: config.rateLimit.sendVerificationWindowMs,
@@ -393,7 +423,8 @@ export const sendVerificationRateLimiter = rateLimit({
 
 /**
  * 11. Verify Code Rate Limiter (10 attempts / 15 minutes / UID or IP)
- * Protects code verification endpoint against brute-force code guessing attacks.
+ * Protects code verification endpoint against 6-digit brute-force code guessing attacks.
+ * Active for ALL users (no Admin skip).
  */
 export const verifyCodeRateLimiter = rateLimit({
   windowMs: config.rateLimit.verifyCodeWindowMs,
@@ -406,4 +437,3 @@ export const verifyCodeRateLimiter = rateLimit({
     'Too many verification attempts. Please wait 15 minutes before trying again.'
   )
 });
-
