@@ -492,7 +492,6 @@ const LandingPage: React.FC = () => {
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-  const [heroLoading, setHeroLoading] = useState(false);
 
   useEffect(() => {
     const fetchPublished = async () => {
@@ -581,77 +580,69 @@ const LandingPage: React.FC = () => {
       <PublicHeader />
 
       {/* Hero Section */}
-      <div className="transition-all duration-500 ease-in-out">
-        {heroLoading ? (
-          <HeroSkeleton />
-        ) : (
-          <div className="animate-fade-in">
-            <section className="bg-black text-white w-full overflow-hidden min-h-[85vh] flex items-center pt-24 pb-20 sm:pt-32 sm:pb-32">
-              <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 xl:px-16">
-                <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-10 lg:gap-16">
-                  <div className="flex flex-col text-left">
-                    <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
-                      Advancing Pure <br /> & Applied <br /> Mathematics
-                    </h2>
-                    <p className="text-gray-400 mt-4 sm:mt-6 max-w-lg text-sm sm:text-lg leading-relaxed">
-                      The Kerala Mathematical Association promotes advanced mathematical research and higher education through collaboration among scholars worldwide.
+      <section className="bg-black text-white w-full overflow-hidden min-h-[85vh] flex items-center pt-24 pb-20 sm:pt-32 sm:pb-32">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 xl:px-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 items-center gap-10 lg:gap-16">
+            <div className="flex flex-col text-left">
+              <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
+                Advancing Pure <br /> & Applied <br /> Mathematics
+              </h2>
+              <p className="text-gray-400 mt-4 sm:mt-6 max-w-lg text-sm sm:text-lg leading-relaxed">
+                The Kerala Mathematical Association promotes advanced mathematical research and higher education through collaboration among scholars worldwide.
+              </p>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mt-6 sm:mt-10 w-full sm:max-w-md shadow-xl lg:w-fit">
+                <div className="flex items-start gap-4">
+                  <div className="bg-zinc-800 p-2.5 rounded-lg shrink-0">
+                    <Info className="text-white" size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-bold text-sm tracking-wide mb-1 flex items-center gap-2">
+                      REVIEWER NOTICE
+                    </h4>
+                    <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed">
+                      Reviewer accounts require admin approval. You will be able to log in only after your account has been approved.
                     </p>
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mt-6 sm:mt-10 w-full sm:max-w-md shadow-xl lg:w-fit">
-                      <div className="flex items-start gap-4">
-                        <div className="bg-zinc-800 p-2.5 rounded-lg shrink-0">
-                          <Info className="text-white" size={20} />
-                        </div>
-                        <div>
-                          <h4 className="text-white font-bold text-sm tracking-wide mb-1 flex items-center gap-2">
-                            REVIEWER NOTICE
-                          </h4>
-                          <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed">
-                            Reviewer accounts require admin approval. You will be able to log in only after your account has been approved.
-                          </p>
-                        </div>
-                      </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="w-full flex justify-center lg:justify-end">
+              <div className="bg-white text-black rounded-2xl shadow-2xl p-8 sm:p-10 w-full max-w-md lg:max-w-lg space-y-6">
+                <h3 className="text-3xl font-bold tracking-tight border-b border-zinc-100 pb-5">Membership Benefits</h3>
+                <div className="space-y-6">
+                  <div className="flex gap-5 items-start">
+                    <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-black/10">
+                      <BookOpen className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xl mb-1.5">Scholarly Access</h4>
+                      <p className="text-zinc-500 text-sm leading-relaxed">Access peer-reviewed scholarly articles and research papers from leading global institutions.</p>
                     </div>
                   </div>
-                  <div className="w-full flex justify-center lg:justify-end">
-                    <div className="bg-white text-black rounded-2xl shadow-2xl p-8 sm:p-10 w-full max-w-md lg:max-w-lg space-y-6">
-                      <h3 className="text-3xl font-bold tracking-tight border-b border-zinc-100 pb-5">Membership Benefits</h3>
-                      <div className="space-y-6">
-                        <div className="flex gap-5 items-start">
-                          <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-black/10">
-                            <BookOpen className="text-white" size={24} />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-xl mb-1.5">Scholarly Access</h4>
-                            <p className="text-zinc-500 text-sm leading-relaxed">Access peer-reviewed scholarly articles and research papers from leading global institutions.</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-5 items-start">
-                          <div className="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center shrink-0">
-                            <Users className="text-black" size={24} />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-xl mb-1.5">Global Collaboration</h4>
-                            <p className="text-zinc-500 text-sm leading-relaxed">Platform for authors and reviewers to collaborate on cutting-edge mathematical research.</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-5 items-start">
-                          <div className="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center shrink-0">
-                            <BadgePercent className="text-black" size={24} />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-xl mb-1.5">Life Member Perks</h4>
-                            <p className="text-zinc-500 text-sm leading-relaxed">50% subscription discount for life members on all premium publications.</p>
-                          </div>
-                        </div>
-                      </div>
+                  <div className="flex gap-5 items-start">
+                    <div className="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center shrink-0">
+                      <Users className="text-black" size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xl mb-1.5">Global Collaboration</h4>
+                      <p className="text-zinc-500 text-sm leading-relaxed">Platform for authors and reviewers to collaborate on cutting-edge mathematical research.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-5 items-start">
+                    <div className="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center shrink-0">
+                      <BadgePercent className="text-black" size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xl mb-1.5">Life Member Perks</h4>
+                      <p className="text-zinc-500 text-sm leading-relaxed">50% subscription discount for life members on all premium publications.</p>
                     </div>
                   </div>
                 </div>
               </div>
-            </section>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      </section>
 
       {/* Published Articles Section */}
       <PublishedArticlesSection

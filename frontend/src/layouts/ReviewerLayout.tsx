@@ -18,6 +18,8 @@ import { SkeletonArticleCard } from '../components/skeletons/SkeletonArticleCard
 import { SkeletonTable } from '../components/skeletons/SkeletonTable';
 import { SkeletonNotification } from '../components/skeletons/SkeletonNotification';
 
+import { ReviewerDashboardSkeleton, NotificationsSkeleton, ArticlesSkeleton } from '../components/skeletons/PageSkeletons';
+
 interface ReviewerLayoutProps {
   isLoadingSkeleton?: boolean;
 }
@@ -38,34 +40,12 @@ const ReviewerLayout: React.FC<ReviewerLayoutProps> = ({ isLoadingSkeleton = fal
   const renderSkeletonContent = () => {
     const path = location.pathname;
     if (path.endsWith('/dashboard')) {
-      return (
-        <div className="space-y-8 animate-pulse">
-          <div className="space-y-2">
-            <div className="h-8 bg-zinc-200 rounded w-1/4" />
-            <div className="h-4 bg-zinc-200 rounded w-1/3" />
-          </div>
-          <SkeletonStatistics />
-          <div className="space-y-4">
-            <div className="h-6 bg-zinc-200 rounded w-1/6" />
-            <SkeletonArticleCard count={3} />
-          </div>
-        </div>
-      );
+      return <ReviewerDashboardSkeleton />;
     }
     if (path.includes('/notifications')) {
-      return (
-        <div className="space-y-6 animate-pulse">
-          <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
-          <SkeletonNotification count={5} />
-        </div>
-      );
+      return <NotificationsSkeleton />;
     }
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
-        <SkeletonTable />
-      </div>
-    );
+    return <ArticlesSkeleton />;
   };
 
   const getTimestamp = (val: any) => {
@@ -205,24 +185,20 @@ const ReviewerLayout: React.FC<ReviewerLayoutProps> = ({ isLoadingSkeleton = fal
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName={isLoadingSkeleton ? '' : userName}
-          userInitials={isLoadingSkeleton ? '' : userInitials}
+          userName={userName}
+          userInitials={userInitials}
           portalName="REVIEWER PORTAL"
-          showProfile={!isLoadingSkeleton}
+          showProfile={true}
           rightActions={
             <div className="flex items-center gap-4">
-              {isLoadingSkeleton ? (
-                <div className="w-8 h-8 rounded-full bg-zinc-200 animate-pulse" />
-              ) : (
-                <div className="relative hidden md:block">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-                  <input 
-                    type="text" 
-                    placeholder="SEARCH ARCHIVE..." 
-                    className="pl-10 pr-4 py-2 bg-black/5 border-none rounded-lg text-xs font-medium w-48 lg:w-64 focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
-              )}
+              <div className="relative hidden md:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="SEARCH ARCHIVE..." 
+                  className="pl-10 pr-4 py-2 bg-black/5 border-none rounded-lg text-xs font-medium w-48 lg:w-64 focus:ring-1 focus:ring-black outline-none"
+                />
+              </div>
             </div>
           }
         />

@@ -41,11 +41,14 @@ export default function ProtectedRoute({
   if (!role) {
     console.error(`[AUTH-DIAGNOSTIC] Route Guard: User ${currentUser.uid} has no role defined. Rendering loader.`);
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-zinc-300" size={48} />
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Loading Role</p>
+      <div className="p-6 space-y-6 animate-pulse w-full max-w-7xl mx-auto">
+        <div className="h-8 bg-zinc-200 rounded-lg w-1/4 mb-6" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <div key={idx} className="bg-white border border-zinc-100 p-6 rounded-3xl h-28" />
+          ))}
         </div>
+        <div className="bg-white border border-zinc-100 rounded-3xl p-6 h-64" />
       </div>
     );
   }

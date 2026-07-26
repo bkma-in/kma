@@ -457,15 +457,15 @@ const AdminArticles = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
         <div className="flex justify-between items-end gap-6 mb-6">
           <div className="space-y-2">
-            <div className="h-8 bg-zinc-200 rounded w-48 animate-pulse" />
-            <div className="h-4 bg-zinc-200 rounded w-64 animate-pulse" />
+            <div className="h-8 skeleton-box rounded w-48" />
+            <div className="h-4 skeleton-box rounded w-64" />
           </div>
           <div className="flex gap-3">
-            <div className="h-10 bg-zinc-200 rounded-xl w-48 animate-pulse" />
-            <div className="h-10 bg-zinc-200 rounded-xl w-36 animate-pulse" />
+            <div className="h-10 skeleton-box rounded-xl w-48" />
+            <div className="h-10 skeleton-box rounded-xl w-36" />
           </div>
         </div>
         <SkeletonTable rowsCount={4} colsCount={5} />

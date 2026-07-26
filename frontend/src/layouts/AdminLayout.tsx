@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud, ChevronDown, ChevronUp, UserCheck, BookOpen, User } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud, ChevronDown, ChevronUp, UserCheck, BookOpen, User, CheckCircle2 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
 import GlobalHeader from '../components/GlobalHeader';
@@ -16,6 +16,7 @@ import { SkeletonStatistics } from '../components/skeletons/SkeletonStatistics';
 import { SkeletonArticleCard } from '../components/skeletons/SkeletonArticleCard';
 import { SkeletonTable } from '../components/skeletons/SkeletonTable';
 import { SkeletonNotification } from '../components/skeletons/SkeletonNotification';
+import { AdminDashboardSkeleton, ArticlesSkeleton, NotificationsSkeleton } from '../components/skeletons/PageSkeletons';
 
 interface AdminLayoutProps {
   isLoadingSkeleton?: boolean;
@@ -30,32 +31,28 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
 
   const renderSkeletonContent = () => {
     const path = location.pathname;
-    if (path.endsWith('/dashboard')) {
-      return (
-        <div className="space-y-8">
-          <div className="space-y-2">
-            <div className="h-8 bg-zinc-200 rounded w-1/4" />
-            <div className="h-4 bg-zinc-200 rounded w-1/3" />
-          </div>
-          <SkeletonStatistics />
-          <div className="space-y-4">
-            <div className="h-6 bg-zinc-200 rounded w-1/6" />
-            <SkeletonArticleCard count={3} />
-          </div>
-        </div>
-      );
+    if (path.includes('/dashboard')) {
+      return <AdminDashboardSkeleton />;
+    }
+    if (
+      path.includes('/published') || 
+      path.includes('/ready-to-publish') || 
+      path.includes('/articles')
+    ) {
+      return <ArticlesSkeleton />;
     }
     if (path.includes('/notifications')) {
-      return (
-        <div className="space-y-6">
-          <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
-          <SkeletonNotification count={5} />
-        </div>
-      );
+      return <NotificationsSkeleton />;
     }
     return (
-      <div className="space-y-6">
-        <div className="h-8 bg-zinc-200 rounded w-1/4 mb-6" />
+      <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="space-y-2">
+            <div className="h-8 skeleton-box rounded-xl w-48" />
+            <div className="h-4 skeleton-box rounded-lg w-72" />
+          </div>
+          <div className="h-10 skeleton-box rounded-xl w-64" />
+        </div>
         <SkeletonTable />
       </div>
     );
@@ -157,6 +154,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
     },
     { name: 'Articles', path: '/admin/articles', icon: FileText },
     { name: 'Ready to Publish', path: '/admin/ready-to-publish', icon: UploadCloud },
+    { name: 'Published Articles', path: '/admin/published-articles', icon: CheckCircle2 },
     { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: formatBadgeCount(unreadCount) },
   ];
 
@@ -311,24 +309,20 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName={isLoadingSkeleton ? '' : userName}
-          userInitials={isLoadingSkeleton ? '' : userInitials}
+          userName={userName}
+          userInitials={userInitials}
           portalName="ADMIN PORTAL"
-          showProfile={!isLoadingSkeleton}
+          showProfile={true}
           rightActions={
             <div className="flex items-center gap-4">
-              {isLoadingSkeleton ? (
-                <div className="w-8 h-8 rounded-full bg-zinc-200 animate-pulse" />
-              ) : (
-                <div className="relative hidden md:block">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-                  <input 
-                    type="text" 
-                    placeholder="SEARCH ARCHIVE..." 
-                    className="pl-10 pr-4 py-2 bg-black/5 border-none rounded-lg text-xs font-medium w-48 lg:w-64 focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
-              )}
+              <div className="relative hidden md:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="SEARCH ARCHIVE..." 
+                  className="pl-10 pr-4 py-2 bg-black/5 border-none rounded-lg text-xs font-medium w-48 lg:w-64 focus:ring-1 focus:ring-black outline-none"
+                />
+              </div>
             </div>
           }
         />

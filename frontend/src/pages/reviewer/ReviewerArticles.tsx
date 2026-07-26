@@ -13,6 +13,7 @@ import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { useLocation } from 'react-router-dom';
 import { getArticles, getPdfUrl, updateArticleStatus } from '../../services/article.service';
+import { ArticlesSkeleton } from '../../components/skeletons/PageSkeletons';
 
 type ReviewStatus = 'Accepted' | 'Rejected' | 'Needs Improvement' | '';
 
@@ -189,14 +190,7 @@ const ReviewerArticles = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-zinc-300" size={48} />
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Loading Assignments</p>
-        </div>
-      </div>
-    );
+    return <ArticlesSkeleton />;
   }
 
   if (articles.length === 0) {

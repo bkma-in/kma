@@ -26,6 +26,7 @@ import { useProfile } from '../../hooks/useProfile';
 import { formatDate } from '../../utils/dateHelpers';
 
 import { SkeletonStatistics } from '../../components/skeletons/SkeletonStatistics';
+import { AdminDashboardSkeleton } from '../../components/skeletons/PageSkeletons';
 
 const AdminDashboard = () => {
   const { profile } = useProfile();
@@ -130,22 +131,7 @@ const AdminDashboard = () => {
     .filter(log => log.detail.toLowerCase().includes(logsSearchTerm.toLowerCase()) || log.title.toLowerCase().includes(logsSearchTerm.toLowerCase()));
 
   if (loading) {
-    return (
-      <div className="space-y-8 max-w-7xl mx-auto">
-        <div className="space-y-2">
-          <div className="h-8 bg-zinc-200 rounded w-1/4 animate-pulse" />
-          <div className="h-4 bg-zinc-200 rounded w-1/3 animate-pulse" />
-        </div>
-        <SkeletonStatistics count={5} />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          <div className="lg:col-span-2 space-y-10">
-            <div className="bg-white border border-zinc-100 rounded-3xl p-6 h-64 animate-pulse" />
-            <div className="bg-white border border-zinc-100 rounded-3xl p-10 h-[300px] animate-pulse" />
-          </div>
-          <div className="bg-zinc-900/10 border border-zinc-100 rounded-3xl p-10 h-[400px] animate-pulse" />
-        </div>
-      </div>
-    );
+    return <AdminDashboardSkeleton />;
   }
 
   return (

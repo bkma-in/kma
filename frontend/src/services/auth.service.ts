@@ -34,6 +34,13 @@ export const login = async (email: string, password: string) => {
     
     if (response.data.success) {
       console.log('[Auth Service] Login: Backend verified. Role:', response.data.user.role);
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('role', response.data.user.role);
+      localStorage.setItem('userName', response.data.user.name);
+      localStorage.setItem('userEmail', response.data.user.email);
+      localStorage.setItem('is_temp_password', response.data.user.mustChangePassword ? 'true' : 'false'); 
+      localStorage.setItem('__kma_cached_role', response.data.user.role);
+      localStorage.setItem('__kma_cached_name', response.data.user.name);
       return {
         success: true,
         user: {

@@ -16,6 +16,7 @@ import {
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
 import { getPdfUrl } from '../../services/article.service';
+import { ArticlesSkeleton } from '../../components/skeletons/PageSkeletons';
 import { db, auth } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useNotification } from '../../utils/NotificationContext';
@@ -288,11 +289,7 @@ const AuthorRevisionRequired = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="animate-spin text-zinc-300" size={48} />
-      </div>
-    );
+    return <ArticlesSkeleton />;
   }
 
   return (

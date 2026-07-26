@@ -44,6 +44,7 @@ const AdminAuthorsList = lazy(() => import('./pages/admin/AdminAuthorsList'));
 const AdminArticles = lazy(() => import('./pages/admin/AdminArticles'));
 const AdminReadyToPublish = lazy(() => import('./pages/admin/AdminReadyToPublish'));
 const AdminReadersList = lazy(() => import('./pages/admin/AdminReadersList'));
+const AdminPublishedArticles = lazy(() => import('./pages/admin/AdminPublishedArticles'));
 
 // Reviewer pages
 const ReviewerDashboard = lazy(() => import('./pages/reviewer/ReviewerDashboard'));
@@ -63,15 +64,11 @@ const DeveloperDashboard = lazy(() => import('./pages/developer/DeveloperDashboa
 const DeveloperIssues = lazy(() => import('./pages/developer/DeveloperIssues'));
 const DeveloperNotifications = lazy(() => import('./pages/developer/DeveloperNotifications'));
 
-// Dynamic route boundary spinner wrapper
+import PageSkeletonFallback from './components/skeletons/PageSkeletonFallback';
+
+// Dynamic route boundary skeleton wrapper
 const lazyRoute = (Component: ComponentType<any>) => (
-  <Suspense
-    fallback={
-      <div className="flex min-h-[400px] w-full items-center justify-center p-8 bg-transparent">
-        <Loader2 className="animate-spin text-black" size={32} />
-      </div>
-    }
-  >
+  <Suspense fallback={<PageSkeletonFallback />}>
     <Component />
   </Suspense>
 );
@@ -93,23 +90,10 @@ function App() {
   const dashboardPath = currentUser ? getDashboardByRole(currentUser.role) : '';
   const hasValidDashboard = !!currentUser && !dashboardPath.startsWith('/auth');
 
-  // Firebase initial initialization check
-  if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-zinc-300" size={48} />
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">
-            Initializing BKMA Portal
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Dashboard skeleton layout loading check (bypass for auth paths to avoid component unmounting/flicker)
-  if (roleLoading) {
+  // Initial auth & role verification skeleton loading check
+  if (loading || roleLoading) {
     const path = window.location.pathname;
+
     if (path.startsWith('/admin')) {
       return <AdminLayout isLoadingSkeleton={true} />;
     }
@@ -125,6 +109,18 @@ function App() {
     if (path.startsWith('/dev')) {
       return <DeveloperLayout isLoadingSkeleton={true} />;
     }
+
+    // If on /auth during credential verification / role loading, show target role's dashboard skeleton if role is known
+    if (path === '/auth') {
+      const userRole = currentUser?.role || (localStorage.getItem('role') as any) || (localStorage.getItem('__kma_cached_role') as any);
+      if (userRole === 'admin') return <AdminLayout isLoadingSkeleton={true} />;
+      if (userRole === 'author') return <AuthorLayout isLoadingSkeleton={true} />;
+      if (userRole === 'reviewer') return <ReviewerLayout isLoadingSkeleton={true} />;
+      if (userRole === 'reader') return <ReaderLayout isLoadingSkeleton={true} />;
+      if (userRole === 'dev' || userRole === 'developer') return <DeveloperLayout isLoadingSkeleton={true} />;
+    }
+
+    return <PageSkeletonFallback />;
   }
 
   if (roleError) {
@@ -270,6 +266,7 @@ function AdminRoutes() {
         <Route path="readers" element={lazyRoute(AdminReadersList)} />
         <Route path="articles" element={lazyRoute(AdminArticles)} />
         <Route path="ready-to-publish" element={lazyRoute(AdminReadyToPublish)} />
+        <Route path="published-articles" element={lazyRoute(AdminPublishedArticles)} />
         <Route path="notifications" element={lazyRoute(Notifications)} />
       </Route>
     </Routes>

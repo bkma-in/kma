@@ -14,6 +14,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { ReviewerDashboardSkeleton } from '../../components/skeletons/PageSkeletons';
 import { NavLink } from 'react-router-dom';
 import { getArticles } from '../../services/article.service';
 import { useProfile } from '../../hooks/useProfile';
@@ -60,28 +61,7 @@ const ReviewerDashboard = () => {
   }));
 
   if (loading) {
-    return (
-      <div className="space-y-8 max-w-7xl mx-auto animate-pulse">
-        <div className="space-y-2">
-          <div className="h-8 bg-zinc-200 rounded w-1/4" />
-          <div className="h-4 bg-zinc-200 rounded w-1/3" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="bg-white border border-zinc-100 p-8 rounded-3xl h-36" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <div className="bg-white border border-zinc-100 rounded-[2rem] p-8 h-80" />
-          </div>
-          <div className="space-y-8">
-            <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-8 h-48" />
-            <div className="bg-white border border-zinc-100 rounded-3xl p-8 h-48" />
-          </div>
-        </div>
-      </div>
-    );
+    return <ReviewerDashboardSkeleton />;
   }
 
   return (

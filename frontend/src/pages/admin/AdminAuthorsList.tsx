@@ -167,13 +167,13 @@ const AdminAuthorsList = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 max-w-7xl mx-auto px-4">
+      <div className="space-y-6 max-w-7xl mx-auto px-4 animate-fade-in">
         <div className="flex justify-between items-end gap-6 mb-6">
           <div className="space-y-2">
-            <div className="h-8 bg-zinc-200 rounded w-48 animate-pulse" />
-            <div className="h-4 bg-zinc-200 rounded w-64 animate-pulse" />
+            <div className="h-8 skeleton-box rounded w-48" />
+            <div className="h-4 skeleton-box rounded w-64" />
           </div>
-          <div className="h-10 bg-zinc-200 rounded-xl w-64 animate-pulse" />
+          <div className="h-10 skeleton-box rounded-xl w-64" />
         </div>
         <SkeletonTable rowsCount={4} colsCount={4} />
       </div>
