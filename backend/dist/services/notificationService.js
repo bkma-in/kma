@@ -385,8 +385,10 @@ const sendReviewerAssignedNotifications = async (articleId, reviewerIds) => {
         const article = articleDoc.data();
         const title = article.title || 'Untitled Manuscript';
         const batch = firebase_1.db.batch();
-        for (const revId of reviewerIds) {
-            const revDoc = await firebase_1.db.collection('users').doc(revId).get();
+        const revDocs = await Promise.all(reviewerIds.map(revId => firebase_1.db.collection('users').doc(revId).get()));
+        for (let i = 0; i < reviewerIds.length; i++) {
+            const revId = reviewerIds[i];
+            const revDoc = revDocs[i];
             if (!revDoc.exists)
                 continue;
             const reviewer = revDoc.data();
@@ -665,8 +667,10 @@ const checkAndSendReviewReminders = async () => {
             // Send reminder to all assigned reviewers
             const title = article.title || 'Untitled Manuscript';
             const batch = firebase_1.db.batch();
-            for (const revId of article.reviewerIds) {
-                const revDoc = await firebase_1.db.collection('users').doc(revId).get();
+            const revDocs = await Promise.all((article.reviewerIds || []).map((revId) => firebase_1.db.collection('users').doc(revId).get()));
+            for (let i = 0; i < (article.reviewerIds || []).length; i++) {
+                const revId = article.reviewerIds[i];
+                const revDoc = revDocs[i];
                 if (!revDoc.exists)
                     continue;
                 const reviewer = revDoc.data();

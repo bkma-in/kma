@@ -114,13 +114,13 @@ router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)
         // Create invitations if any
         if (invitees.length > 0) {
             const invitationsBatch = firebase_1.db.batch();
-            for (const inviteeId of invitees) {
-                if (inviteeId === authorId)
-                    continue; // Prevent self-invite
-                // Fetch invitee details
-                const inviteeDoc = await firebase_1.db.collection('users').doc(inviteeId).get();
+            const validInviteeIds = invitees.filter(id => id !== authorId);
+            // Fetch all invitee details in parallel
+            const inviteeDocs = await Promise.all(validInviteeIds.map(inviteeId => firebase_1.db.collection('users').doc(inviteeId).get()));
+            inviteeDocs.forEach((inviteeDoc, index) => {
                 if (!inviteeDoc.exists)
-                    continue;
+                    return;
+                const inviteeId = validInviteeIds[index];
                 const inviteeData = inviteeDoc.data();
                 const inviteRef = articleRef.collection('invitations').doc();
                 const token = crypto_1.default.randomBytes(32).toString('hex');
@@ -160,7 +160,7 @@ router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)
                     accepted: false,
                     invitedAt: new Date()
                 });
-            }
+            });
             await invitationsBatch.commit();
             // Update article with pending authors
             await articleRef.update({ authors: newArticle.authors });
@@ -202,7 +202,16 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
             articles = snapshot.docs.map(doc => doc.data());
         }
         else if (role === 'admin') {
-            const snapshot = await firebase_1.db.collection('articles').get();
+            let q = firebase_1.db.collection('articles').orderBy('createdAt', 'desc');
+            const { limit: queryLimit, startAfter } = req.query;
+            const limitNum = parseInt(queryLimit) || 100;
+            if (startAfter) {
+                const startDoc = await firebase_1.db.collection('articles').doc(startAfter).get();
+                if (startDoc.exists) {
+                    q = q.startAfter(startDoc);
+                }
+            }
+            const snapshot = await q.limit(limitNum).get();
             articles = snapshot.docs.map(doc => doc.data());
         }
         // Standard mapping and sorting
