@@ -28,6 +28,9 @@ import userRoutes from './routes/userRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import archiveRoutes from './routes/archiveRoutes';
 
+// Import Auth Middleware
+import { authenticateOptional } from './middleware/authMiddleware';
+
 // Import Rate Limiters and IP Trust Validator
 import { globalRateLimiter, webhookRateLimiter, isTrustedProxy } from './middleware/rateLimiter';
 
@@ -47,6 +50,9 @@ app.use('/api/webhooks', webhookRateLimiter, express.raw({ type: 'application/js
 // General Request Payload Size Limits (1MB for JSON and URL-encoded data)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Pre-verify token context once for global rate limiting & route guards
+app.use('/api/', authenticateOptional);
 
 // Global API Rate Limiter
 app.use('/api/', globalRateLimiter);
