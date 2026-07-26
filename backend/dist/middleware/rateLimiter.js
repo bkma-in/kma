@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.webhookRateLimiter = exports.archiveRateLimiter = exports.paymentRateLimiter = exports.downloadRateLimiter = exports.signedUrlRateLimiter = exports.uploadRateLimiter = exports.pdfRateLimiter = exports.authRateLimiter = exports.globalRateLimiter = exports.getClientIp = exports.isTrustedProxy = exports.PRIVATE_IPV6_CIDRS = exports.PRIVATE_IPV4_CIDRS = exports.CLOUDFLARE_IPV6_CIDRS = exports.CLOUDFLARE_IPV4_CIDRS = void 0;
+exports.verifyCodeRateLimiter = exports.sendVerificationRateLimiter = exports.webhookRateLimiter = exports.archiveRateLimiter = exports.paymentRateLimiter = exports.downloadRateLimiter = exports.signedUrlRateLimiter = exports.uploadRateLimiter = exports.pdfRateLimiter = exports.authRateLimiter = exports.globalRateLimiter = exports.getClientIp = exports.isTrustedProxy = exports.PRIVATE_IPV6_CIDRS = exports.PRIVATE_IPV4_CIDRS = exports.CLOUDFLARE_IPV6_CIDRS = exports.CLOUDFLARE_IPV4_CIDRS = void 0;
 exports.isCloudflareIp = isCloudflareIp;
 exports.isPrivateIp = isPrivateIp;
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
@@ -325,4 +325,28 @@ exports.webhookRateLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     keyGenerator: ipKeyGenerator,
     handler: createRateLimiterHandler('Razorpay Webhook', 'Too many webhook requests.')
+});
+/**
+ * 10. Send Verification Email Rate Limiter (5 requests / 15 minutes / UID or IP)
+ * Protects email sending API against verification email spam and email bombing.
+ */
+exports.sendVerificationRateLimiter = (0, express_rate_limit_1.default)({
+    windowMs: env_1.config.rateLimit.sendVerificationWindowMs,
+    max: env_1.config.rateLimit.sendVerificationMax,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator,
+    handler: createRateLimiterHandler('Send Verification Email', 'Too many verification email requests. Please wait a few minutes before requesting another email.')
+});
+/**
+ * 11. Verify Code Rate Limiter (10 attempts / 15 minutes / UID or IP)
+ * Protects code verification endpoint against brute-force code guessing attacks.
+ */
+exports.verifyCodeRateLimiter = (0, express_rate_limit_1.default)({
+    windowMs: env_1.config.rateLimit.verifyCodeWindowMs,
+    max: env_1.config.rateLimit.verifyCodeMax,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator,
+    handler: createRateLimiterHandler('Verify Email Code', 'Too many verification attempts. Please wait 15 minutes before trying again.')
 });

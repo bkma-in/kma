@@ -76,7 +76,9 @@ export const register = async (userData: any) => {
     // 2. Register Profile in Backend (creates Firestore document)
     const response = await api.post('/auth/register', {
       name: userData.name,
-      role: userData.role // "author" or "reader"
+      role: userData.role,
+      qualification: userData.qualification,
+      experience: userData.experience
     }, {
       headers: {
         Authorization: `Bearer ${token}`
@@ -84,9 +86,7 @@ export const register = async (userData: any) => {
     });
 
     if (response.data.success) {
-      // Force sign out to prevent auto-login by Firebase Client SDK
-      await auth.signOut();
-      return { success: true };
+      return { success: true, emailVerified: false };
     }
     throw new Error('Backend registration failed');
   } catch (error: any) {
@@ -94,6 +94,39 @@ export const register = async (userData: any) => {
     throw new Error(getFriendlyErrorMessage(error));
   }
 };
+
+export const sendVerificationCode = async (email?: string) => {
+  try {
+    const user = auth.currentUser;
+    let headers = {};
+    if (user) {
+      const token = await user.getIdToken();
+      headers = { Authorization: `Bearer ${token}` };
+    }
+    const response = await api.post('/auth/send-verification-code', { email }, { headers });
+    return response.data;
+  } catch (error: any) {
+    console.error('[Auth Service] Send verification code error:', error);
+    throw new Error(error.response?.data?.error || 'Failed to send verification code.');
+  }
+};
+
+export const verifyEmailCode = async (code: string, email?: string) => {
+  try {
+    const user = auth.currentUser;
+    let headers = {};
+    if (user) {
+      const token = await user.getIdToken();
+      headers = { Authorization: `Bearer ${token}` };
+    }
+    const response = await api.post('/auth/verify-email-code', { code, email }, { headers });
+    return response.data;
+  } catch (error: any) {
+    console.error('[Auth Service] Verify email code error:', error);
+    throw new Error(error.response?.data?.error || 'Failed to verify code.');
+  }
+};
+
 
 export const changePassword = async (newPassword: string) => {
   try {

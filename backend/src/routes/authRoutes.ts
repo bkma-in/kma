@@ -6,9 +6,59 @@ import { logAuditEvent } from '../services/auditService';
 import { config } from '../config/env';
 import { sendTransactionalEmail } from '../services/emailService';
 import { buildHtmlEmail } from '../services/notificationService';
-import { authRateLimiter } from '../middleware/rateLimiter';
+import { authRateLimiter, sendVerificationRateLimiter, verifyCodeRateLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
+
+// Helper function to hash verification OTP codes securely using SHA-256
+function hashVerificationCode(code: string): string {
+  return crypto.createHash('sha256').update(code.trim()).digest('hex');
+}
+
+// Helper function to generate and dispatch email verification OTP via Brevo
+async function generateAndSendVerificationOTP(uid: string, email: string, name: string) {
+  const normEmail = email.toLowerCase().trim();
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const codeHash = hashVerificationCode(otp);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes validity
+  const now = new Date();
+
+  // Save to emailVerifications collection doc keyed by UID
+  const verificationRef = db.collection('emailVerifications').doc(uid);
+  await verificationRef.set({
+    uid,
+    email: normEmail,
+    codeHash,
+    expiresAt,
+    attempts: 0,
+    lastSentAt: now,
+    verified: false,
+    updatedAt: now
+  });
+
+  const emailHtml = buildHtmlEmail(
+    name || 'User',
+    'Verify Your Email Address',
+    'Thank you for registering with the Bulletin of Kerala Mathematical Association. Please enter the following 6-digit verification code to complete your registration and verify your email address. This code will expire in 10 minutes.',
+    'Verification Code',
+    [
+      { label: 'VERIFICATION CODE', value: `<span style="font-family: monospace; font-size: 18px; font-weight: 800; letter-spacing: 0.2em; color: #000000;">${otp}</span>` },
+      { label: 'VALIDITY', value: '10 Minutes' }
+    ],
+    '',
+    '',
+    'Security Notice',
+    'If you did not create an account with KMA, you can safely ignore this email. Never share your verification code with anyone.',
+    '🔒',
+    'Keep your code secure',
+    '⏳',
+    'Expires in 10 minutes'
+  );
+
+  await sendTransactionalEmail(normEmail, name || 'User', 'KMA Platform - Verify Your Email Address', emailHtml);
+  console.log(`[AUTH-VERIFICATION] Verification OTP sent successfully to ${normEmail} (UID: ${uid})`);
+  return { success: true };
+}
 
 // Endpoint for frontend to send token and get their role/profile back
 router.post('/verify', requireAuth, authRateLimiter, async (req: AuthRequest, res) => {
@@ -16,10 +66,27 @@ router.post('/verify', requireAuth, authRateLimiter, async (req: AuthRequest, re
     const { uid, email, role, name } = req.user!;
     let mustChangePassword = false;
     
+    // Check user document for email verification status
+    const userDoc = await db.collection('users').doc(uid).get();
+    const userData = userDoc.exists ? userDoc.data() : null;
+
+    // Verify email verification state for non-admin/dev users
+    if (role !== 'admin' && role !== 'dev') {
+      const firebaseUser = await auth.getUser(uid).catch(() => null);
+      const isEmailVerified = firebaseUser?.emailVerified === true || userData?.emailVerified === true;
+
+      if (!isEmailVerified) {
+        console.warn(`[AUTH-DIAGNOSTIC] Access Denied: User ${uid} (${email}) has unverified email.`);
+        return res.status(403).json({
+          error: 'Your email address is not verified. Please verify your email to access the portal.',
+          emailVerified: false,
+          email: email
+        });
+      }
+    }
+    
     // Check approval status for reviewers
     if (role === 'reviewer') {
-      const userDoc = await db.collection('users').doc(uid).get();
-      const userData = userDoc.exists ? userDoc.data() : null;
       const status = userData?.status || 'Pending';
       if (status === 'Deactivated') {
         return res.status(403).json({ error: 'Your reviewer account has been deactivated. Please contact administration.' });
@@ -36,9 +103,6 @@ router.post('/verify', requireAuth, authRateLimiter, async (req: AuthRequest, re
         await logAuditEvent('Reviewer First Login', uid);
       }
     } else if (role === 'admin' || role === 'dev') {
-      // Check admin/dev password change status
-      const userDoc = await db.collection('users').doc(uid).get();
-      const userData = userDoc.exists ? userDoc.data() : null;
       mustChangePassword = userData?.mustChangePassword === true;
     }
 
@@ -96,6 +160,7 @@ router.post('/register', requireAuth, authRateLimiter, async (req: AuthRequest, 
       nameLower: name.toLowerCase(),
       emailLower: email.toLowerCase(),
       role: userRole,
+      emailVerified: false,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -109,7 +174,7 @@ router.post('/register', requireAuth, authRateLimiter, async (req: AuthRequest, 
     await userRef.set(userData);
 
     try {
-      // Set Firebase Auth custom claims for role-based authentication bypass
+      // Set Firebase Auth custom claims for role-based authentication
       await auth.setCustomUserClaims(uid, { role: userRole, name });
     } catch (claimError) {
       // Rollback database profile if custom claims assignment fails
@@ -117,6 +182,19 @@ router.post('/register', requireAuth, authRateLimiter, async (req: AuthRequest, 
       throw claimError;
     }
 
+    // Send initial verification OTP email
+    try {
+      await generateAndSendVerificationOTP(uid, email, name);
+    } catch (emailErr: any) {
+      console.error('[AUTH-VERIFICATION] Failed to send initial verification email:', emailErr);
+    }
+
+    res.json({
+      success: true,
+      emailVerified: false,
+      message: 'Registration successful! A 6-digit verification code has been sent to your email.',
+      user: userData
+    });
     // Mark the verified OTP document as used
     const verificationDocs = otpVerificationSnapshot.docs;
     const updateBatch = db.batch();
@@ -131,6 +209,193 @@ router.post('/register', requireAuth, authRateLimiter, async (req: AuthRequest, 
     res.status(500).json({ error: 'Failed to register user' });
   }
 });
+
+// Dedicated endpoint to request / resend email verification code
+router.post('/send-verification-code', sendVerificationRateLimiter, async (req: AuthRequest, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    let uid = '';
+    let email = '';
+    let name = 'User';
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.split('Bearer ')[1];
+      try {
+        const decoded = await auth.verifyIdToken(token);
+        uid = decoded.uid;
+        email = decoded.email || '';
+        name = (decoded.name as string) || 'User';
+      } catch (err) {
+        // Token verification fallback
+      }
+    }
+
+    if (!uid && req.body.email) {
+      const normEmail = (req.body.email as string).toLowerCase().trim();
+      const usersSnap = await db.collection('users').where('emailLower', '==', normEmail).limit(1).get();
+      if (!usersSnap.empty) {
+        const uDoc = usersSnap.docs[0];
+        uid = uDoc.id;
+        email = normEmail;
+        name = uDoc.data().name || 'User';
+      } else {
+        // Prevent email enumeration: return generic response
+        return res.json({
+          success: true,
+          message: 'If the registration request can be processed, a verification email has been sent.'
+        });
+      }
+    }
+
+    if (!uid || !email) {
+      return res.status(400).json({ error: 'Valid authenticated session or email address is required.' });
+    }
+
+    // Enforce 60-second resend cooldown
+    const verDocRef = db.collection('emailVerifications').doc(uid);
+    const verDoc = await verDocRef.get();
+    if (verDoc.exists) {
+      const vData = verDoc.data();
+      if (vData?.verified === true) {
+        return res.json({ success: true, verified: true, message: 'Email address is already verified.' });
+      }
+      const lastSent = vData?.lastSentAt?.toDate ? vData.lastSentAt.toDate().getTime() : new Date(vData?.lastSentAt || 0).getTime();
+      const timeElapsed = Date.now() - lastSent;
+      if (timeElapsed < 60000) {
+        const cooldownRemaining = Math.ceil((60000 - timeElapsed) / 1000);
+        return res.status(429).json({
+          error: `Please wait ${cooldownRemaining} seconds before requesting a new verification code.`,
+          cooldownRemaining
+        });
+      }
+    }
+
+    await generateAndSendVerificationOTP(uid, email, name);
+    res.json({
+      success: true,
+      message: 'A new 6-digit verification code has been sent to your email address.'
+    });
+  } catch (error: any) {
+    console.error('Send verification code error:', error);
+    res.status(500).json({ error: error.message || 'Failed to send verification code.' });
+  }
+});
+
+// Dedicated endpoint to verify 6-digit email OTP
+router.post('/verify-email-code', verifyCodeRateLimiter, async (req: AuthRequest, res) => {
+  try {
+    const { code } = req.body;
+    let email = req.body.email as string | undefined;
+    let uid = '';
+
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.split('Bearer ')[1];
+      try {
+        const decoded = await auth.verifyIdToken(token);
+        uid = decoded.uid;
+        email = decoded.email || email;
+      } catch (err) {
+        // Token fallback
+      }
+    }
+
+    if (!uid && email) {
+      const normEmail = email.toLowerCase().trim();
+      const usersSnap = await db.collection('users').where('emailLower', '==', normEmail).limit(1).get();
+      if (!usersSnap.empty) {
+        uid = usersSnap.docs[0].id;
+      }
+    }
+
+    if (!uid) {
+      return res.status(400).json({ error: 'Valid session or email address is required.' });
+    }
+
+    if (!code || typeof code !== 'string' || code.trim().length !== 6) {
+      return res.status(400).json({ error: 'Please enter a valid 6-digit verification code.' });
+    }
+
+    const verRef = db.collection('emailVerifications').doc(uid);
+    const verDoc = await verRef.get();
+
+    if (!verDoc.exists) {
+      return res.status(400).json({ error: 'Invalid or expired verification code.' });
+    }
+
+    const vData = verDoc.data()!;
+
+    if (vData.verified === true) {
+      return res.json({ success: true, verified: true, message: 'Email address is already verified.' });
+    }
+
+    // Brute-force protection: check maximum failed attempts
+    const attempts = vData.attempts || 0;
+    if (attempts >= 5) {
+      await verRef.update({ codeHash: null });
+      return res.status(400).json({
+        error: 'Too many incorrect attempts. This verification code has been invalidated. Please request a new code.'
+      });
+    }
+
+    // Check expiration
+    const expiresAt = vData.expiresAt?.toDate ? vData.expiresAt.toDate() : new Date(vData.expiresAt);
+    if (expiresAt < new Date()) {
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new code.' });
+    }
+
+    // Hash user-submitted code and compare with stored codeHash
+    const submittedHash = hashVerificationCode(code);
+    if (!vData.codeHash || submittedHash !== vData.codeHash) {
+      const newAttempts = attempts + 1;
+      await verRef.update({ attempts: newAttempts });
+
+      if (newAttempts >= 5) {
+        await verRef.update({ codeHash: null });
+        return res.status(400).json({
+          error: 'Invalid code. Maximum attempts reached. Code has been invalidated; please request a new code.'
+        });
+      }
+
+      return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
+    }
+
+    // Verification Success!
+    const now = new Date();
+    await verRef.update({
+      verified: true,
+      codeHash: null,
+      verifiedAt: now,
+      updatedAt: now
+    });
+
+    // Update Firestore User Document
+    await db.collection('users').doc(uid).update({
+      emailVerified: true,
+      updatedAt: now
+    });
+
+    // Update Firebase Authentication User Record
+    await auth.updateUser(uid, { emailVerified: true }).catch(fbErr => {
+      console.warn('[AUTH-VERIFICATION] Firebase Auth emailVerified update warning:', fbErr);
+    });
+
+    // Audit Log
+    await logAuditEvent('Email Verified', uid);
+
+    console.log(`[AUTH-VERIFICATION] Successfully verified email for UID: ${uid}`);
+
+    res.json({
+      success: true,
+      verified: true,
+      message: 'Your email address has been verified successfully!'
+    });
+  } catch (error: any) {
+    console.error('Verify email code error:', error);
+    res.status(500).json({ error: error.message || 'Failed to verify code.' });
+  }
+});
+
 
 // Endpoint to change password securely and clear mustChangePassword status
 router.post('/change-password', requireAuth, authRateLimiter, async (req: AuthRequest, res) => {
