@@ -11,9 +11,10 @@ const auditService_1 = require("../services/auditService");
 const env_1 = require("../config/env");
 const emailService_1 = require("../services/emailService");
 const notificationService_1 = require("../services/notificationService");
+const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = (0, express_1.Router)();
 // Endpoint for frontend to send token and get their role/profile back
-router.post('/verify', authMiddleware_1.requireAuth, async (req, res) => {
+router.post('/verify', authMiddleware_1.requireAuth, rateLimiter_1.authRateLimiter, async (req, res) => {
     try {
         const { uid, email, role, name } = req.user;
         let mustChangePassword = false;
@@ -35,8 +36,8 @@ router.post('/verify', authMiddleware_1.requireAuth, async (req, res) => {
                 await (0, auditService_1.logAuditEvent)('Reviewer First Login', uid);
             }
         }
-        else {
-            // Check other users
+        else if (role === 'admin' || role === 'dev') {
+            // Check admin/dev password change status
             const userDoc = await firebase_1.db.collection('users').doc(uid).get();
             const userData = userDoc.exists ? userDoc.data() : null;
             mustChangePassword = userData?.mustChangePassword === true;
@@ -48,7 +49,7 @@ router.post('/verify', authMiddleware_1.requireAuth, async (req, res) => {
     }
 });
 // Endpoint to handle new user registration profile creation in Firestore
-router.post('/register', authMiddleware_1.requireAuth, async (req, res) => {
+router.post('/register', authMiddleware_1.requireAuth, rateLimiter_1.authRateLimiter, async (req, res) => {
     try {
         const { name, role, qualification, experience } = req.body;
         const allowedRoles = ['author', 'reader', 'reviewer'];
@@ -103,7 +104,7 @@ router.post('/register', authMiddleware_1.requireAuth, async (req, res) => {
     }
 });
 // Endpoint to change password securely and clear mustChangePassword status
-router.post('/change-password', authMiddleware_1.requireAuth, async (req, res) => {
+router.post('/change-password', authMiddleware_1.requireAuth, rateLimiter_1.authRateLimiter, async (req, res) => {
     try {
         const { uid } = req.user;
         const { newPassword } = req.body;
@@ -128,7 +129,7 @@ router.post('/change-password', authMiddleware_1.requireAuth, async (req, res) =
 });
 // ─── Forgot Password Routes ──────────────────────────────────────────
 // 1. Send OTP Route
-router.post('/forgot-password/send-otp', async (req, res) => {
+router.post('/forgot-password/send-otp', rateLimiter_1.authRateLimiter, async (req, res) => {
     try {
         const { email } = req.body;
         if (!email || typeof email !== 'string' || email.trim() === '') {
@@ -172,7 +173,7 @@ router.post('/forgot-password/send-otp', async (req, res) => {
     }
 });
 // 2. Verify OTP Route
-router.post('/forgot-password/verify-otp', async (req, res) => {
+router.post('/forgot-password/verify-otp', rateLimiter_1.authRateLimiter, async (req, res) => {
     try {
         const { email, otp } = req.body;
         if (!email || !otp) {
@@ -213,7 +214,7 @@ router.post('/forgot-password/verify-otp', async (req, res) => {
     }
 });
 // 3. Reset Password Route
-router.post('/forgot-password/reset', async (req, res) => {
+router.post('/forgot-password/reset', rateLimiter_1.authRateLimiter, async (req, res) => {
     try {
         const { email, resetToken, newPassword } = req.body;
         if (!email || !resetToken || !newPassword) {
