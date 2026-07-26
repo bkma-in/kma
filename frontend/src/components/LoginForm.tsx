@@ -231,6 +231,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
                   <input
                     id="login-email"
                     type="email"
+                    name="email"
+                    autoComplete="email"
+                    spellCheck="false"
                     className="input-field pl-11 !border-zinc-200"
                     placeholder="Enter your email"
                     value={email}
@@ -249,6 +252,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
                   <input
                     id="login-password"
                     type={showPassword ? "text" : "password"}
+                    name="password"
+                    autoComplete="current-password"
+                    spellCheck="false"
                     className="input-field pl-11 pr-11 !border-none !bg-zinc-50"
                     placeholder="Enter your password"
                     value={password}
