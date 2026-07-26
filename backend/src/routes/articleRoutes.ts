@@ -13,6 +13,13 @@ import {
   sendRevisionRequestedNotifications,
   sendArticleRejectedNotifications
 } from '../services/notificationService';
+import {
+  pdfRateLimiter,
+  uploadRateLimiter,
+  signedUrlRateLimiter,
+  downloadRateLimiter,
+  archiveRateLimiter
+} from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -26,7 +33,7 @@ const normalizeRecommendation = (recommendation: string): string => {
 };
 
 // Get signed URL for staged PDF or split article in archive jobs
-router.get('/staged/pdf', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.get('/staged/pdf', requireAuth, signedUrlRateLimiter, requireRole(['admin']), async (req: AuthRequest, res) => {
   try {
     const { key } = req.query;
     if (!key || typeof key !== 'string') {
@@ -49,7 +56,7 @@ router.get('/staged/pdf', requireAuth, requireRole(['admin']), async (req: AuthR
 });
 
 // Submit Article or Save Draft (Author only)
-router.post('/', requireAuth, requireRole(['author']), upload.fields([
+router.post('/', requireAuth, uploadRateLimiter, requireRole(['author']), upload.fields([
   { name: 'pdf', maxCount: 1 },
   { name: 'thumbnail', maxCount: 1 }
 ]), async (req: AuthRequest, res) => {
@@ -593,7 +600,7 @@ router.get('/:id', async (req: Request, res) => {
 });
 
 // Get Signed PDF URL for public Tribute/Obituary articles (no auth required)
-router.get('/:id/pdf-public', async (req, res) => {
+router.get('/:id/pdf-public', downloadRateLimiter, async (req, res) => {
   try {
     const id = req.params.id as string;
     const articleDoc = await db.collection('articles').doc(id).get();
@@ -624,7 +631,7 @@ router.get('/:id/pdf-public', async (req, res) => {
 });
 
 // Get Signed PDF URL (requires active subscription or purchase)
-router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
+router.get('/:id/pdf', requireAuth, downloadRateLimiter, async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
     const { role, uid } = req.user!;
@@ -717,7 +724,7 @@ router.get('/:id/pdf', requireAuth, async (req: AuthRequest, res) => {
 // - draft: full editing allowed (title, abstract, category, pdf, thumbnail)
 // - revision_requested: only abstract and pdf can be updated; title is locked
 // - all other statuses: editing is blocked entirely
-router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
+router.put('/:id', requireAuth, uploadRateLimiter, requireRole(['author']), upload.fields([
   { name: 'pdf', maxCount: 1 },
   { name: 'thumbnail', maxCount: 1 }
 ]), async (req: AuthRequest, res) => {
@@ -897,7 +904,7 @@ router.put('/:id', requireAuth, requireRole(['author']), upload.fields([
 });
 
 // Admin Extract Metadata from Full PDF for Legacy Import
-router.post('/import-extract', requireAuth, requireRole(['admin']), upload.single('pdf'), async (req: AuthRequest, res) => {
+router.post('/import-extract', requireAuth, pdfRateLimiter, requireRole(['admin']), upload.single('pdf'), async (req: AuthRequest, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'PDF file is required' });
@@ -956,7 +963,7 @@ router.post('/import-extract', requireAuth, requireRole(['admin']), upload.singl
 });
 
 // Admin Import & Split Legacy Issue
-router.post('/import-split', requireAuth, requireRole(['admin']), upload.single('pdf'), async (req: AuthRequest, res) => {
+router.post('/import-split', requireAuth, pdfRateLimiter, requireRole(['admin']), upload.single('pdf'), async (req: AuthRequest, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'PDF file is required' });
@@ -1069,7 +1076,7 @@ router.post('/import-split', requireAuth, requireRole(['admin']), upload.single(
 });
 
 // Admin Bulk Publish Articles
-router.patch('/bulk-publish', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.patch('/bulk-publish', requireAuth, archiveRateLimiter, requireRole(['admin']), async (req: AuthRequest, res) => {
   try {
     const { articleIds, volumeNo, monthYear, issueNumber, issn } = req.body;
 

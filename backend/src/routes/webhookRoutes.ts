@@ -46,6 +46,13 @@ router.post('/razorpay', async (req: Request, res: Response) => {
         
         if (!subSnapshot.empty) {
           const docRef = subSnapshot.docs[0].ref;
+          const subData = subSnapshot.docs[0].data();
+          
+          if (subData.status === 'active') {
+            console.log(`Razorpay Webhook: Order ${orderId} already active. Skipping duplicate webhook processing.`);
+            return res.status(200).send('OK');
+          }
+
           await docRef.update({
             status: 'active',
             updatedAt: new Date()
@@ -56,6 +63,13 @@ router.post('/razorpay', async (req: Request, res: Response) => {
           const purchaseSnapshot = await db.collection('purchases').where('paymentId', '==', orderId).limit(1).get();
           if (!purchaseSnapshot.empty) {
             const docRef = purchaseSnapshot.docs[0].ref;
+            const purchaseData = purchaseSnapshot.docs[0].data();
+
+            if (purchaseData.status === 'completed') {
+              console.log(`Razorpay Webhook: Order ${orderId} already completed. Skipping duplicate webhook processing.`);
+              return res.status(200).send('OK');
+            }
+
             await docRef.update({
               status: 'completed',
               updatedAt: new Date()

@@ -5,6 +5,7 @@ import { archiveUpload } from '../services/archive/uploadService';
 import { uploadOriginalJournal } from '../services/archive/storageService';
 import { createJob, updateJobStatus, publishArchiveArticles } from '../services/archive/firestoreService';
 import { queueService, SegmentRange } from '../services/archive/queueService';
+import { archiveRateLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -15,6 +16,7 @@ const router = Router();
 router.post(
   '/upload',
   requireAuth,
+  archiveRateLimiter,
   requireRole(['admin']),
   archiveUpload.fields([
     { name: 'journal', maxCount: 1 },
@@ -144,7 +146,7 @@ router.get('/jobs/:id', requireAuth, requireRole(['admin']), async (req: AuthReq
  * POST /api/archive/jobs/:id/publish
  * Commits the verified articles to the main accepted queue database.
  */
-router.post('/jobs/:id/publish', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
+router.post('/jobs/:id/publish', requireAuth, archiveRateLimiter, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
   try {
     const jobId = req.params.id;
     const { articles } = req.body;

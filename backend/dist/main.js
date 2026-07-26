@@ -28,7 +28,22 @@ const webhookRoutes_1 = __importDefault(require("./routes/webhookRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const notificationRoutes_1 = __importDefault(require("./routes/notificationRoutes"));
 const archiveRoutes_1 = __importDefault(require("./routes/archiveRoutes"));
+// Import Rate Limiters and IP Trust Validator
+const rateLimiter_1 = require("./middleware/rateLimiter");
 const app = (0, express_1.default)();
+// Configure Dynamic Proxy Trust (trusts Render internal network & verified Cloudflare IPs)
+app.set('trust proxy', rateLimiter_1.isTrustedProxy);
+app.use((0, compression_1.default)());
+app.use((0, cors_1.default)({
+    exposedHeaders: ['Retry-After']
+}));
+// Razorpay Webhooks: Dedicated rate limiter + raw body parsing for signature verification
+app.use('/api/webhooks', rateLimiter_1.webhookRateLimiter, express_1.default.raw({ type: 'application/json' }), webhookRoutes_1.default);
+// General Request Payload Size Limits (1MB for JSON and URL-encoded data)
+app.use(express_1.default.json({ limit: '1mb' }));
+app.use(express_1.default.urlencoded({ extended: true, limit: '1mb' }));
+// Global API Rate Limiter
+app.use('/api/', rateLimiter_1.globalRateLimiter);
 app.use((0, compression_1.default)());
 app.use((0, cors_1.default)());
 // Use express.raw for webhooks to verify signatures

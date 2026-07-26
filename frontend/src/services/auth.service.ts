@@ -8,6 +8,10 @@ import { auth } from '../config/firebase';
 import api from './api';
 
 const getFriendlyErrorMessage = (error: any): string => {
+  if (error.response?.status === 429) {
+    return error.response.data?.message || 'Too many attempts. Please wait a few minutes before trying again.';
+  }
+
   const code = error.code || (error.message?.includes('auth/') ? error.message : '');
   
   if (code.includes('auth/email-already-in-use')) return 'This email is already registered. Try logging in instead.';
@@ -15,6 +19,7 @@ const getFriendlyErrorMessage = (error: any): string => {
   if (code.includes('auth/user-not-found')) return 'No account found with this email.';
   if (code.includes('auth/weak-password')) return 'Password is too weak. Please use at least 6 characters.';
   if (code.includes('auth/network-request-failed')) return 'Network error. Please check your internet connection.';
+  if (code.includes('auth/too-many-requests')) return 'Too many attempts. Please wait a few minutes before trying again.';
   
   return error.message || 'An unexpected error occurred. Please try again.';
 };

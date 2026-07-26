@@ -53,6 +53,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }, 4000);
   }, []);
 
+  useEffect(() => {
+    const handleRateLimitExceeded = (e: Event) => {
+      const customEvt = e as CustomEvent<{ message: string; retryAfter?: number }>;
+      const msg = customEvt.detail?.message || 'Too many requests. Please wait a moment and try again.';
+      showToast(msg, 'error');
+    };
+
+    window.addEventListener('kma:rate_limit_exceeded', handleRateLimitExceeded);
+    return () => {
+      window.removeEventListener('kma:rate_limit_exceeded', handleRateLimitExceeded);
+    };
+  }, [showToast]);
+
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);

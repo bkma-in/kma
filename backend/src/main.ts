@@ -28,16 +28,28 @@ import userRoutes from './routes/userRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import archiveRoutes from './routes/archiveRoutes';
 
+// Import Rate Limiters and IP Trust Validator
+import { globalRateLimiter, webhookRateLimiter, isTrustedProxy } from './middleware/rateLimiter';
+
 const app = express();
 
+// Configure Dynamic Proxy Trust (trusts Render internal network & verified Cloudflare IPs)
+app.set('trust proxy', isTrustedProxy);
+
 app.use(compression());
-app.use(cors());
+app.use(cors({
+  exposedHeaders: ['Retry-After']
+}));
 
-// Use express.raw for webhooks to verify signatures
-app.use('/api/webhooks', express.raw({ type: 'application/json' }), webhookRoutes);
+// Razorpay Webhooks: Dedicated rate limiter + raw body parsing for signature verification
+app.use('/api/webhooks', webhookRateLimiter, express.raw({ type: 'application/json' }), webhookRoutes);
 
-// General JSON parsing
-app.use(express.json());
+// General Request Payload Size Limits (1MB for JSON and URL-encoded data)
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Global API Rate Limiter
+app.use('/api/', globalRateLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -47,6 +59,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/archive', archiveRoutes);
+
 
 app.get('/', (req, res) => {
   res.send({ status: 'ok', message: 'KMA Backend is running' });
