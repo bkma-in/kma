@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const compression_1 = __importDefault(require("compression"));
 const env_1 = require("./config/env");
 const migrationService_1 = require("./services/migrationService");
 const notificationService_1 = require("./services/notificationService");
@@ -28,6 +29,7 @@ const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const notificationRoutes_1 = __importDefault(require("./routes/notificationRoutes"));
 const archiveRoutes_1 = __importDefault(require("./routes/archiveRoutes"));
 const app = (0, express_1.default)();
+app.use((0, compression_1.default)());
 app.use((0, cors_1.default)());
 // Use express.raw for webhooks to verify signatures
 app.use('/api/webhooks', express_1.default.raw({ type: 'application/json' }), webhookRoutes_1.default);
