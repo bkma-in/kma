@@ -90,12 +90,24 @@ router.post('/verify', requireAuth, async (req: AuthRequest, res) => {
     // Verify email verification state for non-admin/dev users
     if (role !== 'admin' && role !== 'dev') {
       const firebaseUser = await auth.getUser(uid).catch(() => null);
-      const isEmailVerified = firebaseUser?.emailVerified === true || userData?.emailVerified === true;
+      let isEmailVerified = firebaseUser?.emailVerified === true || userData?.emailVerified === true;
+
+      // Auto-heal ONLY accounts created directly by admin portal with temporary credentials
+      if (!isEmailVerified && (role === 'reviewer' || userData?.role === 'reviewer') && (userData?.createdByAdmin === true || userData?.mustChangePassword === true)) {
+        console.log(`[AUTH-HEAL] Auto-verifying email for admin-created reviewer UID ${uid} (${email})`);
+        isEmailVerified = true;
+        auth.updateUser(uid, { emailVerified: true }).catch(err => {
+          console.warn('[AUTH-HEAL] Firebase Auth update warning:', err);
+        });
+        db.collection('users').doc(uid).update({ emailVerified: true, updatedAt: new Date() }).catch(err => {
+          console.warn('[AUTH-HEAL] Firestore update warning:', err);
+        });
+      }
 
       if (!isEmailVerified) {
         console.warn(`[AUTH-DIAGNOSTIC] Access Denied: User ${uid} (${email}) has unverified email.`);
         return res.status(403).json({
-          error: 'Your email address is not verified. Please verify your email to access the portal.',
+          error: 'Your email address is not verified. Please verify your email via OTP to access the portal.',
           emailVerified: false,
           email: email
         });

@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem(NAME_CACHE_KEY);
         setCurrentUser(null);
         setIsRoleVerified(false);
-        setRoleError('Your account permissions could not be verified. Please sign in again.');
+        setRoleError(error.response?.data?.error || 'Your account permissions could not be verified. Please sign in again.');
         await auth.signOut();
       } else {
         // Network/transient error: keep cached user if present but block route guard until verified
@@ -164,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ─── Manual role refresh ───────────────────────────────────────────
   const refreshRole = useCallback(async () => {
+    setRoleError(null);
     const user = auth.currentUser;
     if (user) await loadRole(user, false);
   }, [loadRole]);
