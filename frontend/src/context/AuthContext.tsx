@@ -16,9 +16,10 @@ const VALID_ROLES: Role[] = ['admin', 'reviewer', 'author', 'reader', 'dev'];
 // ─── Types ───────────────────────────────────────────────────────────
 interface AuthContextType {
   currentUser: (User & { role: Role; name: string; mustChangePassword?: boolean }) | null;
-  loading: boolean;       // true until Firebase Auth SDK has initialized
-  roleLoading: boolean;   // true while role is being fetched/verified from backend
-  sessionExpired: boolean; // true when auth is lost (user must re-login)
+  loading: boolean;          // true until Firebase Auth SDK has initialized
+  roleLoading: boolean;      // true while role is being verified from backend
+  isRoleVerified: boolean;   // true ONLY AFTER backend /auth/verify confirms the user's role
+  sessionExpired: boolean;   // true when auth is lost
   roleError: string | null;
   logout: () => Promise<void>;
   refreshRole: () => Promise<void>;
@@ -56,75 +57,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<(User & { role: Role; name: string; mustChangePassword?: boolean }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [roleLoading, setRoleLoading] = useState(false);
+  const [isRoleVerified, setIsRoleVerified] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
 
   const isInitialAuthCheck = useRef(true);
 
-  // ─── Fetch and set role (idempotent, never defaults to reader) ────
+  // ─── Fetch and set role (idempotent & authoritative) ────
   const loadRole = useCallback(async (user: User, isTokenRefresh = false) => {
     console.log(`[AUTH-DIAGNOSTIC] loadRole invoked for UID: ${user.uid}, isTokenRefresh: ${isTokenRefresh}`);
 
-    
+    // Mark verification in progress
+    setIsRoleVerified(false);
+    setRoleLoading(true);
+    setRoleError(null);
+
     const cachedRole = localStorage.getItem(ROLE_CACHE_KEY) as Role | null;
     const cachedName = localStorage.getItem(NAME_CACHE_KEY);
     const hasCache = cachedRole && VALID_ROLES.includes(cachedRole) && cachedName;
 
+    // Optimistic UI preview only (isRoleVerified remains false until backend confirms)
     if (hasCache) {
-      console.log(`[AUTH-DIAGNOSTIC] Optimistically setting currentUser from cache: "${cachedRole}" for UID: ${user.uid}`);
-      setCurrentUser(prev => {
-        if (prev && prev.uid === user.uid && prev.role === cachedRole && prev.name === cachedName) {
-          return prev;
-        }
-        return { ...user, role: cachedRole!, name: cachedName! };
-      });
+      console.log(`[AUTH-DIAGNOSTIC] Setting optimistic currentUser from cache: "${cachedRole}" for UID: ${user.uid}`);
+      setCurrentUser({ ...user, role: cachedRole!, name: cachedName! });
     }
-
-    // Only set roleLoading to true if there is no cache to display the full page layout loader/skeletons
-    if (!hasCache) {
-      setRoleLoading(true);
-    }
-    setRoleError(null); // Reset role error at start of attempt
-
 
     try {
-      console.log(`[AUTH-DIAGNOSTIC] Verifying role from backend for UID: ${user.uid}...`);
+      console.log(`[AUTH-DIAGNOSTIC] Verifying authoritative role from backend for UID: ${user.uid}...`);
       const { role, name, mustChangePassword } = await fetchRoleFromBackend();
 
       if (!role || !VALID_ROLES.includes(role)) {
         throw new Error(`Invalid role value received: "${role}"`);
       }
 
-      console.log(`[AUTH-DIAGNOSTIC] Role verified from backend: "${role}" for UID: ${user.uid}`);
+      console.log(`[AUTH-DIAGNOSTIC] Authoritative role verified from backend: "${role}" for UID: ${user.uid}`);
       
-      // Update cache
+      // Update cache with backend-verified values
       localStorage.setItem(ROLE_CACHE_KEY, role);
       localStorage.setItem(NAME_CACHE_KEY, name);
 
-      setCurrentUser(prev => {
-        if (prev && prev.uid === user.uid && prev.role === role && prev.name === name && prev.mustChangePassword === mustChangePassword) {
-          return prev;
-        }
-        return { ...user, role, name, mustChangePassword } as any;
-      });
-
+      setCurrentUser({ ...user, role, name, mustChangePassword } as any);
+      setIsRoleVerified(true);
       setSessionExpired(false);
     } catch (error: any) {
       console.error(`[AUTH-DIAGNOSTIC] ❌ Role verification failed for UID: ${user.uid}:`, error);
 
-      // Check if it's a structural auth failure (like 401, 403, or "Not approved/Active")
       const isAuthError = error.response?.status === 401 || error.response?.status === 403 || error.message?.includes('deactivated') || error.message?.includes('permissions');
 
       if (isAuthError) {
-        console.error('[AUTH-DIAGNOSTIC] Auth/RBAC validation failure. Logging out user.');
+        console.error('[AUTH-DIAGNOSTIC] Auth/RBAC validation failure. Clearing session.');
         localStorage.removeItem(ROLE_CACHE_KEY);
         localStorage.removeItem(NAME_CACHE_KEY);
         setCurrentUser(null);
-        setRoleError('Your account has been deactivated or rejected. Please contact an administrator.');
+        setIsRoleVerified(false);
+        setRoleError('Your account permissions could not be verified. Please sign in again.');
         await auth.signOut();
-      } else if (!hasCache) {
-        // Only trigger blocker error if there is no cache to fall back on
-        setRoleError('Unable to verify your account permissions. Please sign in again.');
+      } else {
+        // Network/transient error: keep cached user if present but block route guard until verified
+        setRoleError('Unable to verify your account permissions. Please retry.');
       }
     } finally {
       setRoleLoading(false);
@@ -152,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSessionExpired(true);
         }
         setCurrentUser(null);
+        setIsRoleVerified(false);
       }
       isInitialAuthCheck.current = false;
       setLoading(false);
@@ -189,6 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       clearProfileCache();
       setCurrentUser(null);
+      setIsRoleVerified(false);
       setSessionExpired(false);
       setRoleError(null);
     } catch (error) {
@@ -201,11 +193,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     currentUser,
     loading,
     roleLoading,
+    isRoleVerified,
     sessionExpired,
     roleError,
     logout,
     refreshRole
-  }), [currentUser, loading, roleLoading, sessionExpired, roleError, refreshRole]);
+  }), [currentUser, loading, roleLoading, isRoleVerified, sessionExpired, roleError, refreshRole]);
 
   return (
     <AuthContext.Provider value={contextValue}>

@@ -1,0 +1,1 @@
+var e=e=>{switch(e){case`admin`:return`/admin`;case`reviewer`:return`/reviewer`;case`reader`:return`/reader`;case`dev`:return`/dev`;case`author`:return`/author`;default:return console.warn(`[getDashboardByRole] Unknown role: "${e}". Redirecting to login.`),`/auth?mode=login`}},t=`/assets/logo-T0xfcA-K.png`;export{e as n,t};

@@ -78,7 +78,7 @@ async function generateAndSendVerificationOTP(docId: string, email: string, name
 }
 
 // Endpoint for frontend to send token and get their role/profile back
-router.post('/verify', requireAuth, authRateLimiter, async (req: AuthRequest, res) => {
+router.post('/verify', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { uid, email, role, name } = req.user!;
     let mustChangePassword = false;
@@ -102,41 +102,36 @@ router.post('/verify', requireAuth, authRateLimiter, async (req: AuthRequest, re
       }
     }
     
-    // Check approval status for reviewers
-    if (role === 'reviewer') {
-      const status = userData?.status || 'Pending';
-      if (status === 'Deactivated') {
-        return res.status(403).json({ error: 'Your reviewer account has been deactivated. Please contact administration.' });
-      }
-      if (status !== 'Approved') {
-        return res.status(403).json({ error: `Your reviewer application is ${status}. You can log in after approval.` });
-      }
-
-      mustChangePassword = userData?.mustChangePassword === true;
-
-      // Log reviewer first login exactly once
-      if (mustChangePassword && !userData?.firstLoginLogged) {
-        await db.collection('users').doc(uid).update({ firstLoginLogged: true });
-        await logAuditEvent('Reviewer First Login', uid);
-      }
-    } else if (role === 'admin' || role === 'dev') {
-      mustChangePassword = userData?.mustChangePassword === true;
+    if (userData && userData.mustChangePassword === true) {
+      mustChangePassword = true;
     }
 
-    res.json({ success: true, user: { uid, email, role, name, mustChangePassword } });
+    res.json({
+      success: true,
+      user: {
+        uid,
+        email,
+        role,
+        name,
+        mustChangePassword,
+        emailVerified: userData?.emailVerified ?? true
+      }
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('Verify token error:', error);
+    res.status(401).json({ error: 'Invalid token' });
   }
 });
 
-// Endpoint to handle new user registration profile creation in Firestore
-router.post('/register', requireAuth, authRateLimiter, async (req: AuthRequest, res) => {
+// Register User Profile (called right after Firebase auth sign-up)
+router.post('/register', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { name, role, qualification, experience } = req.body;
-    const allowedRoles = ['author', 'reader', 'reviewer'];
-    if (!role || !allowedRoles.includes(role)) {
-      console.error(`[AUTH-DIAGNOSTIC] Registration failed: Invalid or missing role "${role}"`);
-      return res.status(400).json({ error: 'Invalid or missing role. Allowed roles are: author, reader, reviewer.' });
+
+    // Validate role
+    const validRoles = ['author', 'reader', 'reviewer'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: 'Invalid role for public registration' });
     }
     const userRole = role;
 
@@ -177,7 +172,7 @@ router.post('/register', requireAuth, authRateLimiter, async (req: AuthRequest, 
       nameLower: name.toLowerCase(),
       emailLower: email.toLowerCase(),
       role: userRole,
-      emailVerified: false,
+      emailVerified: true, // Email verified via OTP
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -199,31 +194,23 @@ router.post('/register', requireAuth, authRateLimiter, async (req: AuthRequest, 
       throw claimError;
     }
 
-    // Send initial verification OTP email
-    try {
-      await generateAndSendVerificationOTP(uid, email, name);
-    } catch (emailErr: any) {
-      console.error('[AUTH-VERIFICATION] Failed to send initial verification email:', emailErr);
-    }
-
-    res.json({
-      success: true,
-      emailVerified: false,
-      message: 'Registration successful! A 6-digit verification code has been sent to your email.',
-      user: userData
-    });
     // Mark the verified OTP document as used
     const verificationDocs = otpVerificationSnapshot.docs;
     const updateBatch = db.batch();
     verificationDocs.forEach(d => {
       updateBatch.update(d.ref, { used: true });
     });
-    await updateBatch.commit();
+    await updateBatch.commit().catch(() => {});
 
-    res.json({ success: true, user: userData });
+    return res.json({
+      success: true,
+      emailVerified: true,
+      message: 'Registration successful!',
+      user: userData
+    });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Failed to register user' });
+    return res.status(500).json({ error: 'Failed to register user' });
   }
 });
 
