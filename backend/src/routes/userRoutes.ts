@@ -714,11 +714,14 @@ router.patch('/reviewers/:id/status', requireAuth, requireRole(['admin']), async
     // Handle account activation/deactivation in Firebase Auth and log audit events
     if (status === 'Deactivated') {
       await auth.updateUser(id, { disabled: true });
-      await auth.revokeRefreshTokens(id);
       await logAuditEvent('Reviewer Deactivated', id, adminId);
-    } else if (status === 'Approved' && previousStatus === 'Deactivated') {
-      await auth.updateUser(id, { disabled: false });
-      await logAuditEvent('Reviewer Reactivated', id, adminId);
+    } else if (status === 'Approved') {
+      await auth.updateUser(id, { disabled: false }).catch(() => {});
+      if (previousStatus === 'Deactivated') {
+        await logAuditEvent('Reviewer Reactivated', id, adminId);
+      } else if (previousStatus === 'Pending') {
+        await logAuditEvent('Reviewer Approved', id, adminId);
+      }
     }
 
     await userRef.update(updateData);
@@ -742,11 +745,12 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
 
     const tempPassword = generateTempPassword();
 
-    // 1. Create user in Firebase Auth
+    // 1. Create user in Firebase Auth with emailVerified set to true since credentials are emailed by Admin
     const userRecord = await auth.createUser({
       email,
       password: tempPassword,
-      displayName: name
+      displayName: name,
+      emailVerified: true
     });
 
     // 2. Create user document in Firestore (password is NOT stored in Firestore)
@@ -761,6 +765,8 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
       qualification,
       experience,
       mustChangePassword: true,
+      emailVerified: true,
+      createdByAdmin: true,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -787,7 +793,7 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
 
     if (emailSent) {
       await logAuditEvent('Credentials Email Sent', userRecord.uid, adminId);
-      await db.collection('users').doc(userRecord.uid).update({ credentialsShared: true });
+      await db.collection('users').doc(userRecord.uid).update({ credentialsShared: true, emailVerified: true });
     } else {
       await logAuditEvent('Credentials Email Failed', userRecord.uid, adminId);
     }
@@ -832,13 +838,14 @@ router.post('/reviewers/:id/resend-credentials', requireAuth, requireRole(['admi
 
     const tempPassword = generateTempPassword();
 
-    // 1. Update password securely in Firebase Authentication (invalidates old temp password)
-    await auth.updateUser(id, { password: tempPassword });
+    // 1. Update password securely in Firebase Authentication (invalidates old temp password) and ensure emailVerified is true
+    await auth.updateUser(id, { password: tempPassword, emailVerified: true });
 
-    // 2. Reset mustChangePassword flag in Firestore document to true
+    // 2. Reset mustChangePassword flag in Firestore document to true and set emailVerified to true
     await userRef.update({
       mustChangePassword: true,
       credentialsShared: false,
+      emailVerified: true,
       updatedAt: new Date()
     });
 
