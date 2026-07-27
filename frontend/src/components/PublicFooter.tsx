@@ -22,7 +22,7 @@ const PublicFooter: React.FC = () => {
                   <img src={logo} alt="BKMA Logo" className="w-full h-full object-contain" />
                 </div>
                 <h1 className="font-['Playfair_Display'] font-black text-base tracking-[-0.02em]">
-                  Bulletin Of Kerala Mathematical Association
+                  Bulletin of Kerala Mathematical Association
                 </h1>
               </div>
               <p className="text-zinc-500 text-[10px] leading-relaxed max-w-sm">
@@ -86,7 +86,7 @@ const PublicFooter: React.FC = () => {
                 <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1.5 shadow-xl shadow-white/5 overflow-hidden">
                   <img src={logo} alt="BKMA Logo" className="w-full h-full object-contain" />
                 </div>
-                <h1 className="font-['Playfair_Display'] font-black text-xl tracking-[-0.02em]"> Bulletin Of Kerala Mathematical Association</h1>
+                <h1 className="font-['Playfair_Display'] font-black text-xl tracking-[-0.02em]"> Bulletin of Kerala Mathematical Association</h1>
               </div>
               <p className="text-zinc-500 text-[11px] leading-relaxed max-w-sm">
                 Advancing mathematical research and higher education through global collaboration and peer-reviewed scholarly excellence.
