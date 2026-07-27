@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import type { ComponentType } from 'react';
+import { auth } from './config/firebase';
 import { useAuth } from './context/AuthContext';
 import { getDashboardByRole } from './utils/auth';
 import { Loader2, AlertTriangle, RefreshCw, Home } from 'lucide-react';
@@ -132,11 +133,18 @@ function App() {
           </div>
           <h3 className="text-xl font-bold text-zinc-900 mb-2">Access Verification Failed</h3>
           <p className="text-zinc-500 text-sm mb-6 leading-relaxed">
-            We couldn't verify your account credentials or system access role. This might be due to a temporary network issue.
+            {roleError || "We couldn't verify your account credentials or system access role. This might be due to a temporary network issue."}
           </p>
           <div className="space-y-3">
             <button
-              onClick={refreshRole}
+              onClick={async () => {
+                if (auth.currentUser) {
+                  await refreshRole();
+                } else {
+                  await logout();
+                  navigate('/auth?mode=login', { replace: true });
+                }
+              }}
               className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-black text-white text-sm font-black rounded-xl hover:bg-zinc-800 transition-all shadow-xl shadow-black/10 cursor-pointer"
             >
               <RefreshCw size={16} />
