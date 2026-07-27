@@ -127,8 +127,7 @@ export const verifyEmailCode = async (code: string, email?: string) => {
   }
 };
 
-export const sendRegistrationOtp = sendVerificationCode;
-export const verifyRegistrationOtp = (email: string, otp: string) => verifyEmailCode(otp, email);
+
 
 
 
