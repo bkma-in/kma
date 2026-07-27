@@ -84,14 +84,14 @@ function ScrollToTop() {
 }
 
 function App() {
-  const { currentUser, loading, roleLoading, roleError, refreshRole, logout } = useAuth();
+  const { currentUser, loading, roleLoading, isRoleVerified, roleError, refreshRole, logout } = useAuth();
   const navigate = useNavigate();
 
   const dashboardPath = currentUser ? getDashboardByRole(currentUser.role) : '';
-  const hasValidDashboard = !!currentUser && !dashboardPath.startsWith('/auth');
+  const hasValidDashboard = !!currentUser && isRoleVerified && !dashboardPath.startsWith('/auth');
 
   // Initial auth & role verification skeleton loading check
-  if (loading || roleLoading) {
+  if (loading || roleLoading || (currentUser && !isRoleVerified)) {
     const path = window.location.pathname;
 
     if (path.startsWith('/admin')) {
