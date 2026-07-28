@@ -47,8 +47,6 @@ The system features a role-based architecture with dedicated dashboards for Auth
 - ✅ Fixed all import paths and routing
 - ✅ Synced Git repository (clean state)
 
-
-
 ---
 
 © 2026-JUL KMA Article Publishing System. All Rights Reserved.
