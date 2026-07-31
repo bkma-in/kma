@@ -158,17 +158,6 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
 
     const normEmail = email.toLowerCase().trim();
 
-    // Verify that the email was verified in registrationOTPs
-    const otpVerificationSnapshot = await db.collection('registrationOTPs')
-      .where('email', '==', normEmail)
-      .where('verified', '==', true)
-      .where('used', '==', false)
-      .get();
-
-    if (otpVerificationSnapshot.empty) {
-      return res.status(400).json({ error: 'Email verification is required before registration.' });
-    }
-
     // Check if user already exists
     const userRef = db.collection('users').doc(uid);
     const doc = await userRef.get();
@@ -184,7 +173,7 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
       nameLower: name.toLowerCase(),
       emailLower: email.toLowerCase(),
       role: userRole,
-      emailVerified: true, // Email verified via OTP
+      emailVerified: false, // Email is unverified at registration, OTP sent next
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -206,18 +195,10 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
       throw claimError;
     }
 
-    // Mark the verified OTP document as used
-    const verificationDocs = otpVerificationSnapshot.docs;
-    const updateBatch = db.batch();
-    verificationDocs.forEach(d => {
-      updateBatch.update(d.ref, { used: true });
-    });
-    await updateBatch.commit().catch(() => {});
-
     return res.json({
       success: true,
-      emailVerified: true,
-      message: 'Registration successful!',
+      emailVerified: false,
+      message: 'Registration successful! Verification code sent.',
       user: userData
     });
   } catch (error) {
@@ -300,20 +281,7 @@ router.post('/send-verification-code', sendVerificationRateLimiter, async (req: 
   }
 });
 
-// Alias /registration/send-otp to send verification code
-router.post('/registration/send-otp', sendVerificationRateLimiter, async (req: AuthRequest, res) => {
-  try {
-    const { email, name } = req.body;
-    if (!email || typeof email !== 'string' || email.trim() === '') {
-      return res.status(400).json({ error: 'A valid email address is required.' });
-    }
-    const normEmail = email.toLowerCase().trim();
-    await generateAndSendVerificationOTP(normEmail, normEmail, name || 'User');
-    res.json({ success: true, message: 'A 6-digit verification code has been sent to your email address.' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to send verification code.' });
-  }
-});
+
 
 // Dedicated endpoint to verify 6-digit email OTP
 router.post('/verify-email-code', verifyCodeRateLimiter, async (req: AuthRequest, res) => {
@@ -464,48 +432,7 @@ router.post('/verify-email-code', verifyCodeRateLimiter, async (req: AuthRequest
   }
 });
 
-// Alias /registration/verify-otp to /verify-email-code
-router.post('/registration/verify-otp', verifyCodeRateLimiter, async (req: AuthRequest, res) => {
-  try {
-    const code = req.body.otp || req.body.code;
-    const email = req.body.email;
-    if (!code || typeof code !== 'string' || code.trim().length !== 6) {
-      return res.status(400).json({ error: 'Please enter a valid 6-digit verification code.' });
-    }
-    if (!email) {
-      return res.status(400).json({ error: 'A valid email address is required.' });
-    }
 
-    const normEmail = email.toLowerCase().trim();
-    let verRef = db.collection('emailVerifications').doc(normEmail);
-    let verDoc = await verRef.get();
-
-    if (!verDoc.exists) {
-      verRef = db.collection('registrationOTPs').doc(normEmail);
-      verDoc = await verRef.get();
-    }
-
-    if (!verDoc.exists) {
-      return res.status(400).json({ error: 'Invalid or expired verification code.' });
-    }
-
-    const vData = verDoc.data()!;
-    const cleanCode = code.trim();
-    const submittedHash = hashVerificationCode(cleanCode);
-    const isMatch = (vData.codeHash && submittedHash === vData.codeHash) || (vData.otp && vData.otp === cleanCode);
-
-    if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
-    }
-
-    const now = new Date();
-    await verRef.update({ verified: true, verifiedAt: now, updatedAt: now });
-
-    res.json({ success: true, verified: true, message: 'Your email address has been verified successfully!' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to verify code.' });
-  }
-});
 
 
 
@@ -541,160 +468,7 @@ router.post('/change-password', requireAuth, authRateLimiter, async (req: AuthRe
 // ─── Registration OTP Routes ──────────────────────────────────────────
 
 // 1. Send Registration OTP
-router.post('/registration/send-otp', async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email || typeof email !== 'string' || email.trim() === '') {
-      return res.status(400).json({ error: 'A valid email address is required.' });
-    }
 
-    const normEmail = email.toLowerCase().trim();
-
-    // Verify email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(normEmail)) {
-      return res.status(400).json({ error: 'Invalid email address format.' });
-    }
-
-    // Rate Limit: Check if an OTP was sent in the last 60 seconds or if they exceeded 3 per day
-    const recentSnapshot = await db.collection('registrationOTPs')
-      .where('email', '==', normEmail)
-      .get();
-    
-    const now = Date.now();
-    let hasRecent = false;
-    let dailyCount = 0;
-
-    recentSnapshot.docs.forEach(doc => {
-      const data = doc.data();
-      const createdAt = data.createdAt.toDate ? data.createdAt.toDate().getTime() : new Date(data.createdAt).getTime();
-      
-      // Check 60 seconds limit
-      if ((now - createdAt) < 60000) {
-        hasRecent = true;
-      }
-      // Check 24 hours limit
-      if ((now - createdAt) < 24 * 60 * 60 * 1000) {
-        dailyCount++;
-      }
-    });
-
-    if (hasRecent) {
-      return res.status(429).json({ error: 'Please wait 60 seconds before requesting another verification code.' });
-    }
-
-    if (dailyCount >= 3) {
-      return res.status(429).json({ error: 'You have reached the maximum limit of 3 verification codes per day.' });
-    }
-
-    // Invalidate previous active OTPs
-    const activeSnapshot = await db.collection('registrationOTPs')
-      .where('email', '==', normEmail)
-      .where('used', '==', false)
-      .where('verified', '==', false)
-      .get();
-
-    const batch = db.batch();
-    activeSnapshot.docs.forEach(doc => {
-      batch.update(doc.ref, { used: true, expiresAt: new Date(0) });
-    });
-    await batch.commit();
-
-    // Generate 6-digit numeric OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(now + 5 * 60 * 1000); // 5 minutes validity
-
-    const otpRef = db.collection('registrationOTPs').doc();
-    await otpRef.set({
-      id: otpRef.id,
-      email: normEmail,
-      otp,
-      expiresAt,
-      verified: false,
-      used: false,
-      attempts: 0,
-      createdAt: new Date()
-    });
-
-    // Send email using standard Brevo wrapper
-    const supportUrl = config.brevo.supportUrl;
-    const emailHtml = buildHtmlEmail(
-      'New User',
-      'Verify Your Email Address',
-      'Thank you for registering. Use the following 6-digit One-Time Password (OTP) to verify your email address and complete your registration. This OTP is valid for 5 minutes.',
-      'Verification Code',
-      [
-        { label: 'OTP CODE', value: `<span style="font-family: monospace; font-size: 16px; font-weight: 800; letter-spacing: 0.15em; color: #000000;">${otp}</span>` }
-      ],
-      '',
-      '',
-      'Security Notice',
-      `If you did not request this code, please ignore this email or contact <a href="${supportUrl}" style="color: #000000; text-decoration: underline;"><strong>support</strong></a>. Keep this verification code confidential.`,
-      '🔒',
-      'Do not share this code',
-      '⏳',
-      'Expires in 5 minutes'
-    );
-
-    await sendTransactionalEmail(normEmail, 'New User', 'KMA Portal Registration Verification OTP', emailHtml);
-
-    res.json({ success: true, message: 'Verification OTP has been sent to your email.' });
-  } catch (error: any) {
-    console.error('Registration Send OTP error:', error);
-    res.status(500).json({ error: error.message || 'Failed to send verification OTP.' });
-  }
-});
-
-// 2. Verify Registration OTP
-router.post('/registration/verify-otp', async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-    if (!email || !otp) {
-      return res.status(400).json({ error: 'Email and OTP code are required.' });
-    }
-
-    const normEmail = email.toLowerCase().trim();
-    const cleanOtp = otp.trim();
-
-    // Query active unverified OTPs
-    const snapshot = await db.collection('registrationOTPs')
-      .where('email', '==', normEmail)
-      .where('used', '==', false)
-      .where('verified', '==', false)
-      .get();
-
-    if (snapshot.empty) {
-      return res.status(400).json({ error: 'Invalid or expired verification code.' });
-    }
-
-    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), ref: doc.ref } as any));
-    docs.sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime());
-    const activeDoc = docs[0];
-
-    const attempts = (activeDoc.attempts || 0) + 1;
-    if (attempts > 5) {
-      await activeDoc.ref.update({ used: true, expiresAt: new Date(0) });
-      return res.status(400).json({ error: 'Too many verification attempts. Please request a new OTP.' });
-    }
-
-    await activeDoc.ref.update({ attempts });
-
-    const expiresAt = activeDoc.expiresAt.toDate ? activeDoc.expiresAt.toDate() : new Date(activeDoc.expiresAt);
-    if (expiresAt < new Date()) {
-      return res.status(400).json({ error: 'Verification code has expired. Please request a new OTP.' });
-    }
-
-    if (activeDoc.otp !== cleanOtp) {
-      return res.status(400).json({ error: 'Invalid OTP. Please try again.' });
-    }
-
-    await activeDoc.ref.update({ verified: true });
-    res.json({ success: true, message: 'Email verified successfully.' });
-  } catch (error: any) {
-    console.error('Registration Verify OTP error:', error);
-    res.status(500).json({ error: error.message || 'Failed to verify OTP.' });
-  }
-});
 
 // ─── Forgot Password Routes ──────────────────────────────────────────
 

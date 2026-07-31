@@ -39,89 +39,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const [otp, setOtp] = useState('');
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [showOtp, setShowOtp] = useState(false);
-  const [isOtpFocused, setIsOtpFocused] = useState(false);
-  const [hasRequestedOtp, setHasRequestedOtp] = useState(false);
-  const [attemptsRemaining, setAttemptsRemaining] = useState(3);
-
-  // Countdown timer for Get OTP resend
-  React.useEffect(() => {
-    if (countdown <= 0) return;
-    const timer = setInterval(() => {
-      setCountdown((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [countdown]);
-
-  const handleGetOtp = async () => {
-    if (attemptsRemaining <= 0) return;
-    const emailV = validateEmail(formData.email);
-    if (!emailV.isValid) {
-      setErrors((prev) => ({ ...prev, email: emailV.message! }));
-      return;
-    }
-    // Clear email and OTP errors if valid
-    setErrors((prev) => {
-      const { email, otp: _, ...rest } = prev;
-      return rest;
-    });
-
-    setIsSendingOtp(true);
-    try {
-      await sendVerificationCode(formData.email);
-      setCountdown(60);
-      setHasRequestedOtp(true);
-      setErrors((prev) => {
-        const { otp: _, ...rest } = prev;
-        return rest;
-      });
-    } catch (err: any) {
-      setErrors((prev) => ({ ...prev, otp: err.message || 'Failed to send OTP.' }));
-    } finally {
-      setIsSendingOtp(false);
-    }
-  };
-
-  const handleOtpChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-    setOtp(val);
-
-    if (val.length === 6 && attemptsRemaining > 0) {
-      setIsVerifyingOtp(true);
-      setErrors((prev) => {
-        const { otp: _, ...rest } = prev;
-        return rest;
-      });
-      try {
-        await verifyEmailCode(val, formData.email);
-        setOtpVerified(true);
-      } catch (err: any) {
-        setAttemptsRemaining((prev) => {
-          const nextVal = prev - 1;
-          if (nextVal <= 0) {
-            setErrors((prevErrors) => ({
-              ...prevErrors,
-              otp: 'Verification attempts exceeded. OTP verification has been disabled.'
-            }));
-          } else {
-            setErrors((prevErrors) => ({
-              ...prevErrors,
-              otp: `${err.message || 'Invalid OTP.'} Please try again.`
-            }));
-          }
-          return nextVal;
-        });
-      } finally {
-        setIsVerifyingOtp(false);
-      }
-    }
-  };
-
   const passwordsMatch =
     formData.password.length > 0 &&
     formData.confirmPassword.length > 0 &&
@@ -130,7 +47,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
   const isFormReady = 
     formData.name.length > 0 && 
     formData.email.length > 0 && 
-    otpVerified &&
     formData.password.length >= 8 && 
     passwordsMatch &&
     (formData.role !== 'reviewer' || (formData.qualification.length > 0 && formData.experience.length > 0));
@@ -158,7 +74,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     if (!nameV.isValid) newErrors.name = nameV.message!;
     const emailV = validateEmail(formData.email);
     if (!emailV.isValid) newErrors.email = emailV.message!;
-    if (!otpVerified) newErrors.otp = 'Email verification is required.';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0 && isFormReady;
@@ -180,6 +95,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
         qualification: formData.qualification,
         experience: formData.experience
       });
+
+      // Send OTP to user's registered email
+      await sendVerificationCode(formData.email);
 
       setStep('verify');
       setResendCooldown(60);
@@ -432,118 +350,9 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                     placeholder="Enter your email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    disabled={otpVerified || isLoading}
+                    disabled={isLoading}
                   />
                 </div>
-              </div>
-
-              {/* Email OTP Verification */}
-              <div className="space-y-1.5 animate-in fade-in duration-300">
-                <label className="form-label" htmlFor="reg-otp">
-                  Email OTP{' '}
-                  <span className="text-[10px] text-zinc-400 font-normal lowercase ml-1.5">
-                    {attemptsRemaining === 3 && "(only 3 attempts per day)"}
-                    {attemptsRemaining === 2 && "(2 attempts remaining)"}
-                    {attemptsRemaining === 1 && "(1 attempt remaining)"}
-                    {attemptsRemaining <= 0 && "(verification disabled)"}
-                  </span>
-                </label>
-                <div className="flex items-center gap-3">
-                  {/* Modern 6-slot OTP Input Wrapper */}
-                  <div className="relative flex-1 group">
-                    <input
-                      id="reg-otp"
-                      type={showOtp ? "text" : "password"}
-                      maxLength={6}
-                      pattern="\d{6}"
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-text z-20 disabled:cursor-not-allowed"
-                      value={otp}
-                      onChange={handleOtpChange}
-                      onFocus={() => setIsOtpFocused(true)}
-                      onBlur={() => setIsOtpFocused(false)}
-                      disabled={otpVerified || isSendingOtp || isVerifyingOtp || isLoading || !formData.name.trim() || !formData.email.trim() || attemptsRemaining <= 0}
-                    />
-                    
-                    {/* Visual slots representation */}
-                    <div className="grid grid-cols-6 gap-2 w-full">
-                      {Array.from({ length: 6 }).map((_, index) => {
-                        const digit = otp[index] || "";
-                        const isActive = index === otp.length && isOtpFocused && !otpVerified && formData.name.trim() && formData.email.trim() && attemptsRemaining > 0;
-                        
-                        return (
-                          <div
-                            key={index}
-                            className={cn(
-                              "h-11 rounded-xl border flex items-center justify-center text-sm font-black transition-all duration-200 select-none bg-zinc-50/50",
-                              otpVerified
-                                ? "bg-emerald-50/50 border-emerald-200 text-emerald-800"
-                                : errors.otp
-                                  ? "border-red-500 text-red-600 bg-red-50/10"
-                                  : isActive
-                                    ? "border-black bg-white ring-2 ring-black/5 shadow-sm"
-                                    : "border-zinc-200 text-zinc-800"
-                            )}
-                          >
-                            {digit ? (
-                              showOtp ? (
-                                digit
-                              ) : (
-                                <span className="w-1.5 h-1.5 bg-current rounded-full animate-in zoom-in duration-100" />
-                              )
-                            ) : (
-                              isActive && (
-                                <span className="w-[1.5px] h-4 bg-black animate-[reg-otp-blink_1s_infinite] rounded-full" />
-                              )
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Eye Toggle Action */}
-                  {otp.length > 0 && !otpVerified && attemptsRemaining > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowOtp(!showOtp)}
-                      className="p-2.5 rounded-xl border border-zinc-200 bg-white hover:border-black/30 text-zinc-400 hover:text-zinc-600 transition-all cursor-pointer flex items-center justify-center shrink-0"
-                      disabled={isSendingOtp || isVerifyingOtp || isLoading}
-                    >
-                      {showOtp ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  )}
-
-                  {/* Get OTP Button */}
-                  <button
-                    type="button"
-                    onClick={handleGetOtp}
-                    disabled={countdown > 0 || isSendingOtp || otpVerified || isLoading || !formData.name.trim() || !formData.email.trim() || attemptsRemaining <= 0}
-                    className={cn(
-                      "px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border h-11 flex items-center justify-center",
-                      (countdown > 0 || otpVerified || !formData.name.trim() || !formData.email.trim() || attemptsRemaining <= 0)
-                        ? "bg-zinc-50 border-zinc-200 text-zinc-400 cursor-not-allowed"
-                        : "bg-black text-white border-black hover:bg-zinc-800"
-                    )}
-                  >
-                    {isSendingOtp ? (
-                      <Loader2 className="animate-spin h-4 w-4 mx-auto" />
-                    ) : countdown > 0 ? (
-                      `Resend in ${countdown}s`
-                    ) : hasRequestedOtp ? (
-                      "Resend OTP"
-                    ) : (
-                      "Get OTP"
-                    )}
-                  </button>
-                </div>
-                {errors.otp && (
-                  <p className="text-[11px] text-red-500 font-bold mt-0.5">{errors.otp}</p>
-                )}
-                {otpVerified && (
-                  <p className="text-[11px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1">
-                    ✓ Email Verified
-                  </p>
-                )}
               </div>
 
               {/* Role Selection */}
