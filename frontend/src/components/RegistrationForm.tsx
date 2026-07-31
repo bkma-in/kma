@@ -429,8 +429,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
               </AnimatePresence>
 
               {/* Password */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between relative">
+              <div className="space-y-1.5 relative">
+                <div className="flex items-center justify-between">
                   <label className="form-label flex items-center gap-1.5" htmlFor="reg-password">
                     Password (8 characters)
                     <button
@@ -446,48 +446,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                       ⓘ
                     </button>
                   </label>
-
-                  {/* Requirements Tooltip Popover */}
-                  <AnimatePresence>
-                    {showRequirementsTooltip && (
-                      <motion.div
-                        ref={tooltipRef}
-                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute left-0 top-[28px] z-50 w-[320px] sm:w-[420px] bg-white p-4 rounded-xl shadow-xl border border-red-500/50 flex flex-col gap-3 font-sans select-none"
-                      >
-                        <div className="flex items-start gap-2.5 text-zinc-500 text-xs font-semibold leading-relaxed">
-                          <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
-                          <div className="flex-1 space-y-2">
-                            <span className="text-zinc-500">Use at least 8 characters including:</span>
-                            
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-1.5 gap-x-4 pt-1">
-                              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
-                                <span className="text-emerald-500 font-bold">✓</span>
-                                <span>Uppercase <span className="text-zinc-400 font-normal">(A-Z)</span></span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
-                                <span className="text-emerald-500 font-bold">✓</span>
-                                <span>Lowercase <span className="text-zinc-400 font-normal">(a-z)</span></span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
-                                <span className="text-emerald-500 font-bold">✓</span>
-                                <span>Number <span className="text-zinc-400 font-normal">(0-9)</span></span>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
-                              <span className="text-emerald-500 font-bold">✓</span>
-                              <span>Special character <span className="text-zinc-400 font-normal">(e.g. #, @, !)</span></span>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
+                
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-black transition-colors" size={18} />
                   <input
@@ -506,6 +466,48 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+
+                {/* Requirements Tooltip Popover */}
+                <AnimatePresence>
+                  {showRequirementsTooltip && (
+                    <motion.div
+                      ref={tooltipRef}
+                      initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 w-full bg-white p-4 rounded-xl shadow-xl border border-red-300 flex flex-col gap-3 font-sans select-none box-border"
+                    >
+                      <div className="flex items-start gap-2.5 text-zinc-500 text-xs font-semibold leading-relaxed">
+                        <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                        <div className="flex-1 space-y-2">
+                          <span className="text-zinc-500">Use at least 8 characters including:</span>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-1.5 gap-x-4 pt-1">
+                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
+                              <span className="text-emerald-500 font-bold">✓</span>
+                              <span>Uppercase <span className="text-zinc-400 font-normal">(A-Z)</span></span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
+                              <span className="text-emerald-500 font-bold">✓</span>
+                              <span>Lowercase <span className="text-zinc-400 font-normal">(a-z)</span></span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
+                              <span className="text-emerald-500 font-bold">✓</span>
+                              <span>Number <span className="text-zinc-400 font-normal">(0-9)</span></span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
+                            <span className="text-emerald-500 font-bold">✓</span>
+                            <span>Special character <span className="text-zinc-400 font-normal">(e.g. #, @, !)</span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
                 {/* Password Strength Indicator */}
                 <div className="flex gap-1.5 mt-2 h-1">
                   {[1, 2, 3, 4].map((i) => {
