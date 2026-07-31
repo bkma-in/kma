@@ -60,10 +60,10 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     formData.confirmPassword.length > 0 &&
     formData.password === formData.confirmPassword;
 
-  const isFormReady = 
-    formData.name.length > 0 && 
-    formData.email.length > 0 && 
-    passwordValidation.isValid && 
+  const isFormReady =
+    formData.name.length > 0 &&
+    formData.email.length > 0 &&
+    passwordValidation.isValid &&
     passwordsMatch &&
     (formData.role !== 'reviewer' || (formData.qualification.length > 0 && formData.experience.length > 0));
 
@@ -90,7 +90,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     if (!nameV.isValid) newErrors.name = nameV.message!;
     const emailV = validateEmail(formData.email);
     if (!emailV.isValid) newErrors.email = emailV.message!;
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0 && isFormReady;
   };
@@ -132,7 +132,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     setVerifyError(null);
     try {
       await verifyEmailCode(verificationCode, formData.email);
-      
+
       let msg = "Email verified successfully! Flipping to login...";
       if (formData.role === 'reviewer') {
         msg = "Email verified! Your reviewer account is under admin approval. You can log in after approval.";
@@ -218,8 +218,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
             {step === 'verify'
               ? `Verification code sent to ${maskEmail(formData.email)}`
               : step === 'success'
-              ? 'Your account is ready.'
-              : 'Join the Kerala Mathematical Association'}
+                ? 'Your account is ready.'
+                : 'Join the Kerala Mathematical Association'}
           </p>
         </header>
 
@@ -244,7 +244,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
               </div>
 
               {verifyError && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 shadow-sm"
@@ -327,7 +327,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
           {step === 'form' && (
             <form onSubmit={handleSubmit} className="space-y-4">
               {errors.form && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 shadow-sm"
@@ -435,7 +435,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
               <div className="space-y-1.5 relative">
                 <div className="flex items-center justify-between">
                   <label className="form-label flex items-center gap-1.5" htmlFor="reg-password">
-                    Password (8 characters)
+                    Password (Atleast 8 characters)
                     <button
                       type="button"
                       onClick={(e) => {
@@ -450,7 +450,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                     </button>
                   </label>
                 </div>
-                
+
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-black transition-colors" size={18} />
                   <input
@@ -488,7 +488,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                             <span className={cn(passwordValidation.hasMinLength ? "text-emerald-500" : "text-amber-500", "font-bold mr-1.5")}>✓</span>
                             Use at least 8 characters including:
                           </span>
-                          
+
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-1.5 gap-x-4 pt-1">
                             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
                               <span className={cn(passwordValidation.hasUppercase ? "text-emerald-500" : "text-amber-500", "font-bold")}>✓</span>
@@ -503,7 +503,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                               <span>Number <span className="text-zinc-400 font-normal">(0-9)</span></span>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
                             <span className={cn(passwordValidation.hasSpecialChar ? "text-emerald-500" : "text-amber-500", "font-bold")}>✓</span>
                             <span>Special character <span className="text-zinc-400 font-normal">(e.g. #, @, !)</span></span>
@@ -513,7 +513,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                     </motion.div>
                   )}
                 </AnimatePresence>
-                
+
                 {/* Password Strength Indicator */}
                 <div className="flex gap-1.5 mt-2 h-1">
                   {[1, 2, 3, 4].map((i) => {
@@ -529,7 +529,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                           passwordValidation.hasNumber,
                           passwordValidation.hasSpecialChar
                         ].filter(Boolean).length;
-                        
+
                         const threshold = Math.round((metCount / 5) * 4);
                         if (i <= threshold) {
                           color = "bg-amber-500";
@@ -538,12 +538,12 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                     }
 
                     return (
-                      <div 
-                        key={i} 
+                      <div
+                        key={i}
                         className={cn(
                           "flex-1 rounded-full transition-all duration-500",
                           color
-                        )} 
+                        )}
                       />
                     );
                   })}
@@ -573,11 +573,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                 </div>
                 {/* Underline */}
                 <div className={cn(
-                  "h-0.5 w-full transition-colors duration-300", 
-                  formData.confirmPassword.length === 0 
-                    ? "bg-zinc-100" 
-                    : (formData.password === formData.confirmPassword && passwordValidation.isValid) 
-                      ? "bg-green-500" 
+                  "h-0.5 w-full transition-colors duration-300",
+                  formData.confirmPassword.length === 0
+                    ? "bg-zinc-100"
+                    : (formData.password === formData.confirmPassword && passwordValidation.isValid)
+                      ? "bg-green-500"
                       : "bg-red-500"
                 )} />
               </div>
