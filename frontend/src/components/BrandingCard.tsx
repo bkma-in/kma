@@ -43,7 +43,7 @@ const BrandingCard: React.FC = () => {
               <br className="hidden md:block" />
               Kerala{' '}
               <br className="hidden md:block" />
-              Mathematical{' '}
+              Mathematics{' '}
               <br className="hidden md:block" />
               Association
             </h1>
@@ -71,7 +71,7 @@ const BrandingCard: React.FC = () => {
           <div>
             <h3 className="text-xs lg:text-sm font-bold uppercase tracking-wider text-white">Research Areas</h3>
             <p className="text-[11px] text-[#B3B3B3] leading-relaxed mt-0.5 max-w-sm">
-              Explore the major fields of mathematical research published in the Bulletin of Kerala Mathematical Association.
+              Explore the major fields of mathematical research published in the Bulletin of Kerala Mathematics Association.
             </p>
           </div>
 

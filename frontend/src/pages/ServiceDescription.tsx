@@ -36,7 +36,7 @@ const ServiceDescription: React.FC = () => {
           <section className="mb-12">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 leading-tight">Overview</h2>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed mb-6">
-              The <strong className="text-black">Bulletin of Kerala Mathematical Association (BKMA)</strong> is an academic publication platform dedicated to promoting mathematical research, scholarly communication, and knowledge sharing among researchers, educators, students, and institutions.
+              The <strong className="text-black">Bulletin of Kerala Mathematics Association (BKMA)</strong> is an academic publication platform dedicated to promoting mathematical research, scholarly communication, and knowledge sharing among researchers, educators, students, and institutions.
             </p>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
               BKMA provides access to academic publications, subscription services, memberships, and related scholarly resources through its digital platform.

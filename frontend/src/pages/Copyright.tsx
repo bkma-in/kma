@@ -38,7 +38,7 @@ const Copyright: React.FC = () => {
           <section className="mb-12">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 leading-tight">Copyright Policy &amp; Terms</h2>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed mb-6">
-              All content published by the Bulletin of Kerala Mathematical Association (BKMA) is protected under applicable copyright laws. Authors retain copyright to their original work while granting BKMA the right to publish and archive accepted manuscripts.
+              All content published by the Bulletin of Kerala Mathematics Association (BKMA) is protected under applicable copyright laws. Authors retain copyright to their original work while granting BKMA the right to publish and archive accepted manuscripts.
             </p>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
               Published articles may be used for educational and non-commercial purposes with proper attribution. Unauthorized reproduction, distribution, or commercial use without prior written permission is prohibited. BKMA is committed to protecting intellectual property and maintaining the highest standards of academic publishing.

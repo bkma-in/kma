@@ -20,7 +20,7 @@ const ContactUs: React.FC = () => {
               Contact Us
             </h1>
             <p className="text-zinc-400 text-xs sm:text-sm uppercase tracking-widest font-semibold">
-              Get in touch with the Bulletin of Kerala Mathematical Association
+              Get in touch with the Bulletin of Kerala Mathematics Association
             </p>
             <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-wider pt-2">
               <Link to="/" className="hover:text-white transition-colors">Home</Link>
@@ -38,7 +38,7 @@ const ContactUs: React.FC = () => {
             <div className="space-y-6 text-lg sm:text-xl text-zinc-700 leading-relaxed">
               <div>
                 <p className="text-xs font-black uppercase tracking-wider text-zinc-400 mb-1.5">Address</p>
-                <p className="text-zinc-800 font-semibold">Bulletin of Kerala Mathematical Association (BKMA)<br />Kerala, India</p>
+                <p className="text-zinc-800 font-semibold">Bulletin of Kerala Mathematics Association (BKMA)<br />Kerala, India</p>
               </div>
               <div>
                 <p className="text-xs font-black uppercase tracking-wider text-zinc-400 mb-1.5">Email</p>

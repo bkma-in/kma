@@ -142,7 +142,7 @@ const AboutUs: React.FC = () => {
           <section className="mb-12">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 leading-tight">Advancing Mathematical Research Through Knowledge and Collaboration</h2>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed mb-6">
-              The <strong className="text-black">Bulletin of Kerala Mathematical Association (BKMA)</strong> is the official academic publication of the Kerala Mathematical Association (KMA). Established with the vision of promoting excellence in mathematical sciences, BKMA serves as a trusted platform for researchers, academicians, educators, and students to publish and share high-quality mathematical research.
+              The <strong className="text-black">Bulletin of Kerala Mathematics Association (BKMA)</strong> is the official academic publication of the Kerala Mathematical Association (KMA). Established with the vision of promoting excellence in mathematical sciences, BKMA serves as a trusted platform for researchers, academicians, educators, and students to publish and share high-quality mathematical research.
             </p>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
               Our journal is dedicated to fostering innovation, encouraging scholarly collaboration, and supporting the global exchange of mathematical knowledge across diverse disciplines.

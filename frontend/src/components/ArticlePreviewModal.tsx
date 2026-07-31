@@ -133,7 +133,7 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
             </div>
             <div>
               <p className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.3em]">
-                Bulletin of Kerala Mathematical Association
+                Bulletin of Kerala Mathematics Association
               </p>
               <p className="text-[11px] font-bold text-zinc-600">
                 {isTribute ? '' : getIssueDetails()}

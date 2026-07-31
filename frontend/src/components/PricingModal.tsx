@@ -60,7 +60,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) => {
             <div>
               <p className="font-bold text-white mb-1">Payment Method</p>
               <p className="text-xs">
-                Subscription charges may be sent through Demand Draft (Bank Check/Cashier's Check as it is called in some western countries) in favour of <strong className="text-zinc-200">Bulletin of Kerala Mathematical Association</strong>, payable at Kottayam - 686 001.
+                Subscription charges may be sent through Demand Draft (Bank Check/Cashier's Check as it is called in some western countries) in favour of <strong className="text-zinc-200">Bulletin of Kerala Mathematics Association</strong>, payable at Kottayam - 686 001.
               </p>
             </div>
           </div>

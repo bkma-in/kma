@@ -52,7 +52,7 @@ async function generateAndSendVerificationOTP(docId, email, name) {
         attempts: 0,
         createdAt: now
     }).catch(() => { });
-    const emailHtml = (0, notificationService_1.buildHtmlEmail)(name || 'User', 'Verify Your Email Address', 'Thank you for registering with the Bulletin of Kerala Mathematical Association. Please enter the following 6-digit verification code to complete your registration and verify your email address. This code will expire in 10 minutes.', 'Verification Code', [
+    const emailHtml = (0, notificationService_1.buildHtmlEmail)(name || 'User', 'Verify Your Email Address', 'Thank you for registering with the Bulletin of Kerala Mathematics Association. Please enter the following 6-digit verification code to complete your registration and verify your email address. This code will expire in 10 minutes.', 'Verification Code', [
         { label: 'VERIFICATION CODE', value: `<span style="font-family: monospace; font-size: 18px; font-weight: 800; letter-spacing: 0.2em; color: #000000;">${otp}</span>` },
         { label: 'VALIDITY', value: '10 Minutes' }
     ], '', '', 'Security Notice', 'If you did not create an account with KMA, you can safely ignore this email. Never share your verification code with anyone.', '🔒', 'Keep your code secure', '⏳', 'Expires in 10 minutes');
@@ -71,11 +71,22 @@ router.post('/verify', authMiddleware_1.requireAuth, async (req, res) => {
         // Verify email verification state for non-admin/dev users
         if (role !== 'admin' && role !== 'dev') {
             const firebaseUser = await firebase_1.auth.getUser(uid).catch(() => null);
-            const isEmailVerified = firebaseUser?.emailVerified === true || userData?.emailVerified === true;
+            let isEmailVerified = firebaseUser?.emailVerified === true || userData?.emailVerified === true;
+            // Auto-heal ONLY accounts created directly by admin portal with temporary credentials
+            if (!isEmailVerified && (role === 'reviewer' || userData?.role === 'reviewer') && (userData?.createdByAdmin === true || userData?.mustChangePassword === true)) {
+                console.log(`[AUTH-HEAL] Auto-verifying email for admin-created reviewer UID ${uid} (${email})`);
+                isEmailVerified = true;
+                firebase_1.auth.updateUser(uid, { emailVerified: true }).catch(err => {
+                    console.warn('[AUTH-HEAL] Firebase Auth update warning:', err);
+                });
+                firebase_1.db.collection('users').doc(uid).update({ emailVerified: true, updatedAt: new Date() }).catch(err => {
+                    console.warn('[AUTH-HEAL] Firestore update warning:', err);
+                });
+            }
             if (!isEmailVerified) {
                 console.warn(`[AUTH-DIAGNOSTIC] Access Denied: User ${uid} (${email}) has unverified email.`);
                 return res.status(403).json({
-                    error: 'Your email address is not verified. Please verify your email to access the portal.',
+                    error: 'Your email address is not verified. Please verify your email via OTP to access the portal.',
                     emailVerified: false,
                     email: email
                 });
@@ -603,7 +614,7 @@ router.post('/forgot-password/send-otp', rateLimiter_1.authRateLimiter, async (r
         const logoUrl = env_1.config.brevo.logoUrl;
         const loginUrl = env_1.config.brevo.loginUrl;
         const supportUrl = env_1.config.brevo.supportUrl;
-        const emailHtml = (0, notificationService_1.buildHtmlEmail)(userName, 'Reset Your Password', 'You have requested to reset your password for the Bulletin of Kerala Mathematical Association portal. Use the following 6-digit One-Time Password (OTP) to verify your identity. This OTP is valid for 5 minutes.', 'Verification Code', [
+        const emailHtml = (0, notificationService_1.buildHtmlEmail)(userName, 'Reset Your Password', 'You have requested to reset your password for the Bulletin of Kerala Mathematics Association portal. Use the following 6-digit One-Time Password (OTP) to verify your identity. This OTP is valid for 5 minutes.', 'Verification Code', [
             { label: 'OTP CODE', value: `<span style="font-family: monospace; font-size: 16px; font-weight: 800; letter-spacing: 0.15em; color: #000000;">${otp}</span>` }
         ], '', '', 'Security Notice', `If you did not request a password reset, please ignore this email or contact <a href="${supportUrl}" style="color: #000000; text-decoration: underline;"><strong>support</strong></a>. Keep this verification code confidential.`, '🔒', 'Do not share this code', '⏳', 'Expires in 5 minutes');
         await (0, emailService_1.sendTransactionalEmail)(normEmail, userName, 'KMA Portal Password Reset OTP', emailHtml);
