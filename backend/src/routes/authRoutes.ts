@@ -56,7 +56,7 @@ async function generateAndSendVerificationOTP(docId: string, email: string, name
   const emailHtml = buildHtmlEmail(
     name || 'User',
     'Verify Your Email Address',
-    'Thank you for registering with the Bulletin of Kerala Mathematical Association. Please enter the following 6-digit verification code to complete your registration and verify your email address. This code will expire in 10 minutes.',
+    'Thank you for registering with the Bulletin of Kerala Mathematics Association. Please enter the following 6-digit verification code to complete your registration and verify your email address. This code will expire in 10 minutes.',
     'Verification Code',
     [
       { label: 'VERIFICATION CODE', value: `<span style="font-family: monospace; font-size: 18px; font-weight: 800; letter-spacing: 0.2em; color: #000000;">${otp}</span>` },
@@ -740,7 +740,7 @@ router.post('/forgot-password/send-otp', authRateLimiter, async (req, res) => {
     const emailHtml = buildHtmlEmail(
       userName,
       'Reset Your Password',
-      'You have requested to reset your password for the Bulletin of Kerala Mathematical Association portal. Use the following 6-digit One-Time Password (OTP) to verify your identity. This OTP is valid for 5 minutes.',
+      'You have requested to reset your password for the Bulletin of Kerala Mathematics Association portal. Use the following 6-digit One-Time Password (OTP) to verify your identity. This OTP is valid for 5 minutes.',
       'Verification Code',
       [
         { label: 'OTP CODE', value: `<span style="font-family: monospace; font-size: 16px; font-weight: 800; letter-spacing: 0.15em; color: #000000;">${otp}</span>` }

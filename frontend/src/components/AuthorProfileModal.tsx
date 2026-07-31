@@ -78,7 +78,7 @@ const AuthorProfileModal: React.FC<AuthorProfileModalProps> = ({ isOpen, onClose
               institution: data.affiliation || 'Kerala Mathematical Association (KMA)',
               email: data.email,
               interests: data.interests || ['Mathematics', 'Research'],
-              bio: data.bio || `${data.name} is an active researcher and contributor to the Bulletin of Kerala Mathematical Association (BKMA).`,
+              bio: data.bio || `${data.name} is an active researcher and contributor to the Bulletin of Kerala Mathematics Association (BKMA).`,
               publications: data.publications || ['Scholarly contribution to BKMA Journal'],
               profileImage: data.profileImage
             });
@@ -102,7 +102,7 @@ const AuthorProfileModal: React.FC<AuthorProfileModalProps> = ({ isOpen, onClose
         institution: 'Kerala Mathematical Association (KMA)',
         email: 'keralamathsasso@gmail.com',
         interests: ['Mathematics', 'Research'],
-        bio: `${authorName} is an active researcher and contributor to the Bulletin of Kerala Mathematical Association (BKMA).`,
+        bio: `${authorName} is an active researcher and contributor to the Bulletin of Kerala Mathematics Association (BKMA).`,
         publications: ['Scholarly contribution to BKMA Journal']
       };
       setProfile(mock);
@@ -223,7 +223,7 @@ const AuthorProfileModal: React.FC<AuthorProfileModalProps> = ({ isOpen, onClose
         {/* Footer */}
         <div className="px-6 py-4 border-t border-zinc-100 bg-zinc-50 text-center shrink-0">
           <p className="text-[9px] text-zinc-400 uppercase tracking-widest font-black">
-            Bulletin of Kerala Mathematical Association (BKMA)
+            Bulletin of Kerala Mathematics Association (BKMA)
           </p>
         </div>
 

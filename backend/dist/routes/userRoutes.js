@@ -67,7 +67,7 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
                 </tr>
                 <tr>
                   <td align="center">
-                    <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #000000; letter-spacing: -0.02em; line-height: 1.2;">Bulletin of Kerala Mathematical Association</h1>
+                    <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #000000; letter-spacing: -0.02em; line-height: 1.2;">Bulletin of Kerala Mathematics Association</h1>
                   </td>
                 </tr>
               </table>
@@ -87,7 +87,7 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
               <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #000000; letter-spacing: -0.01em;">Welcome to the BKMA Community!</h2>
               <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #3f3f46;">
                 Dear ${name},<br /><br />
-                Congratulations! Your reviewer account has been successfully created for the Bulletin of Kerala Mathematical Association. We are delighted to welcome you as a valued member of our reviewer panel. Your expertise and contribution will play a vital role in maintaining the quality and integrity of scholarly publications.
+                Congratulations! Your reviewer account has been successfully created for the Bulletin of Kerala Mathematics Association. We are delighted to welcome you as a valued member of our reviewer panel. Your expertise and contribution will play a vital role in maintaining the quality and integrity of scholarly publications.
               </p>
             </td>
           </tr>
@@ -221,7 +221,7 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
           <!-- Footer -->
           <tr>
             <td style="background-color: #000000; padding: 40px; text-align: center; color: #a1a1aa;">
-              <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.1em;">Bulletin of Kerala Mathematical Association</h4>
+              <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.1em;">Bulletin of Kerala Mathematics Association</h4>
               <p style="margin: 0 0 4px 0; font-size: 13px; color: #a1a1aa; line-height: 1.4;">Advancing Mathematical Research Through Quality Publications</p>
               <p style="margin: 0 0 24px 0; font-size: 13px; color: #a1a1aa;">Kerala, India</p>
               
@@ -236,7 +236,7 @@ const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
               </table>
               
               <p style="margin: 0; font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">
-                © ${currentYear} Bulletin of Kerala Mathematical Association. All Rights Reserved.
+                © ${currentYear} Bulletin of Kerala Mathematics Association. All Rights Reserved.
               </p>
             </td>
           </tr>
@@ -651,12 +651,16 @@ router.patch('/reviewers/:id/status', authMiddleware_1.requireAuth, (0, authMidd
         // Handle account activation/deactivation in Firebase Auth and log audit events
         if (status === 'Deactivated') {
             await firebase_1.auth.updateUser(id, { disabled: true });
-            await firebase_1.auth.revokeRefreshTokens(id);
             await (0, auditService_1.logAuditEvent)('Reviewer Deactivated', id, adminId);
         }
-        else if (status === 'Approved' && previousStatus === 'Deactivated') {
-            await firebase_1.auth.updateUser(id, { disabled: false });
-            await (0, auditService_1.logAuditEvent)('Reviewer Reactivated', id, adminId);
+        else if (status === 'Approved') {
+            await firebase_1.auth.updateUser(id, { disabled: false }).catch(() => { });
+            if (previousStatus === 'Deactivated') {
+                await (0, auditService_1.logAuditEvent)('Reviewer Reactivated', id, adminId);
+            }
+            else if (previousStatus === 'Pending') {
+                await (0, auditService_1.logAuditEvent)('Reviewer Approved', id, adminId);
+            }
         }
         await userRef.update(updateData);
         res.json({ success: true, reviewer: { ...userDoc.data(), ...updateData, id } });
@@ -675,11 +679,12 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
             return res.status(400).json({ error: 'All fields (name, email, qualification, experience) are required' });
         }
         const tempPassword = generateTempPassword();
-        // 1. Create user in Firebase Auth
+        // 1. Create user in Firebase Auth with emailVerified set to true since credentials are emailed by Admin
         const userRecord = await firebase_1.auth.createUser({
             email,
             password: tempPassword,
-            displayName: name
+            displayName: name,
+            emailVerified: true
         });
         // 2. Create user document in Firestore (password is NOT stored in Firestore)
         const userData = {
@@ -693,6 +698,8 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
             qualification,
             experience,
             mustChangePassword: true,
+            emailVerified: true,
+            createdByAdmin: true,
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -713,7 +720,7 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
         const emailSent = await sendReviewerCredentialsEmail(name, email, tempPassword, req);
         if (emailSent) {
             await (0, auditService_1.logAuditEvent)('Credentials Email Sent', userRecord.uid, adminId);
-            await firebase_1.db.collection('users').doc(userRecord.uid).update({ credentialsShared: true });
+            await firebase_1.db.collection('users').doc(userRecord.uid).update({ credentialsShared: true, emailVerified: true });
         }
         else {
             await (0, auditService_1.logAuditEvent)('Credentials Email Failed', userRecord.uid, adminId);
@@ -754,12 +761,13 @@ router.post('/reviewers/:id/resend-credentials', authMiddleware_1.requireAuth, (
             return res.status(400).json({ error: 'User is not a reviewer' });
         }
         const tempPassword = generateTempPassword();
-        // 1. Update password securely in Firebase Authentication (invalidates old temp password)
-        await firebase_1.auth.updateUser(id, { password: tempPassword });
-        // 2. Reset mustChangePassword flag in Firestore document to true
+        // 1. Update password securely in Firebase Authentication (invalidates old temp password) and ensure emailVerified is true
+        await firebase_1.auth.updateUser(id, { password: tempPassword, emailVerified: true });
+        // 2. Reset mustChangePassword flag in Firestore document to true and set emailVerified to true
         await userRef.update({
             mustChangePassword: true,
             credentialsShared: false,
+            emailVerified: true,
             updatedAt: new Date()
         });
         // 3. Send email with new temporary credentials

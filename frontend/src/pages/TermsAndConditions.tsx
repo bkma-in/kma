@@ -38,7 +38,7 @@ const TermsAndConditions: React.FC = () => {
           <section className="mb-12">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 leading-tight">Introduction</h2>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
-              Welcome to <strong className="text-black">BKMA (Bulletin of Kerala Mathematical Association)</strong>. By accessing, browsing, or using this website, you agree to comply with and be bound by these Terms &amp; Conditions. If you do not agree with any part of these terms, you should discontinue use of the website.
+              Welcome to <strong className="text-black">BKMA (Bulletin of Kerala Mathematics Association)</strong>. By accessing, browsing, or using this website, you agree to comply with and be bound by these Terms &amp; Conditions. If you do not agree with any part of these terms, you should discontinue use of the website.
             </p>
           </section>
 

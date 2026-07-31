@@ -20,7 +20,7 @@ const PricingPage: React.FC = () => {
               Subscription &amp; Pricing
             </h1>
             <p className="text-zinc-400 text-xs sm:text-sm uppercase tracking-widest font-semibold">
-              Official subscription information for the Bulletin of Kerala Mathematical Association
+              Official subscription information for the Bulletin of Kerala Mathematics Association
             </p>
             <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-zinc-500 font-bold uppercase tracking-wider pt-2">
               <Link to="/" className="hover:text-white transition-colors">Home</Link>
@@ -71,7 +71,7 @@ const PricingPage: React.FC = () => {
           <section className="mb-12">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 leading-tight">Journal Indexing &amp; Recognition</h2>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed mb-6">
-              The <strong className="text-black">Bulletin of Kerala Mathematical Association (BKMA)</strong> is included in journal listings recognized by the <strong className="text-black">American Mathematical Society (AMS)</strong>.
+              The <strong className="text-black">Bulletin of Kerala Mathematics Association (BKMA)</strong> is included in journal listings recognized by the <strong className="text-black">American Mathematical Society (AMS)</strong>.
             </p>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
               Research papers published in BKMA are reviewed and indexed through recognized mathematical indexing and abstracting resources, ensuring global visibility and peer citation credibility for authors' works.

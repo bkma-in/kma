@@ -69,7 +69,7 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
                 </tr>
                 <tr>
                   <td align="center">
-                    <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #000000; letter-spacing: -0.02em; line-height: 1.2;">Bulletin of Kerala Mathematical Association</h1>
+                    <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #000000; letter-spacing: -0.02em; line-height: 1.2;">Bulletin of Kerala Mathematics Association</h1>
                   </td>
                 </tr>
               </table>
@@ -89,7 +89,7 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
               <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #000000; letter-spacing: -0.01em;">Welcome to the BKMA Community!</h2>
               <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #3f3f46;">
                 Dear ${name},<br /><br />
-                Congratulations! Your reviewer account has been successfully created for the Bulletin of Kerala Mathematical Association. We are delighted to welcome you as a valued member of our reviewer panel. Your expertise and contribution will play a vital role in maintaining the quality and integrity of scholarly publications.
+                Congratulations! Your reviewer account has been successfully created for the Bulletin of Kerala Mathematics Association. We are delighted to welcome you as a valued member of our reviewer panel. Your expertise and contribution will play a vital role in maintaining the quality and integrity of scholarly publications.
               </p>
             </td>
           </tr>
@@ -223,7 +223,7 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
           <!-- Footer -->
           <tr>
             <td style="background-color: #000000; padding: 40px; text-align: center; color: #a1a1aa;">
-              <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.1em;">Bulletin of Kerala Mathematical Association</h4>
+              <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.1em;">Bulletin of Kerala Mathematics Association</h4>
               <p style="margin: 0 0 4px 0; font-size: 13px; color: #a1a1aa; line-height: 1.4;">Advancing Mathematical Research Through Quality Publications</p>
               <p style="margin: 0 0 24px 0; font-size: 13px; color: #a1a1aa;">Kerala, India</p>
               
@@ -238,7 +238,7 @@ const sendReviewerCredentialsEmail = async (name: string, email: string, tempPas
               </table>
               
               <p style="margin: 0; font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">
-                © ${currentYear} Bulletin of Kerala Mathematical Association. All Rights Reserved.
+                © ${currentYear} Bulletin of Kerala Mathematics Association. All Rights Reserved.
               </p>
             </td>
           </tr>

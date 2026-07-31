@@ -38,7 +38,7 @@ const PrivacyPolicy: React.FC = () => {
           <section className="mb-12">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 leading-tight">Privacy Policy Statement</h2>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed mb-6">
-              The Bulletin of Kerala Mathematical Association respects your privacy and is committed to protecting your personal information. We collect only the information necessary to manage user accounts, manuscript submissions, peer reviews, and journal publications.
+              The Bulletin of Kerala Mathematics Association respects your privacy and is committed to protecting your personal information. We collect only the information necessary to manage user accounts, manuscript submissions, peer reviews, and journal publications.
             </p>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
               Personal data is securely stored and is never sold or shared except where required for journal operations or by law. By using this website, you agree to the collection and use of information in accordance with this Privacy Policy.

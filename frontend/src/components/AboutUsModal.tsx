@@ -77,7 +77,7 @@ const AboutUsModal: React.FC<AboutUsModalProps> = ({ isOpen, onClose }) => {
               BKMA remains highly active, organizing an average of <strong className="text-white">10 to 12 national and international seminars, workshops, and symposiums annually</strong>. The association publishes formal proceedings from these events to disseminate contemporary discoveries.
             </p>
             <p>
-              Since 2004, the association has published its flagship international publication, the <strong className="text-white">Bulletin of Kerala Mathematical Association (BKMA)</strong>. Releasing two peer-reviewed issues annually, this journal showcases original research papers spanning mathematical theories and their real-world applications under rigorous peer review.
+              Since 2004, the association has published its flagship international publication, the <strong className="text-white">Bulletin of Kerala Mathematics Association (BKMA)</strong>. Releasing two peer-reviewed issues annually, this journal showcases original research papers spanning mathematical theories and their real-world applications under rigorous peer review.
             </p>
           </section>
 

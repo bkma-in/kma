@@ -95,7 +95,7 @@ export const buildHtmlEmail = (
                 </tr>
                 <tr>
                   <td align="center">
-                    <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #000000; letter-spacing: -0.02em; line-height: 1.2;">Bulletin of Kerala Mathematical Association</h1>
+                    <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #000000; letter-spacing: -0.02em; line-height: 1.2;">Bulletin of Kerala Mathematics Association</h1>
                   </td>
                 </tr>
               </table>
@@ -247,7 +247,7 @@ export const buildHtmlEmail = (
           <!-- Footer -->
           <tr>
             <td style="background-color: #000000; padding: 40px; text-align: center; color: #a1a1aa;">
-              <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.1em;">Bulletin of Kerala Mathematical Association</h4>
+              <h4 style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 0.1em;">Bulletin of Kerala Mathematics Association</h4>
               <p style="margin: 0 0 4px 0; font-size: 13px; color: #a1a1aa; line-height: 1.4;">Advancing Mathematical Research Through Quality Publications</p>
               <p style="margin: 0 0 24px 0; font-size: 13px; color: #a1a1aa;">Kerala, India</p>
               
@@ -262,7 +262,7 @@ export const buildHtmlEmail = (
               </table>
               
               <p style="margin: 0; font-size: 11px; color: #71717a; text-transform: uppercase; letter-spacing: 0.05em;">
-                © ${currentYear} Bulletin of Kerala Mathematical Association. All Rights Reserved.
+                © ${currentYear} Bulletin of Kerala Mathematics Association. All Rights Reserved.
               </p>
             </td>
           </tr>
@@ -354,8 +354,8 @@ export const sendArticleSubmittedNotifications = async (articleId: string) => {
                            (article.reviews !== undefined);
 
         const bodyText = isRevision
-          ? `Congratulations! The revised version of your manuscript has been successfully submitted to the Bulletin of Kerala Mathematical Association. It has been returned to our peer-review queue for further assessment.`
-          : `Congratulations! Your manuscript has been successfully submitted to the Bulletin of Kerala Mathematical Association. It is now registered in our peer-review queue.`;
+          ? `Congratulations! The revised version of your manuscript has been successfully submitted to the Bulletin of Kerala Mathematics Association. It has been returned to our peer-review queue for further assessment.`
+          : `Congratulations! Your manuscript has been successfully submitted to the Bulletin of Kerala Mathematics Association. It is now registered in our peer-review queue.`;
 
         const emailTitle = isRevision ? 'Manuscript Revision Received' : 'Manuscript Received Successfully';
         const sectionHeader = isRevision ? 'Review Process' : 'Desk Review Process';
@@ -467,7 +467,7 @@ export const sendReviewerAssignedNotifications = async (articleId: string, revie
           formattedDeadline = deadlineDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
         }
 
-        let bodyText = `You have been assigned as a peer reviewer for a recently submitted article in the Bulletin of Kerala Mathematical Association. Your expertise is highly valuable to us in maintaining the scholarly quality of our publications.`;
+        let bodyText = `You have been assigned as a peer reviewer for a recently submitted article in the Bulletin of Kerala Mathematics Association. Your expertise is highly valuable to us in maintaining the scholarly quality of our publications.`;
         
         if (article.reviewDeadline) {
           if (article.reviewerNote) {
@@ -658,7 +658,7 @@ export const sendArticleRejectedNotifications = async (articleId: string, isDesk
       }
 
       if (author.email) {
-        const bodyText = `We regret to inform you that after careful consideration by our editorial board, we are unable to accept your manuscript for publication in the Bulletin of Kerala Mathematical Association in its current form.`;
+        const bodyText = `We regret to inform you that after careful consideration by our editorial board, we are unable to accept your manuscript for publication in the Bulletin of Kerala Mathematics Association in its current form.`;
         const cardRows: EmailRow[] = [
           { label: 'Article Title', value: title },
           { label: 'Final Status', value: isDeskReject ? 'Desk Rejected' : 'Rejected' },

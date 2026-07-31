@@ -264,7 +264,7 @@ const EditorialBoardModal: React.FC<EditorialBoardModalProps> = ({ isOpen, onClo
                   <li>Annual Subscription: Rs. 1000/- each for the year 2011 in India.</li>
                   <li>Life members will receive 50% concession in the subscription charges.</li>
                 </ul>
-                <p className="mb-3">Subscription charges may be sent through Demand Draft (Bank Check/Cashier's Check as it is called in some western countries) in favour of Bulletin of Kerala Mathematical Association, payable at Kottayam - 686 001.</p>
+                <p className="mb-3">Subscription charges may be sent through Demand Draft (Bank Check/Cashier's Check as it is called in some western countries) in favour of Bulletin of Kerala Mathematics Association, payable at Kottayam - 686 001.</p>
                 <p className="text-emerald-400">All correspondence including subscription orders and exchange proposals should be sent to the Executive Editor.</p>
               </div>
             </div>
