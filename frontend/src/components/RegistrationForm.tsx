@@ -5,6 +5,7 @@ import { cn } from '../utils/cn';
 import {
   validateName,
   validateEmail,
+  validatePassword,
   type Role
 } from '../utils/validation';
 import { register, sendVerificationCode, verifyEmailCode } from '../services/auth.service';
@@ -52,15 +53,17 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const passwordValidation = validatePassword(formData.password);
+
   const passwordsMatch =
-    formData.password.length > 0 &&
+    passwordValidation.isValid &&
     formData.confirmPassword.length > 0 &&
     formData.password === formData.confirmPassword;
 
   const isFormReady = 
     formData.name.length > 0 && 
     formData.email.length > 0 && 
-    formData.password.length >= 8 && 
+    passwordValidation.isValid && 
     passwordsMatch &&
     (formData.role !== 'reviewer' || (formData.qualification.length > 0 && formData.experience.length > 0));
 
@@ -479,27 +482,30 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                       className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 w-full bg-white p-4 rounded-xl shadow-xl border border-red-300 flex flex-col gap-3 font-sans select-none box-border"
                     >
                       <div className="flex items-start gap-2.5 text-zinc-500 text-xs font-semibold leading-relaxed">
-                        <AlertCircle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                        <AlertCircle size={18} className={cn(passwordValidation.hasMinLength ? "text-emerald-500" : "text-red-500", "shrink-0 mt-0.5")} />
                         <div className="flex-1 space-y-2">
-                          <span className="text-zinc-500">Use at least 8 characters including:</span>
+                          <span className="text-zinc-500">
+                            <span className={cn(passwordValidation.hasMinLength ? "text-emerald-500" : "text-amber-500", "font-bold mr-1.5")}>✓</span>
+                            Use at least 8 characters including:
+                          </span>
                           
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-1.5 gap-x-4 pt-1">
                             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
-                              <span className="text-emerald-500 font-bold">✓</span>
+                              <span className={cn(passwordValidation.hasUppercase ? "text-emerald-500" : "text-amber-500", "font-bold")}>✓</span>
                               <span>Uppercase <span className="text-zinc-400 font-normal">(A-Z)</span></span>
                             </div>
                             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
-                              <span className="text-emerald-500 font-bold">✓</span>
+                              <span className={cn(passwordValidation.hasLowercase ? "text-emerald-500" : "text-amber-500", "font-bold")}>✓</span>
                               <span>Lowercase <span className="text-zinc-400 font-normal">(a-z)</span></span>
                             </div>
                             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
-                              <span className="text-emerald-500 font-bold">✓</span>
+                              <span className={cn(passwordValidation.hasNumber ? "text-emerald-500" : "text-amber-500", "font-bold")}>✓</span>
                               <span>Number <span className="text-zinc-400 font-normal">(0-9)</span></span>
                             </div>
                           </div>
                           
                           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-700">
-                            <span className="text-emerald-500 font-bold">✓</span>
+                            <span className={cn(passwordValidation.hasSpecialChar ? "text-emerald-500" : "text-amber-500", "font-bold")}>✓</span>
                             <span>Special character <span className="text-zinc-400 font-normal">(e.g. #, @, !)</span></span>
                           </div>
                         </div>
@@ -511,21 +517,23 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                 {/* Password Strength Indicator */}
                 <div className="flex gap-1.5 mt-2 h-1">
                   {[1, 2, 3, 4].map((i) => {
-                    const strength = formData.password.length;
                     let color = "bg-zinc-100";
-                    
-                    if (strength > 0) {
-                      if (i === 1) {
-                        if (strength <= 3) color = "bg-red-500";
-                        else if (strength <= 5) color = "bg-amber-500";
-                        else color = "bg-green-500";
-                      } else if (i === 2 && strength >= 4) {
-                        if (strength <= 5) color = "bg-amber-500";
-                        else color = "bg-green-500";
-                      } else if (i === 3 && strength >= 6) {
+                    if (formData.password.length > 0) {
+                      if (passwordValidation.isValid) {
                         color = "bg-green-500";
-                      } else if (i === 4 && strength >= 8) {
-                        color = "bg-green-500";
+                      } else {
+                        const metCount = [
+                          passwordValidation.hasMinLength,
+                          passwordValidation.hasUppercase,
+                          passwordValidation.hasLowercase,
+                          passwordValidation.hasNumber,
+                          passwordValidation.hasSpecialChar
+                        ].filter(Boolean).length;
+                        
+                        const threshold = Math.round((metCount / 5) * 4);
+                        if (i <= threshold) {
+                          color = "bg-amber-500";
+                        }
                       }
                     }
 
@@ -568,7 +576,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onSwitch
                   "h-0.5 w-full transition-colors duration-300", 
                   formData.confirmPassword.length === 0 
                     ? "bg-zinc-100" 
-                    : formData.password === formData.confirmPassword 
+                    : (formData.password === formData.confirmPassword && passwordValidation.isValid) 
                       ? "bg-green-500" 
                       : "bg-red-500"
                 )} />

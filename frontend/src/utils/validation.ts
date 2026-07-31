@@ -16,48 +16,53 @@ export const validateEmail = (email: string): ValidationResult => {
   return { isValid: true };
 };
 
-export const validatePassword = (password: string): ValidationResult => {
-  if (!password) return { isValid: false, message: "Password is required" };
-  if (password.length !== 8) return { isValid: false, message: "Password must be exactly 8 characters" };
-
-  const hasUpper = /[A-Z]/.test(password);
-  const hasLower = /[a-z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
-  const hasSpecial = /[^A-Za-z0-9]/.test(password);
-
-  if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-    return {
-      isValid: false,
-      message: "Include uppercase, lowercase, number, and special character"
-    };
-  }
-  return { isValid: true };
-};
-
-/** Individual password requirement checks for real-time UI feedback */
-export interface PasswordRequirement {
-  label: string;
-  met: boolean;
+export interface PasswordValidationResult {
+  hasMinLength: boolean;
+  hasUppercase: boolean;
+  hasLowercase: boolean;
+  hasNumber: boolean;
+  hasSpecialChar: boolean;
+  isValid: boolean;
+  message?: string;
 }
 
-export const getPasswordRequirements = (password: string): PasswordRequirement[] => [
-  { label: "Exactly 8 characters", met: password.length === 8 },
-  { label: "One uppercase letter (A–Z)", met: /[A-Z]/.test(password) },
-  { label: "One lowercase letter (a–z)", met: /[a-z]/.test(password) },
-  { label: "One numeric digit (0–9)", met: /[0-9]/.test(password) },
-  { label: "One special character (!@#$...)", met: /[^A-Za-z0-9]/.test(password) },
-];
+export const validatePassword = (password: string): PasswordValidationResult => {
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecialChar = /[^A-Za-z0-9]/.test(password);
+  const isValid = hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar;
 
-export const areAllPasswordRequirementsMet = (password: string): boolean =>
-  getPasswordRequirements(password).every((r) => r.met);
+  let message: string | undefined;
+  if (!password) {
+    message = "Password is required";
+  } else if (!hasMinLength) {
+    message = "Password must be at least 8 characters";
+  } else if (!isValid) {
+    message = "Password requirements not met";
+  }
+
+  return {
+    hasMinLength,
+    hasUppercase,
+    hasLowercase,
+    hasNumber,
+    hasSpecialChar,
+    isValid,
+    message
+  };
+};
 
 export const getPasswordStrength = (password: string): number => {
   let strength = 0;
   if (!password) return 0;
-  if (password.length === 8) strength += 25;
-  if (/[A-Z]/.test(password)) strength += 25;
-  if (/[a-z]/.test(password)) strength += 25;
-  if (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password)) strength += 25;
+  const result = validatePassword(password);
+  if (result.hasMinLength) strength += 20;
+  if (result.hasUppercase) strength += 20;
+  if (result.hasLowercase) strength += 20;
+  if (result.hasNumber) strength += 20;
+  if (result.hasSpecialChar) strength += 20;
   return strength;
 };
 
