@@ -1,6 +1,5 @@
 import { Router, Response } from 'express';
 import { db, auth } from '../config/firebase';
-import { FieldPath } from 'firebase-admin/firestore';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/authMiddleware';
 import { upload } from '../middleware/uploadMiddleware';
 import { uploadImage, deleteImage } from '../services/cloudinaryService';
@@ -10,7 +9,7 @@ import { logAuditEvent } from '../services/auditService';
 import { config } from '../config/env';
 
 // Helper to send reviewer onboarding credentials via email
-const sendReviewerCredentialsEmail = async (name: string, email: string, tempPassword: string, req: any) => {
+const sendReviewerCredentialsEmail = async (name: string, email: string, tempPassword: string, _req?: any) => {
   const logoUrl = config.brevo.logoUrl;
   const loginUrl = config.brevo.loginUrl;
   const privacyPolicyUrl = config.brevo.privacyPolicyUrl;
@@ -442,7 +441,7 @@ router.post('/report-issue', requireAuth, upload.single('screenshot'), async (re
 });
 
 // Get All Reported Issues (for Developer Dashboard)
-router.get('/reported-issues', requireAuth, requireRole(['admin', 'dev']), async (req: AuthRequest, res: Response) => {
+router.get('/reported-issues', requireAuth, requireRole(['admin', 'dev']), async (_req: AuthRequest, res: Response) => {
   try {
     const snapshot = await db.collection('reported_issues').orderBy('createdAt', 'desc').get();
     const issues = snapshot.docs.map((doc: any) => {
@@ -554,7 +553,7 @@ const generateTempPassword = () => {
 };
 
 // Admin: Get all reviewers
-router.get('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
+router.get('/reviewers', requireAuth, requireRole(['admin']), async (_req: AuthRequest, res: Response) => {
   try {
     const snapshot = await db.collection('users').where('role', '==', 'reviewer').get();
     const reviewers = snapshot.docs.map((doc: any) => {
@@ -644,7 +643,7 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
 });
 
 // Admin: Get all readers
-router.get('/readers', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
+router.get('/readers', requireAuth, requireRole(['admin']), async (_req: AuthRequest, res: Response) => {
   try {
     const snapshot = await db.collection('users').where('role', '==', 'reader').get();
     

@@ -9,7 +9,7 @@ const emailService_1 = require("../services/emailService");
 const auditService_1 = require("../services/auditService");
 const env_1 = require("../config/env");
 // Helper to send reviewer onboarding credentials via email
-const sendReviewerCredentialsEmail = async (name, email, tempPassword, req) => {
+const sendReviewerCredentialsEmail = async (name, email, tempPassword, _req) => {
     const logoUrl = env_1.config.brevo.logoUrl;
     const loginUrl = env_1.config.brevo.loginUrl;
     const privacyPolicyUrl = env_1.config.brevo.privacyPolicyUrl;
@@ -414,7 +414,7 @@ router.post('/report-issue', authMiddleware_1.requireAuth, uploadMiddleware_1.up
     }
 });
 // Get All Reported Issues (for Developer Dashboard)
-router.get('/reported-issues', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin', 'dev']), async (req, res) => {
+router.get('/reported-issues', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin', 'dev']), async (_req, res) => {
     try {
         const snapshot = await firebase_1.db.collection('reported_issues').orderBy('createdAt', 'desc').get();
         const issues = snapshot.docs.map((doc) => {
@@ -512,7 +512,7 @@ const generateTempPassword = () => {
     return Math.random().toString(36).slice(-8) + '!' + Math.floor(Math.random() * 100);
 };
 // Admin: Get all reviewers
-router.get('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
+router.get('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (_req, res) => {
     try {
         const snapshot = await firebase_1.db.collection('users').where('role', '==', 'reviewer').get();
         const reviewers = snapshot.docs.map((doc) => {
@@ -591,7 +591,7 @@ router.get('/authors', authMiddleware_1.requireAuth, (0, authMiddleware_1.requir
     }
 });
 // Admin: Get all readers
-router.get('/readers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
+router.get('/readers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (_req, res) => {
     try {
         const snapshot = await firebase_1.db.collection('users').where('role', '==', 'reader').get();
         // Also fetch all active subscriptions to check for life membership type

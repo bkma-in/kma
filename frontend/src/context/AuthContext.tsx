@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { auth } from '../config/firebase';
-import { onAuthStateChanged, onIdTokenChanged } from 'firebase/auth';
-import type { User } from 'firebase/auth';
+import { onAuthStateChanged, onIdTokenChanged, type User } from 'firebase/auth';
 import type { Role } from '../utils/validation';
 import api from '../services/api';
 import { clearProfileCache } from '../services/user.service';

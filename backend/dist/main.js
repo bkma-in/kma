@@ -56,11 +56,11 @@ app.use('/api/subscriptions', subscriptionRoutes_1.default);
 app.use('/api/users', userRoutes_1.default);
 app.use('/api/notifications', notificationRoutes_1.default);
 app.use('/api/archive', archiveRoutes_1.default);
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
     res.send({ status: 'ok', message: 'KMA Backend is running' });
 });
 // Global error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, _req, res, _next) => {
     console.error('[GLOBAL-ERROR-HANDLER]', err);
     const status = err.status || err.statusCode || 500;
     const message = err.message || 'An unexpected error occurred';

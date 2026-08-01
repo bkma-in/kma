@@ -3,7 +3,7 @@ import { db } from '../config/firebase';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/authMiddleware';
 import { archiveUpload } from '../services/archive/uploadService';
 import { uploadOriginalJournal } from '../services/archive/storageService';
-import { createJob, updateJobStatus, publishArchiveArticles } from '../services/archive/firestoreService';
+import { createJob, publishArchiveArticles } from '../services/archive/firestoreService';
 import { queueService, SegmentRange } from '../services/archive/queueService';
 import { archiveRateLimiter } from '../middleware/rateLimiter';
 

@@ -19,6 +19,14 @@ import ArticlePreviewModal from '../../components/ArticlePreviewModal';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import { SkeletonArticleCard } from '../../components/skeletons/SkeletonArticleCard';
 
+const chunkArticles = (arr: any[], size: number) => {
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+};
+
 interface ArticleScrollRowProps {
   rowArticles: any[];
   setPreviewArticle: (art: any) => void;
@@ -325,24 +333,14 @@ const AdminPublishedArticles: React.FC = () => {
           <>
             {/* Mobile view with horizontal scroll rows */}
             <div className="md:hidden space-y-6">
-              {(() => {
-                const chunkArticles = (arr: any[], size: number) => {
-                  const chunks = [];
-                  for (let i = 0; i < arr.length; i += size) {
-                    chunks.push(arr.slice(i, i + size));
-                  }
-                  return chunks;
-                };
-                const rows = chunkArticles(regularArticles, 3);
-                return rows.map((rowArticles, rowIndex) => (
-                  <ArticleScrollRow
-                    key={rowIndex}
-                    rowArticles={rowArticles}
-                    setPreviewArticle={setPreviewArticle}
-                    getIssueDetailsString={getIssueDetailsString}
-                  />
-                ));
-              })()}
+              {chunkArticles(regularArticles, 3).map((rowArticles, rowIndex) => (
+                <ArticleScrollRow
+                  key={rowIndex}
+                  rowArticles={rowArticles}
+                  setPreviewArticle={setPreviewArticle}
+                  getIssueDetailsString={getIssueDetailsString}
+                />
+              ))}
             </div>
 
             {/* Desktop / Tablet view */}
@@ -429,24 +427,14 @@ const AdminPublishedArticles: React.FC = () => {
           <>
             {/* Mobile view with horizontal scroll rows */}
             <div className="md:hidden space-y-6">
-              {(() => {
-                const chunkArticles = (arr: any[], size: number) => {
-                  const chunks = [];
-                  for (let i = 0; i < arr.length; i += size) {
-                    chunks.push(arr.slice(i, i + size));
-                  }
-                  return chunks;
-                };
-                const rows = chunkArticles(tributeArticles, 3);
-                return rows.map((rowArticles, rowIndex) => (
-                  <ArticleScrollRow
-                    key={rowIndex}
-                    rowArticles={rowArticles}
-                    setPreviewArticle={setPreviewArticle}
-                    getIssueDetailsString={getIssueDetailsString}
-                  />
-                ));
-              })()}
+              {chunkArticles(tributeArticles, 3).map((rowArticles, rowIndex) => (
+                <ArticleScrollRow
+                  key={rowIndex}
+                  rowArticles={rowArticles}
+                  setPreviewArticle={setPreviewArticle}
+                  getIssueDetailsString={getIssueDetailsString}
+                />
+              ))}
             </div>
 
             {/* Desktop / Tablet view */}

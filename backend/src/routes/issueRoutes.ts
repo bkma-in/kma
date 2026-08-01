@@ -39,7 +39,7 @@ router.post('/', requireAuth, requireRole(['admin']), async (req, res) => {
 });
 
 // List Issues
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
   try {
     const snapshot = await db.collection('issues').orderBy('publishedAt', 'desc').get();
     const issues = snapshot.docs.map(doc => doc.data());
