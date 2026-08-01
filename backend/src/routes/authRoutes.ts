@@ -156,8 +156,6 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Invalid email' });
     }
 
-    const normEmail = email.toLowerCase().trim();
-
     // Check if user already exists
     const userRef = db.collection('users').doc(uid);
     const doc = await userRef.get();
@@ -508,8 +506,6 @@ router.post('/forgot-password/send-otp', authRateLimiter, async (req, res) => {
     });
 
     // Send email using standard Brevo wrapper and the standardized layout
-    const logoUrl = config.brevo.logoUrl;
-    const loginUrl = config.brevo.loginUrl;
     const supportUrl = config.brevo.supportUrl;
     const emailHtml = buildHtmlEmail(
       userName,
