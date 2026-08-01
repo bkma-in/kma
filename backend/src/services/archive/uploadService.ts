@@ -12,7 +12,7 @@ export const archiveUpload = multer({
   limits: {
     fileSize: 150 * 1024 * 1024 // 150 MB limit
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     const allowedMimeTypes = [
       'application/pdf',
       'application/zip',

@@ -90,7 +90,7 @@ exports.generateSearchTextField = generateSearchTextField;
  * Commits a list of verified articles to the main articles collection.
  * Reuses KMA articles schema, sets status to 'accepted', and updates the archive job status.
  */
-const publishArchiveArticles = async (jobId, verifiedArticles, volumeNo, issueNumber) => {
+const publishArchiveArticles = async (jobId, verifiedArticles, _volumeNo, _issueNumber) => {
     const batch = firebase_1.db.batch();
     for (const art of verifiedArticles) {
         const articleRef = firebase_1.db.collection('articles').doc();
