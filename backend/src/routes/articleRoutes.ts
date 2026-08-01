@@ -32,6 +32,20 @@ const normalizeRecommendation = (recommendation: string): string => {
   return recommendation;
 };
 
+const getTimestamp = (val: any): number => {
+  if (!val) return 0;
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (val._seconds) return val._seconds * 1000;
+  if (val instanceof Date) return val.getTime();
+  if (typeof val === 'string') return new Date(val).getTime();
+  return 0;
+};
+
+const checkIsAssigned = (article: any, uid: string): boolean => {
+  return (Array.isArray(article.reviewerIds) && article.reviewerIds.includes(uid)) || (article.reviewerId === uid);
+};
+
+
 // Get signed URL for staged PDF or split article in archive jobs
 router.get('/staged/pdf', requireAuth, signedUrlRateLimiter, requireRole(['admin']), async (req: AuthRequest, res) => {
   try {
@@ -319,14 +333,6 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
         // Expose reviews but also populate reviewerFeedback with the latest review for backward-compatibility
         if (sanitized.reviews && Object.keys(sanitized.reviews).length > 0) {
           const reviewList = Object.values(sanitized.reviews).sort((a: any, b: any) => {
-            const getTimestamp = (val: any) => {
-              if (!val) return 0;
-              if (typeof val.toDate === 'function') return val.toDate().getTime();
-              if (val._seconds) return val._seconds * 1000;
-              if (val instanceof Date) return val.getTime();
-              if (typeof val === 'string') return new Date(val).getTime();
-              return 0;
-            };
             return getTimestamp(b.updatedAt) - getTimestamp(a.updatedAt);
           });
           sanitized.reviewerFeedback = reviewList[0];
@@ -497,7 +503,7 @@ router.get('/:id', async (req: Request, res) => {
 
     // Reviewer has access only if assigned
     if (role === 'reviewer' && uid) {
-      const isAssigned = (Array.isArray(article.reviewerIds) && article.reviewerIds.includes(uid)) || (article.reviewerId === uid);
+      const isAssigned = checkIsAssigned(article, uid);
       if (isAssigned) {
         hasAccess = true;
       }
@@ -565,14 +571,6 @@ router.get('/:id', async (req: Request, res) => {
     } else if (role === 'admin') {
       if (sanitized.reviews && Object.keys(sanitized.reviews).length > 0) {
         const reviewList = Object.values(sanitized.reviews).sort((a: any, b: any) => {
-          const getTimestamp = (val: any) => {
-            if (!val) return 0;
-            if (typeof val.toDate === 'function') return val.toDate().getTime();
-            if (val._seconds) return val._seconds * 1000;
-            if (val instanceof Date) return val.getTime();
-            if (typeof val === 'string') return new Date(val).getTime();
-            return 0;
-          };
           return getTimestamp(b.updatedAt) - getTimestamp(a.updatedAt);
         });
         sanitized.reviewerFeedback = reviewList[0];
@@ -648,7 +646,7 @@ router.get('/:id/pdf', requireAuth, downloadRateLimiter, async (req: AuthRequest
     if (role === 'admin') hasAccess = true;
 
     if (role === 'reviewer') {
-      const isAssigned = (Array.isArray(article.reviewerIds) && article.reviewerIds.includes(uid)) || (article.reviewerId === uid);
+      const isAssigned = checkIsAssigned(article, uid);
       if (isAssigned) {
         hasAccess = true;
       } else {
@@ -1768,7 +1766,6 @@ router.post('/:id/revisions', requireAuth, upload.fields([
 ]), async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
-    const { message } = req.body;
     const uid = req.user!.uid;
 
     const articleRef = db.collection('articles').doc(id);

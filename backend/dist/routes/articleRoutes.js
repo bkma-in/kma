@@ -26,6 +26,22 @@ const normalizeRecommendation = (recommendation) => {
         return 'Needs Improvement';
     return recommendation;
 };
+const getTimestamp = (val) => {
+    if (!val)
+        return 0;
+    if (typeof val.toDate === 'function')
+        return val.toDate().getTime();
+    if (val._seconds)
+        return val._seconds * 1000;
+    if (val instanceof Date)
+        return val.getTime();
+    if (typeof val === 'string')
+        return new Date(val).getTime();
+    return 0;
+};
+const checkIsAssigned = (article, uid) => {
+    return (Array.isArray(article.reviewerIds) && article.reviewerIds.includes(uid)) || (article.reviewerId === uid);
+};
 // Get signed URL for staged PDF or split article in archive jobs
 router.get('/staged/pdf', authMiddleware_1.requireAuth, rateLimiter_1.signedUrlRateLimiter, (0, authMiddleware_1.requireRole)(['admin']), async (req, res) => {
     try {
@@ -290,19 +306,6 @@ router.get('/', authMiddleware_1.requireAuth, async (req, res) => {
                 // Expose reviews but also populate reviewerFeedback with the latest review for backward-compatibility
                 if (sanitized.reviews && Object.keys(sanitized.reviews).length > 0) {
                     const reviewList = Object.values(sanitized.reviews).sort((a, b) => {
-                        const getTimestamp = (val) => {
-                            if (!val)
-                                return 0;
-                            if (typeof val.toDate === 'function')
-                                return val.toDate().getTime();
-                            if (val._seconds)
-                                return val._seconds * 1000;
-                            if (val instanceof Date)
-                                return val.getTime();
-                            if (typeof val === 'string')
-                                return new Date(val).getTime();
-                            return 0;
-                        };
                         return getTimestamp(b.updatedAt) - getTimestamp(a.updatedAt);
                     });
                     sanitized.reviewerFeedback = reviewList[0];
@@ -459,7 +462,7 @@ router.get('/:id', async (req, res) => {
             hasAccess = true;
         // Reviewer has access only if assigned
         if (role === 'reviewer' && uid) {
-            const isAssigned = (Array.isArray(article.reviewerIds) && article.reviewerIds.includes(uid)) || (article.reviewerId === uid);
+            const isAssigned = checkIsAssigned(article, uid);
             if (isAssigned) {
                 hasAccess = true;
             }
@@ -526,19 +529,6 @@ router.get('/:id', async (req, res) => {
         else if (role === 'admin') {
             if (sanitized.reviews && Object.keys(sanitized.reviews).length > 0) {
                 const reviewList = Object.values(sanitized.reviews).sort((a, b) => {
-                    const getTimestamp = (val) => {
-                        if (!val)
-                            return 0;
-                        if (typeof val.toDate === 'function')
-                            return val.toDate().getTime();
-                        if (val._seconds)
-                            return val._seconds * 1000;
-                        if (val instanceof Date)
-                            return val.getTime();
-                        if (typeof val === 'string')
-                            return new Date(val).getTime();
-                        return 0;
-                    };
                     return getTimestamp(b.updatedAt) - getTimestamp(a.updatedAt);
                 });
                 sanitized.reviewerFeedback = reviewList[0];
@@ -607,7 +597,7 @@ router.get('/:id/pdf', authMiddleware_1.requireAuth, rateLimiter_1.downloadRateL
         if (role === 'admin')
             hasAccess = true;
         if (role === 'reviewer') {
-            const isAssigned = (Array.isArray(article.reviewerIds) && article.reviewerIds.includes(uid)) || (article.reviewerId === uid);
+            const isAssigned = checkIsAssigned(article, uid);
             if (isAssigned) {
                 hasAccess = true;
             }
@@ -1593,7 +1583,6 @@ router.post('/:id/revisions', authMiddleware_1.requireAuth, uploadMiddleware_1.u
 ]), async (req, res) => {
     try {
         const id = req.params.id;
-        const { message } = req.body;
         const uid = req.user.uid;
         const articleRef = firebase_1.db.collection('articles').doc(id);
         const articleDoc = await articleRef.get();
