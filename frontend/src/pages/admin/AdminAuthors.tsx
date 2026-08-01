@@ -671,45 +671,47 @@ const AdminAuthors = () => {
               )}
 
               {/* Reviewed Articles Section */}
-              <div className="bg-white/5 backdrop-blur-md rounded-[2rem] p-8 border border-white/5 space-y-6">
-                <div className="flex items-center gap-3">
-                  <FileText size={18} className="text-zinc-400" />
-                  <h3 className="text-sm font-bold text-white uppercase tracking-widest">Reviewed Articles ({reviewedArticles.length})</h3>
-                </div>
-                
-                {reviewedArticles.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {reviewedArticles.map((art) => (
-                      <div 
-                        key={art.id} 
-                        className="p-5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all flex flex-col gap-3"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <h4 className="text-sm font-bold text-white leading-snug line-clamp-2">
-                            {art.title}
-                          </h4>
-                          <span className={cn(
-                            "shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border",
-                            art.status === 'Approved' || art.status === 'Accepted' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/30' :
-                            art.status === 'Rejected' ? 'bg-rose-950/40 text-rose-400 border-rose-800/30' :
-                            'bg-amber-950/40 text-amber-400 border-amber-800/30'
-                          )}>
-                            {art.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-[10px] text-zinc-500 font-bold uppercase">
-                          <span>ID: {art.id}</span>
-                          <span>{art.date}</span>
-                        </div>
-                      </div>
-                    ))}
+              {selectedReviewer.status !== 'Pending' && (
+                <div className="bg-white/5 backdrop-blur-md rounded-[2rem] p-8 border border-white/5 space-y-6">
+                  <div className="flex items-center gap-3">
+                    <FileText size={18} className="text-zinc-400" />
+                    <h3 className="text-sm font-bold text-white uppercase tracking-widest">Reviewed Articles ({reviewedArticles.length})</h3>
                   </div>
-                ) : (
-                  <p className="text-xs text-zinc-500 italic py-8 text-center bg-white/5 border border-white/5 rounded-2xl">
-                    No articles reviewed yet.
-                  </p>
-                )}
-              </div>
+                  
+                  {reviewedArticles.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {reviewedArticles.map((art) => (
+                        <div 
+                          key={art.id} 
+                          className="p-5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl transition-all flex flex-col gap-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <h4 className="text-sm font-bold text-white leading-snug line-clamp-2">
+                              {art.title}
+                            </h4>
+                            <span className={cn(
+                              "shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border",
+                              art.status === 'Approved' || art.status === 'Accepted' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/30' :
+                              art.status === 'Rejected' ? 'bg-rose-950/40 text-rose-400 border-rose-800/30' :
+                              'bg-amber-950/40 text-amber-400 border-amber-800/30'
+                            )}>
+                              {art.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-zinc-500 font-bold uppercase">
+                            <span>ID: {art.id}</span>
+                            <span>{art.date}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-zinc-500 italic py-8 text-center bg-white/5 border border-white/5 rounded-2xl">
+                      No articles reviewed yet.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
