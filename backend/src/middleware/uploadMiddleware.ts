@@ -8,7 +8,7 @@ export const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10 MB limit
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     const allowedMimeTypes = [
       'application/pdf',
       'image/jpeg',

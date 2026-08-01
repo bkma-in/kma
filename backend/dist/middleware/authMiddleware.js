@@ -8,7 +8,7 @@ const firebase_1 = require("../config/firebase");
  * Populates req.user once so that rate limiters and route guards reuse the verified identity
  * without duplicating Firebase token verification logic.
  */
-const authenticateOptional = async (req, res, next) => {
+const authenticateOptional = async (req, _res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
         return next();

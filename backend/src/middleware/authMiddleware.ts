@@ -21,7 +21,7 @@ export interface AuthRequest extends Request {
  * Populates req.user once so that rate limiters and route guards reuse the verified identity
  * without duplicating Firebase token verification logic.
  */
-export const authenticateOptional = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authenticateOptional = async (req: AuthRequest, _res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     return next();
