@@ -6,8 +6,7 @@ import {
   Activity,
   ArrowUpRight,
   Code2,
-  Bug,
-  Zap
+  Bug
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { getReportedIssues } from '../../services/user.service';
@@ -104,9 +103,9 @@ const DeveloperDashboard = () => {
       </div>
 
       {/* Recent Activity Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="space-y-6">
         {/* Recent Issues List */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-black tracking-tight flex items-center gap-2">
               <Bug size={20} className="text-zinc-400" />
@@ -155,44 +154,6 @@ const DeveloperDashboard = () => {
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-zinc-500">Zero Active Incidents</p>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* System Health / Quick Actions */}
-        <div className="space-y-6">
-          <h3 className="text-lg font-bold text-black tracking-tight flex items-center gap-2">
-            <Zap size={20} className="text-zinc-400" />
-            System Health
-          </h3>
-          <div className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-8 shadow-sm">
-            <div className="space-y-4">
-              <div className="flex justify-between items-end">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Storage API</p>
-                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">99.9% Uptime</p>
-              </div>
-              <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 w-[99%]" />
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between items-end">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Incident Response</p>
-                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">1.4h AVG</p>
-              </div>
-              <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-[75%]" />
-              </div>
-            </div>
-
-            <div className="pt-4 space-y-3">
-              <button className="w-full py-3 px-4 bg-black text-white rounded-xl text-xs font-black tracking-widest hover:bg-zinc-800 transition-all active:scale-95 uppercase">
-                System Diagnostics
-              </button>
-              <button className="w-full py-3 px-4 bg-zinc-100 text-zinc-500 rounded-xl text-xs font-black tracking-widest hover:text-black transition-all active:scale-95 uppercase border border-zinc-200">
-                Review Build Logs
-              </button>
-            </div>
           </div>
         </div>
       </div>
