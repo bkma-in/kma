@@ -35,7 +35,7 @@ router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)
     }
 });
 // List Issues
-router.get('/', async (req, res) => {
+router.get('/', async (_req, res) => {
     try {
         const snapshot = await firebase_1.db.collection('issues').orderBy('publishedAt', 'desc').get();
         const issues = snapshot.docs.map(doc => doc.data());

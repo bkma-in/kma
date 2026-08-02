@@ -18,7 +18,7 @@ class QueueService {
     /**
      * Enqueues a job for processing.
      */
-    async enqueueJob(jobId, fileBuffer, filename, mimeType, ranges, segmentImages, volumeNo, issueNumber, monthYear, issn) {
+    async enqueueJob(jobId, fileBuffer, _filename, mimeType, ranges, segmentImages, volumeNo, issueNumber, monthYear, issn) {
         console.log(`[QUEUE-SERVICE] Enqueuing job ${jobId}...`);
         // 1. Stage the files in Cloudflare R2 immediately to make the job resumable
         try {
@@ -38,7 +38,7 @@ class QueueService {
     /**
      * Performs processing of a staged job.
      */
-    async processJob(jobId, fileBuffer, mimeType, ranges, segmentImages, volumeNo, issueNumber, monthYear, issn) {
+    async processJob(jobId, fileBuffer, mimeType, ranges, segmentImages, volumeNo, issueNumber, _monthYear, _issn) {
         if (this.activeJobs.has(jobId))
             return;
         this.activeJobs.add(jobId);
@@ -213,7 +213,7 @@ class QueueService {
 }
 exports.QueueService = QueueService;
 // Helper functions for filename checks
-function filenameOfJob(jobId) {
+function filenameOfJob(_jobId) {
     return 'journal.pdf';
 }
 function filenameEndsWith(filename, ext) {

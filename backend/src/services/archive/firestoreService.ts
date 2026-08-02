@@ -130,8 +130,8 @@ export const generateSearchTextField = (
 export const publishArchiveArticles = async (
   jobId: string,
   verifiedArticles: any[],
-  volumeNo: string,
-  issueNumber: string
+  _volumeNo: string,
+  _issueNumber: string
 ): Promise<void> => {
   const batch = db.batch();
 

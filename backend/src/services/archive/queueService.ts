@@ -1,4 +1,3 @@
-import fs from 'fs';
 import { db } from '../../config/firebase';
 import { splitPdf, compileZipToPdf } from './splitterService';
 import { extractDigitalText } from './textExtractor';
@@ -7,7 +6,7 @@ import { parseMetadata } from './metadataParser';
 import { validateMetadata } from './validationService';
 import { checkForDuplicate } from './duplicateChecker';
 import { uploadStagedFile, downloadStagedFile, uploadSplitArticle } from './storageService';
-import { updateJobStatus, addJobLog, generateSearchTextField } from './firestoreService';
+import { updateJobStatus, addJobLog } from './firestoreService';
 
 export interface SegmentRange {
   startPage: number;
@@ -26,7 +25,7 @@ export class QueueService {
   async enqueueJob(
     jobId: string,
     fileBuffer: Buffer,
-    filename: string,
+    _filename: string,
     mimeType: string,
     ranges: SegmentRange[],
     segmentImages: Buffer[],
@@ -64,8 +63,8 @@ export class QueueService {
     segmentImages: Buffer[],
     volumeNo: string,
     issueNumber: string,
-    monthYear: string,
-    issn: string
+    _monthYear: string,
+    _issn: string
   ) {
     if (this.activeJobs.has(jobId)) return;
     this.activeJobs.add(jobId);
@@ -271,7 +270,7 @@ export class QueueService {
 }
 
 // Helper functions for filename checks
-function filenameOfJob(jobId: string): string {
+function filenameOfJob(_jobId: string): string {
   return 'journal.pdf';
 }
 function filenameEndsWith(filename: string, ext: string): boolean {

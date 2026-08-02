@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLocation, NavLink } from 'react-router-dom';
+import { useLocation, NavLink, useNavigate } from 'react-router-dom';
 import { 
   Search, 
   Filter, 
@@ -30,7 +30,6 @@ import {
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
 import { getPdfUrl } from '../../services/article.service';
-import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../../utils/NotificationContext';
 import { auth, db } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';

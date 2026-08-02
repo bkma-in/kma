@@ -6,7 +6,7 @@ const firebase_1 = require("../../config/firebase");
  * Checks Firestore articles collection to detect possible duplicate entries.
  * Compares title (case-insensitive) and checks if matching author names exist.
  */
-const checkForDuplicate = async (title, authorNames, volume, issue) => {
+const checkForDuplicate = async (title, _authorNames, _volume, _issue) => {
     console.log(`[DUPLICATE-CHECKER] Checking duplicate for: "${title}"`);
     if (!title)
         return { isDuplicate: false };

@@ -67,12 +67,12 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/archive', archiveRoutes);
 
 
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.send({ status: 'ok', message: 'KMA Backend is running' });
 });
 
 // Global error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[GLOBAL-ERROR-HANDLER]', err);
   const status = err.status || err.statusCode || 500;
   const message = err.message || 'An unexpected error occurred';

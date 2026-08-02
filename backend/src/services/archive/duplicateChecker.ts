@@ -6,9 +6,9 @@ import { db } from '../../config/firebase';
  */
 export const checkForDuplicate = async (
   title: string,
-  authorNames: string[],
-  volume?: string,
-  issue?: string
+  _authorNames: string[],
+  _volume?: string,
+  _issue?: string
 ): Promise<{ isDuplicate: boolean; matchedArticleId?: string }> => {
   console.log(`[DUPLICATE-CHECKER] Checking duplicate for: "${title}"`);
 

@@ -1,21 +1,19 @@
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { useEffect, lazy, Suspense } from 'react';
-import type { ComponentType } from 'react';
+import { useEffect, lazy, Suspense, type ComponentType } from 'react';
 import { auth } from './config/firebase';
 import { useAuth } from './context/AuthContext';
 import { getDashboardByRole } from './utils/auth';
-import { Loader2, AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import ToastContainer from './components/notifications/ToastContainer';
 import ConfirmModal from './components/notifications/ConfirmModal';
 import AuthorLayout from './layouts/AuthorLayout';
 import AdminLayout from './layouts/AdminLayout';
 import ReviewerLayout from './layouts/ReviewerLayout';
 import DeveloperLayout from './layouts/DeveloperLayout';
+import ReaderLayout from './layouts/ReaderLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import SessionOverlay from './components/SessionOverlay';
-
-// Reader Portal Imports
-import ReaderLayout from './layouts/ReaderLayout';
+import PageSkeletonFallback from './components/skeletons/PageSkeletonFallback';
 
 // Lazy-loaded pages
 const Auth = lazy(() => import('./pages/Auth'));
@@ -65,8 +63,6 @@ const GetSubscription = lazy(() => import('./pages/reader/GetSubscription'));
 const DeveloperDashboard = lazy(() => import('./pages/developer/DeveloperDashboard'));
 const DeveloperIssues = lazy(() => import('./pages/developer/DeveloperIssues'));
 const DeveloperNotifications = lazy(() => import('./pages/developer/DeveloperNotifications'));
-
-import PageSkeletonFallback from './components/skeletons/PageSkeletonFallback';
 
 // Dynamic route boundary skeleton wrapper
 const lazyRoute = (Component: ComponentType<any>) => (

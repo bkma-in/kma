@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   FileText, 
   Upload, 
@@ -25,7 +25,6 @@ import { cn } from '../../utils/cn';
 import api from '../../services/api';
 import { useNotification } from '../../utils/NotificationContext';
 import { useProfile } from '../../hooks/useProfile';
-import { useEffect } from 'react';
 import ReportIssueModal from '../../components/ReportIssueModal';
 
 const SubmitArticle = () => {
