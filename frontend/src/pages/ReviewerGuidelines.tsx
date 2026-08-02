@@ -125,6 +125,110 @@ const ReviewerGuidelines: React.FC = () => {
 
           <hr className="border-zinc-200 mb-12" />
 
+          <section className="mb-12">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 leading-tight">Research Areas</h2>
+            <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
+              Manuscripts from all areas of Pure and Applied Mathematical Sciences and the applications are eligible for submission.
+            </p>
+          </section>
+
+          <hr className="border-zinc-200 mb-12" />
+
+          <section className="mb-12">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 leading-tight">Peer Review Principles</h2>
+            <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed mb-4">
+              Articles published in the BKMA undergo peer review before acceptance.
+            </p>
+            <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed mb-4">
+              The journal operates a single-anonymous peer review process. This means that:
+            </p>
+            <ul className="list-disc list-inside text-zinc-700 text-lg sm:text-xl leading-relaxed space-y-2 mb-6 ml-4">
+              <li>Reviewer identity is not made visible to author</li>
+              <li>Author identity is visible to reviewer</li>
+              <li>Reviewer and author identity are both visible to the editor</li>
+            </ul>
+            <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed mb-4">
+              The reviewers interact only with the editor and/or journal team. Reviewers do not interact with each other or with the authors.
+            </p>
+            <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
+              Information about the editors of the Journal can be found on the{' '}
+              <a 
+                href="https://www.lms.ac.uk/publications/plms" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-black font-semibold underline hover:text-zinc-600 transition-colors"
+              >
+                journal's homepage
+              </a>.
+            </p>
+          </section>
+
+          <hr className="border-zinc-200 mb-12" />
+
+          <section className="mb-12">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 leading-tight">The Peer Review Process</h2>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-bold text-black mb-2">1) Assessment by editor</h3>
+                <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
+                  Submissions are initially assessed by an editor, who determines whether the paper is suitable for further consideration by the journal. Submissions may be rejected by the editor at this stage, if they are judged to be unsuitable.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-black mb-2">2) Expert advice</h3>
+                <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
+                  The editor will send the submission to several independent experts in the field. The experts will advise the editor whether, in their opinion, the paper is likely to meet the mathematical and editorial standards of the Journal. The editor may ask the author(s) to revise their paper based on the advice of the expert(s).
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-black mb-2">3) Board approval</h3>
+                <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
+                  The editor's assessment and any expert advice is reported to the group of editors in the relevant section of the journal for discussion. After discussion, the section editor decides whether to proceed with peer review. Submissions may be rejected at this stage. The preliminary decisions on the papers will be taken within three months of submission.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-black mb-2">4) Full peer review</h3>
+                <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
+                  The editor will obtain an in‐depth report on the paper from one or more reviewers.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-black mb-2">5) Editorial decision</h3>
+                <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
+                  Following the reviewer's report, the editor and section editor (and occasionally the managing editors) will collectively make a final decision to accept the paper (possibly subject to minor revisions), request the author make substantial revisions addressing the comments of the reviewers, or reject the paper.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-bold text-black mb-2">6) Revisions</h3>
+                <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
+                  If revisions are requested, the editor may obtain further reports from the reviewers about the revisions before returning to stage 5.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <hr className="border-zinc-200 mb-12" />
+
+          <section className="mb-12">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 leading-tight">Peer Review Times</h2>
+            <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed mb-4">
+              The Bulletin of Kerala Mathematics Association aims to provide a fair, rigorous and efficient peer review process.
+            </p>
+            <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed mb-4">
+              If a submission is to be rejected from the Journal the editors aim to do so at the earliest opportunity so that the authors may choose to submit to an alternative journal.
+            </p>
+            <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed">
+              On rare occasions, editors may be unable to find suitable reviewers, or be unable to obtain a report from a reviewer long after the agreed deadline has passed. In such circumstances, as a last resort, the editor may offer the author the option to withdraw the paper and submit it elsewhere. Authors maintain the right to withdraw the current version of their article at any time during the review process.
+            </p>
+          </section>
+
+          <hr className="border-zinc-200 mb-12" />
+
           <section>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed italic">
               Thank you for your valuable contribution to the mathematical research community and for ensuring the high quality of BKMA publications.
