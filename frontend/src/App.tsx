@@ -27,6 +27,7 @@ const ServiceDescription = lazy(() => import('./pages/ServiceDescription'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const Copyright = lazy(() => import('./pages/Copyright'));
 const ContactUs = lazy(() => import('./pages/ContactUs'));
+const ReviewerGuidelines = lazy(() => import('./pages/ReviewerGuidelines'));
 
 // Author pages
 const Dashboard = lazy(() => import('./pages/author/Dashboard'));
@@ -194,6 +195,7 @@ function App() {
           <Route path="/contact-us" element={lazyRoute(ContactUs)} />
           <Route path="/contact" element={<Navigate to="/contact-us" replace />} />
           <Route path="/contact us" element={<Navigate to="/contact-us" replace />} />
+          <Route path="/reviewer-guidelines" element={lazyRoute(ReviewerGuidelines)} />
           <Route path="/auth" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : lazyRoute(Auth)} />
           <Route path="/login" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
           <Route path="/signin" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />

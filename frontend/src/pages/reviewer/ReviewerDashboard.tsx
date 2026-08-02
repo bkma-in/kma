@@ -179,7 +179,10 @@ const ReviewerDashboard = () => {
           <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-8">
             <h3 className="text-xs font-bold text-black uppercase tracking-widest mb-6">Expert Resources</h3>
             <div className="space-y-4">
-              <div className="p-4 bg-zinc-50 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-white/60 transition-all border border-zinc-100 shadow-sm">
+              <NavLink 
+                to="/reviewer-guidelines"
+                className="p-4 bg-zinc-50 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-white/60 transition-all border border-zinc-100 shadow-sm text-left"
+              >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-zinc-400 group-hover:text-black border border-white/50">
                     <Star size={16} />
@@ -187,16 +190,19 @@ const ReviewerDashboard = () => {
                   <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Reviewer Handbook</span>
                 </div>
                 <ArrowRight size={14} className="text-zinc-300 group-hover:text-black" />
-              </div>
-              <div className="p-4 bg-zinc-50 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-white/60 transition-all border border-zinc-100 shadow-sm">
+              </NavLink>
+              <NavLink 
+                to="/reviewer-guidelines"
+                className="p-4 bg-zinc-50 rounded-2xl flex items-center justify-between group cursor-pointer hover:bg-white/60 transition-all border border-zinc-100 shadow-sm text-left"
+              >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-zinc-400 group-hover:text-black border border-white/50">
                     <CheckCircle2 size={16} />
                   </div>
-                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Quality Standards</span>
+                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Reviewer Guidelines</span>
                 </div>
                 <ArrowRight size={14} className="text-zinc-300 group-hover:text-black" />
-              </div>
+              </NavLink>
             </div>
           </div>
         </div>
