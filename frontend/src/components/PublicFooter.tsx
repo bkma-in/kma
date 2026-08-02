@@ -31,7 +31,7 @@ const PublicFooter: React.FC = () => {
               <div className="flex flex-wrap justify-center sm:justify-start gap-2 pt-1">
                 <Link to="/about-us" className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-2.5 py-1 rounded-md">About Us</Link>
                 <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-2.5 py-1 rounded-md">Author Guidelines</button>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-2.5 py-1 rounded-md">Reviewer Guidelines</button>
+                <Link to="/reviewer-guidelines" className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-2.5 py-1 rounded-md">Reviewer Guidelines</Link>
               </div>
             </div>
 
@@ -99,7 +99,7 @@ const PublicFooter: React.FC = () => {
                   About Us
                 </Link>
                 <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Author Guidelines</button>
-                <button className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Reviewer Guidelines</button>
+                <Link to="/reviewer-guidelines" className="text-[9px] font-black uppercase tracking-widest text-zinc-400 hover:text-white transition-colors border border-white/10 px-3 py-1.5 rounded-md">Reviewer Guidelines</Link>
               </div>
             </div>
 
