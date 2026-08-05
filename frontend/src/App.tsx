@@ -259,6 +259,7 @@ function AuthorRoutes() {
         <Route path="drafts" element={lazyRoute(Drafts)} />
         <Route path="revision-required" element={lazyRoute(AuthorRevisionRequired)} />
         <Route path="notifications" element={lazyRoute(Notifications)} />
+        <Route path="profile" element={lazyRoute(ReaderProfile)} />
       </Route>
     </Routes>
   );
@@ -277,6 +278,7 @@ function AdminRoutes() {
         <Route path="ready-to-publish" element={lazyRoute(AdminReadyToPublish)} />
         <Route path="published-articles" element={lazyRoute(AdminPublishedArticles)} />
         <Route path="notifications" element={lazyRoute(Notifications)} />
+        <Route path="profile" element={lazyRoute(ReaderProfile)} />
       </Route>
     </Routes>
   );
@@ -290,6 +292,7 @@ function ReviewerRoutes() {
         <Route path="dashboard" element={lazyRoute(ReviewerDashboard)} />
         <Route path="articles" element={lazyRoute(ReviewerArticles)} />
         <Route path="notifications" element={lazyRoute(ReviewerNotifications)} />
+        <Route path="profile" element={lazyRoute(ReaderProfile)} />
       </Route>
     </Routes>
   );
@@ -319,6 +322,7 @@ function DeveloperRoutes() {
         <Route path="dashboard" element={lazyRoute(DeveloperDashboard)} />
         <Route path="issues" element={lazyRoute(DeveloperIssues)} />
         <Route path="notifications" element={lazyRoute(DeveloperNotifications)} />
+        <Route path="profile" element={lazyRoute(ReaderProfile)} />
       </Route>
     </Routes>
   );

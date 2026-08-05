@@ -140,7 +140,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
     });
   };
 
-  const navItems = [
+  const navItems: any[] = [
     { name: 'Dashboard', path: '/admin/dashboard', end: true, icon: LayoutDashboard },
     {
       name: 'Users',
@@ -155,7 +155,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
     { name: 'Articles', path: '/admin/articles', icon: FileText },
     { name: 'Ready to Publish', path: '/admin/ready-to-publish', icon: UploadCloud },
     { name: 'Published Articles', path: '/admin/published-articles', icon: CheckCircle2 },
-    { name: 'Notifications', path: '/admin/notifications', icon: Bell, badge: formatBadgeCount(unreadCount) },
+    { name: 'Profile', path: '/admin/profile', icon: User },
   ];
 
   return (
@@ -210,7 +210,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
 
                   {isUsersDropdownOpen && item.children && (
                     <div className="mt-1 ml-6 pl-4 border-l border-zinc-800 space-y-1 relative">
-                      {item.children.map((child) => (
+                      {item.children.map((child: any) => (
                         <NavLink
                           key={child.name}
                           to={child.path}
@@ -309,10 +309,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName={userName}
-          userInitials={userInitials}
           portalName="ADMIN PORTAL"
-          showProfile={true}
           rightActions={
             <div className="flex items-center gap-4">
               <div className="relative hidden md:block">

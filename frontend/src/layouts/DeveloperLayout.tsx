@@ -5,7 +5,8 @@ import {
   Bug, 
   Bell,
   LogOut, 
-  X
+  X,
+  User
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
@@ -75,7 +76,7 @@ const DeveloperLayout: React.FC<DeveloperLayoutProps> = ({ isLoadingSkeleton = f
   const navItems = [
     { name: 'Dashboard', path: '/dev/dashboard', end: true, icon: LayoutDashboard },
     { name: 'Issues List', path: '/dev/issues', icon: Bug },
-    { name: 'Notifications', path: '/dev/notifications', icon: Bell },
+    { name: 'Profile', path: '/dev/profile', icon: User },
   ];
 
   return (
@@ -149,10 +150,7 @@ const DeveloperLayout: React.FC<DeveloperLayoutProps> = ({ isLoadingSkeleton = f
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName={userName}
-          userInitials={userInitials}
           portalName="DEV PORTAL"
-          showProfile={true}
         />
 
         {/* Page Content */}
