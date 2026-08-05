@@ -13,11 +13,15 @@ import {
   ShieldCheck,
   Loader2,
   AlertCircle,
-  X
+  X,
+  Megaphone
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSubscription } from '../../utils/SubscriptionContext';
 import { getPublishedArticles, getPdfUrl } from '../../services/article.service';
+import { getCFPs } from '../../services/cfp.service';
+import { CallForPaperCard } from '../../components/cfp/CallForPaperCard';
+import type { CallForPaper } from '../../types/cfp';
 import AuthorDetailsModal from '../../components/AuthorDetailsModal';
 import ArticlePreviewModal from '../../components/ArticlePreviewModal';
 import { getIssueDetailsString, ArticleScrollRow, parseMonthYear } from '../LandingPage';
@@ -29,6 +33,7 @@ const ReaderDashboard = () => {
   const { isSubscribed } = useSubscription();
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCFP, setActiveCFP] = useState<CallForPaper | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [previewArticle, setPreviewArticle] = useState<any | null>(null);
 
@@ -57,7 +62,10 @@ const ReaderDashboard = () => {
   useEffect(() => {
     const fetchPublished = async () => {
       try {
-        const res = await getPublishedArticles();
+        const [res, cfpRes] = await Promise.all([
+          getPublishedArticles(),
+          getCFPs({ status: 'published' })
+        ]);
         if (res.success) {
           // Sort newest published first for new articles, and chronologically for legacy articles
           const sorted = [...(res.articles || [])].sort((a: any, b: any) => {
@@ -85,8 +93,11 @@ const ReaderDashboard = () => {
           });
           setArticles(sorted);
         }
+        if (cfpRes.success && cfpRes.cfps && cfpRes.cfps.length > 0) {
+          setActiveCFP(cfpRes.cfps[0]);
+        }
       } catch (err) {
-        console.error('Failed to load published articles:', err);
+        console.error('Failed to load published data:', err);
       } finally {
         setLoading(false);
       }
@@ -163,6 +174,25 @@ const ReaderDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Active Call for Papers Card */}
+      {activeCFP && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold tracking-widest text-zinc-500 uppercase flex items-center gap-2">
+              <Megaphone size={14} className="text-black" />
+              Latest Call for Papers
+            </h2>
+            <button
+              onClick={() => navigate('/call-for-papers')}
+              className="text-xs font-bold text-black hover:underline uppercase tracking-wider"
+            >
+              View All Calls →
+            </button>
+          </div>
+          <CallForPaperCard cfp={activeCFP} />
+        </div>
+      )}
 
       {/* System Under Development Notice Card */}
       <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 rounded-[2rem] p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">

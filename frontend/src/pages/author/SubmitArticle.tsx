@@ -35,6 +35,11 @@ const SubmitArticle = () => {
   // Stepper State
   const location = useLocation();
   const prefillData = location.state?.draft;
+  const cfpState = location.state?.cfpId ? location.state : (location.state?.cfpData || null);
+  const cfpId = cfpState?.cfpId || new URLSearchParams(location.search).get('cfpId') || null;
+  const cfpVolume = cfpState?.volume || new URLSearchParams(location.search).get('volume') || null;
+  const cfpIssue = cfpState?.issue || new URLSearchParams(location.search).get('issue') || null;
+  const cfpTheme = cfpState?.theme || new URLSearchParams(location.search).get('theme') || null;
   
   // Stepper State
   const [currentStep, setCurrentStep] = useState(1);
@@ -44,7 +49,7 @@ const SubmitArticle = () => {
     title: prefillData?.title || '',
     abstract: prefillData?.abstract || '',
     keywords: prefillData?.keywords || '',
-    category: '',
+    category: cfpTheme || '',
     allowComments: false,
     termsAccepted: false,
     pdfName: prefillData?.pdfName || ''
@@ -293,6 +298,7 @@ const SubmitArticle = () => {
       payload.append('abstract', formData.abstract);
       if (file) payload.append('pdf', file);
       payload.append('status', 'submitted');
+      if (cfpId) payload.append('cfpId', cfpId);
       
       // Add co-authors
       coAuthors.forEach(ca => {

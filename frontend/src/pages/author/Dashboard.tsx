@@ -15,11 +15,16 @@ import {
   Inbox,
   Loader2,
   XCircle,
-  UserPlus
+  UserPlus,
+  Megaphone,
+  Send
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
 import { getArticles } from '../../services/article.service';
+import { getCFPs } from '../../services/cfp.service';
+import { CallForPaperCard } from '../../components/cfp/CallForPaperCard';
+import type { CallForPaper } from '../../types/cfp';
 import { AuthorDashboardSkeleton } from '../../components/skeletons/PageSkeletons';
 import { useProfile } from '../../hooks/useProfile';
 
@@ -27,37 +32,28 @@ const Dashboard = () => {
   const { profile } = useProfile();
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCFP, setActiveCFP] = useState<CallForPaper | null>(null);
 
   useEffect(() => {
-    const fetchArticles = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getArticles();
-        if (response.success) {
+        const [articlesRes, cfpRes] = await Promise.all([
+          getArticles(),
+          getCFPs({ status: 'published' })
+        ]);
+        if (articlesRes.success) {
           // Filter articles based on visibility rules
-          const filteredArticles = response.articles.filter((a: any) => {
-            // 1. Submitter (C): Always sees the article
+          const filteredArticles = articlesRes.articles.filter((a: any) => {
             if (!profile?.uid) return false;
             if (a.authorId === profile?.uid) return true;
-            
-            // Find user in authors array
             const authorData = a.authors?.find((author: any) => author.userId === profile?.uid);
-            if (!authorData) return false; // If not primary and not a co-author, hide it
-            
-            // 2. Rejected (B): Hide if rejected
+            if (!authorData) return false;
             if (authorData.status === 'rejected') return false;
-            
-            // 5. Accepted: Always visible
             if (authorData.accepted === true) return true;
-            
-            // At this point, the user's invitation is pending (accepted === false and not rejected)
-            
-            // 3 & 4. Pending: Visible only if the article is still a Draft
-            // If the article is no longer a draft (e.g. submitted), it is too late and should be hidden.
             if (a.status !== 'draft') return false;
-            
             return true;
           });
-          
+
           filteredArticles.sort((a: any, b: any) => {
             const timeA = new Date(a.createdAt).getTime();
             const timeB = new Date(b.createdAt).getTime();
@@ -66,15 +62,18 @@ const Dashboard = () => {
 
           setArticles(filteredArticles);
         }
+        if (cfpRes.success && cfpRes.cfps && cfpRes.cfps.length > 0) {
+          setActiveCFP(cfpRes.cfps[0]);
+        }
       } catch (error) {
-        console.error('Failed to fetch articles:', error);
+        console.error('Failed to fetch dashboard data:', error);
       } finally {
         setLoading(false);
       }
     };
 
     if (profile?.uid) {
-      fetchArticles();
+      fetchData();
     }
   }, [profile?.uid]);
 
@@ -223,6 +222,22 @@ const Dashboard = () => {
           </div>
         ))}
       </div>
+
+      {/* Active Call for Papers Widget */}
+      {activeCFP && (
+        <div className="mb-8 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase flex items-center gap-2">
+              <Megaphone size={14} className="text-zinc-600" />
+              Latest Call for Papers
+            </h2>
+            <NavLink to="/call-for-papers" className="text-xs font-bold text-black hover:underline uppercase tracking-wider">
+              View All Calls →
+            </NavLink>
+          </div>
+          <CallForPaperCard cfp={activeCFP} />
+        </div>
+      )}
 
       {/* Main Grid Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

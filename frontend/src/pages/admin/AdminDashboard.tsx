@@ -16,12 +16,15 @@ import {
   Bell,
   Loader2,
   X,
-  Search
+  Search,
+  Megaphone
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
 import { getArticles } from '../../services/article.service';
 import { getReviewers } from '../../services/user.service';
+import { getCFPs } from '../../services/cfp.service';
+import type { CallForPaper } from '../../types/cfp';
 import { useProfile } from '../../hooks/useProfile';
 import { formatDate } from '../../utils/dateHelpers';
 
@@ -32,6 +35,7 @@ const AdminDashboard = () => {
   const { profile } = useProfile();
   const [articles, setArticles] = useState<any[]>([]);
   const [reviewerRequestsCount, setReviewerRequestsCount] = useState(0);
+  const [cfps, setCfps] = useState<CallForPaper[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [logsSearchTerm, setLogsSearchTerm] = useState('');
@@ -51,9 +55,10 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [articlesRes, reviewersRes] = await Promise.all([
+        const [articlesRes, reviewersRes, cfpRes] = await Promise.all([
           getArticles(),
-          getReviewers()
+          getReviewers(),
+          getCFPs()
         ]);
         if (articlesRes.success) {
           setArticles(articlesRes.articles);
@@ -61,6 +66,9 @@ const AdminDashboard = () => {
         if (reviewersRes.success) {
           const pending = reviewersRes.reviewers.filter((r: any) => r.status === 'Pending');
           setReviewerRequestsCount(pending.length);
+        }
+        if (cfpRes.success) {
+          setCfps(cfpRes.cfps);
         }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
@@ -171,7 +179,7 @@ const AdminDashboard = () => {
         {stats.map((stat, i) => (
           <div 
             key={i} 
-            className="bg-white/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-lg block group hover:border-black transition-all"
+            className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm group hover:border-black transition-all cursor-default"
           >
             <div className="flex justify-between items-start mb-4">
               <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", stat.bg, stat.color)}>
@@ -183,6 +191,59 @@ const AdminDashboard = () => {
             <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{stat.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Call for Papers Summary Widget */}
+      <div className="bg-white rounded-3xl border border-zinc-200 p-6 sm:p-8 shadow-sm mb-10 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold">
+              <Megaphone size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-black font-['Outfit']">Call for Papers Management</h3>
+              <p className="text-xs text-zinc-500 font-medium">Overview of active calls, upcoming deadlines, and queue status</p>
+            </div>
+          </div>
+
+          <NavLink
+            to="/admin/call-for-papers"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-zinc-800 transition-all shadow-sm"
+          >
+            <span>Manage CFPs</span>
+            <ArrowRight size={14} />
+          </NavLink>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+          <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-4 space-y-1">
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Active Call</p>
+            <p className="text-2xl font-black text-emerald-600 font-['Outfit']">
+              {cfps.filter(c => c.status === 'published').length}
+            </p>
+          </div>
+
+          <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-4 space-y-1">
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Draft CFPs</p>
+            <p className="text-2xl font-black text-zinc-700 font-['Outfit']">
+              {cfps.filter(c => c.status === 'draft').length}
+            </p>
+          </div>
+
+          <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-4 space-y-1">
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Scheduled Calls</p>
+            <p className="text-2xl font-black text-blue-600 font-['Outfit']">
+              {cfps.filter(c => c.status === 'scheduled').length}
+            </p>
+          </div>
+
+          <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-4 space-y-1">
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Expired / Closed</p>
+            <p className="text-2xl font-black text-zinc-400 font-['Outfit']">
+              {cfps.filter(c => c.status === 'closed' || c.status === 'archived').length}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Reviewer Onboarding Section */}

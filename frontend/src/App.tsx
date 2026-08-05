@@ -29,6 +29,8 @@ const Copyright = lazy(() => import('./pages/Copyright'));
 const ContactUs = lazy(() => import('./pages/ContactUs'));
 const ReviewerGuidelines = lazy(() => import('./pages/ReviewerGuidelines'));
 const AuthorGuidelines = lazy(() => import('./pages/AuthorGuidelines'));
+const CallForPapersPublic = lazy(() => import('./pages/CallForPapersPublic'));
+const CallForPaperDetailsPublic = lazy(() => import('./pages/CallForPaperDetailsPublic'));
 
 // Author pages
 const Dashboard = lazy(() => import('./pages/author/Dashboard'));
@@ -46,6 +48,7 @@ const AdminArticles = lazy(() => import('./pages/admin/AdminArticles'));
 const AdminReadyToPublish = lazy(() => import('./pages/admin/AdminReadyToPublish'));
 const AdminReadersList = lazy(() => import('./pages/admin/AdminReadersList'));
 const AdminPublishedArticles = lazy(() => import('./pages/admin/AdminPublishedArticles'));
+const AdminCallForPapers = lazy(() => import('./pages/admin/AdminCallForPapers'));
 
 // Reviewer pages
 const ReviewerDashboard = lazy(() => import('./pages/reviewer/ReviewerDashboard'));
@@ -199,6 +202,10 @@ function App() {
           <Route path="/reviewer-guidelines" element={lazyRoute(ReviewerGuidelines)} />
           <Route path="/author-guidelines" element={lazyRoute(AuthorGuidelines)} />
           <Route path="/author guidelines" element={<Navigate to="/author-guidelines" replace />} />
+          <Route path="/call-for-papers" element={lazyRoute(CallForPapersPublic)} />
+          <Route path="/call for papers" element={<Navigate to="/call-for-papers" replace />} />
+          <Route path="/cfp" element={<Navigate to="/call-for-papers" replace />} />
+          <Route path="/call-for-papers/:id" element={lazyRoute(CallForPaperDetailsPublic)} />
           <Route path="/auth" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : lazyRoute(Auth)} />
           <Route path="/login" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
           <Route path="/signin" element={hasValidDashboard ? <Navigate to={dashboardPath} replace /> : <Navigate to="/auth?mode=login" replace />} />
@@ -270,6 +277,8 @@ function AdminRoutes() {
       <Route element={<AdminLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={lazyRoute(AdminDashboard)} />
+        <Route path="call-for-papers" element={lazyRoute(AdminCallForPapers)} />
+        <Route path="cfp" element={<Navigate to="call-for-papers" replace />} />
         <Route path="reviewers" element={lazyRoute(AdminAuthors)} />
         <Route path="authors-list" element={lazyRoute(AdminAuthorsList)} />
         <Route path="readers" element={lazyRoute(AdminReadersList)} />
