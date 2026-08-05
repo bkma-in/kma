@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud, ChevronDown, ChevronUp, UserCheck, BookOpen, User, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud, ChevronDown, ChevronUp, UserCheck, BookOpen, User, CheckCircle2, Megaphone } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
 import GlobalHeader from '../components/GlobalHeader';
@@ -142,6 +142,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
 
   const navItems: any[] = [
     { name: 'Dashboard', path: '/admin/dashboard', end: true, icon: LayoutDashboard },
+    { name: 'Call for Papers', path: '/admin/call-for-papers', icon: Megaphone },
     {
       name: 'Users',
       icon: Users,

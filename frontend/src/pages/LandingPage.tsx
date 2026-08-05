@@ -7,7 +7,9 @@ import {
   Users,
   BadgePercent,
   Info,
-  Loader2
+  Loader2,
+  Megaphone,
+  ArrowRight
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import PublicHeader from '../components/PublicHeader';
@@ -17,6 +19,9 @@ import PublicFooter from '../components/PublicFooter';
 import { useAuth } from '../context/AuthContext';
 import { getDashboardByRole } from '../utils/auth';
 import { getPublishedArticles, getPdfUrl } from '../services/article.service';
+import { getCFPs } from '../services/cfp.service';
+import { CallForPaperCard } from '../components/cfp/CallForPaperCard';
+import type { CallForPaper } from '../types/cfp';
 import AuthorDetailsModal from '../components/AuthorDetailsModal';
 import ArticlePreviewModal from '../components/ArticlePreviewModal';
 
@@ -492,14 +497,18 @@ const LandingPage: React.FC = () => {
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCFP, setActiveCFP] = useState<CallForPaper | null>(null);
 
   useEffect(() => {
     const fetchPublished = async () => {
       try {
-        const res = await getPublishedArticles();
-        if (res.success) {
+        const [articlesRes, cfpRes] = await Promise.all([
+          getPublishedArticles(),
+          getCFPs({ status: 'published' })
+        ]);
+        if (articlesRes.success) {
           // Sort newest published first for new articles, and chronologically for legacy articles
-          const sorted = [...(res.articles || [])].sort((a: any, b: any) => {
+          const sorted = [...(articlesRes.articles || [])].sort((a: any, b: any) => {
             if (a.isOld && b.isOld) {
               const timeA = parseMonthYear(a.monthYear);
               const timeB = parseMonthYear(b.monthYear);
@@ -524,8 +533,11 @@ const LandingPage: React.FC = () => {
           });
           setArticles(sorted);
         }
+        if (cfpRes.success && cfpRes.cfps && cfpRes.cfps.length > 0) {
+          setActiveCFP(cfpRes.cfps[0]);
+        }
       } catch (err) {
-        console.error('Failed to load published articles:', err);
+        console.error('Failed to load published data:', err);
       } finally {
         setLoading(false);
       }
@@ -643,6 +655,37 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Call for Papers Announcement Section */}
+      {activeCFP && (
+        <section className="py-16 px-6 bg-white border-b border-zinc-200">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold">
+                  <Megaphone size={20} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-black font-['Outfit']">Call for Papers</h2>
+                  <p className="text-xs text-zinc-500 font-medium">Special Announcement & Submission Drive</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => navigate('/call-for-papers')}
+                className="inline-flex items-center gap-2 text-xs font-bold text-black hover:text-zinc-600 uppercase tracking-wider py-2 cursor-pointer"
+              >
+                <span>View All Calls</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+
+            <div className="max-w-4xl mx-auto">
+              <CallForPaperCard cfp={activeCFP} />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Published Articles Section */}
       <PublishedArticlesSection
