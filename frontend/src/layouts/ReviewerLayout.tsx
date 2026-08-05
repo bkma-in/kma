@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Bell, LogOut, X, Search, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, FileText, Bell, LogOut, X, Search, HelpCircle, User } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
 import GlobalHeader from '../components/GlobalHeader';
@@ -94,10 +94,10 @@ const ReviewerLayout: React.FC<ReviewerLayoutProps> = ({ isLoadingSkeleton = fal
     });
   };
 
-  const navItems = [
+  const navItems: any[] = [
     { name: 'Dashboard', path: '/reviewer/dashboard', end: true, icon: LayoutDashboard },
     { name: 'Assigned Articles', path: '/reviewer/articles', icon: FileText },
-    { name: 'Notifications', path: '/reviewer/notifications', icon: Bell, badge: formatBadgeCount(unreadCount) },
+    { name: 'Profile', path: '/reviewer/profile', icon: User },
   ];
 
   return (
@@ -185,10 +185,7 @@ const ReviewerLayout: React.FC<ReviewerLayoutProps> = ({ isLoadingSkeleton = fal
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName={userName}
-          userInitials={userInitials}
           portalName="REVIEWER PORTAL"
-          showProfile={true}
           rightActions={
             <div className="flex items-center gap-4">
               <div className="relative hidden md:block">
