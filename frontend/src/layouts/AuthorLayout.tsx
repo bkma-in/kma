@@ -170,7 +170,7 @@ const AuthorLayout: React.FC<AuthorLayoutProps> = ({ isLoadingSkeleton = false }
     { name: 'My Articles', path: '/author/articles', icon: BookOpen, badge: counts.articles > 0 ? counts.articles : null },
     { name: 'Revision Required', path: '/author/revision-required', icon: AlertCircle, badge: counts.revisionRequired > 0 ? counts.revisionRequired : null },
     { name: 'Drafts', path: '/author/drafts', icon: Inbox, badge: counts.drafts > 0 ? counts.drafts : null },
-    { name: 'Notifications', path: '/author/notifications', icon: Bell, badge: formatBadgeCount(unreadCount) },
+    { name: 'Profile', path: '/author/profile', icon: User },
   ];
 
   return (
@@ -258,10 +258,7 @@ const AuthorLayout: React.FC<AuthorLayoutProps> = ({ isLoadingSkeleton = false }
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName={userName}
-          userInitials={userInitials}
           portalName="AUTHOR PORTAL"
-          showProfile={true}
           rightActions={
             <div className="flex items-center gap-4">
               <div className="relative hidden md:block">

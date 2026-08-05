@@ -95,11 +95,11 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({ isLoadingSkeleton = false }
     });
   };
 
-  const navItems = [
+  const navItems: any[] = [
     { name: 'Dashboard', path: '/reader/dashboard', end: true, icon: LayoutDashboard, locked: false },
     { name: 'Payments', path: '/reader/payments', icon: CreditCard, locked: !isSubscribed },
-    { name: 'Notifications', path: '/reader/notifications', icon: Bell, locked: !isSubscribed, badge: formatBadgeCount(unreadCount) },
     { name: 'Saved Articles', path: '/reader/saved', icon: Bookmark, locked: !isSubscribed },
+    { name: 'Profile', path: '/reader/profile', icon: User, locked: false },
   ];
 
   const handleLockedClick = (e: React.MouseEvent, item: typeof navItems[0]) => {
@@ -233,9 +233,7 @@ const ReaderLayout: React.FC<ReaderLayoutProps> = ({ isLoadingSkeleton = false }
         {/* Global Header */}
         <GlobalHeader 
           onMenuClick={() => setIsSidebarOpen(true)} 
-          userName={profile?.name || "Premium Reader"}
-          userInitials={profile?.name ? (profile.name.trim().split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || "R") : "R"}
-          showProfile={true}
+          portalName="READER PORTAL"
         />
 
         {/* Page Content */}
