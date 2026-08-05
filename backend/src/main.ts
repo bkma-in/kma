@@ -27,6 +27,7 @@ import webhookRoutes from './routes/webhookRoutes';
 import userRoutes from './routes/userRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import archiveRoutes from './routes/archiveRoutes';
+import cfpRoutes from './routes/cfpRoutes';
 
 // Import Auth Middleware
 import { authenticateOptional } from './middleware/authMiddleware';
@@ -65,6 +66,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/archive', archiveRoutes);
+app.use('/api/cfp', cfpRoutes);
 
 
 app.get('/', (_req, res) => {

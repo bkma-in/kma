@@ -272,6 +272,54 @@ router.get('/profile', authMiddleware_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch profile' });
     }
 });
+// Get Notification Preferences
+router.get('/notification-preferences', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const { uid } = req.user;
+        const userDoc = await firebase_1.db.collection('users').doc(uid).get();
+        const defaultPreferences = {
+            callForPapers: true,
+            announcements: true,
+            invoices: true,
+            receipts: true,
+            subscriptionRenewals: true,
+            reviewAssignments: true,
+            articleDecisions: true
+        };
+        if (!userDoc.exists) {
+            return res.json({ success: true, preferences: defaultPreferences });
+        }
+        const currentPrefs = userDoc.data()?.notificationPreferences || {};
+        res.json({
+            success: true,
+            preferences: { ...defaultPreferences, ...currentPrefs }
+        });
+    }
+    catch (error) {
+        console.error('Get notification preferences error:', error);
+        res.status(500).json({ error: 'Failed to fetch notification preferences' });
+    }
+});
+// Update Notification Preferences
+router.put('/notification-preferences', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const { uid } = req.user;
+        const { preferences } = req.body;
+        if (!preferences || typeof preferences !== 'object') {
+            return res.status(400).json({ error: 'Invalid preferences payload' });
+        }
+        const userRef = firebase_1.db.collection('users').doc(uid);
+        await userRef.set({
+            notificationPreferences: preferences,
+            updatedAt: new Date()
+        }, { merge: true });
+        res.json({ success: true, preferences });
+    }
+    catch (error) {
+        console.error('Update notification preferences error:', error);
+        res.status(500).json({ error: 'Failed to update notification preferences' });
+    }
+});
 // Get Public Profile (Unauthenticated)
 router.get('/:id/public-profile', async (req, res) => {
     try {

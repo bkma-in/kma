@@ -70,7 +70,7 @@ router.post('/', authMiddleware_1.requireAuth, rateLimiter_1.uploadRateLimiter, 
     { name: 'thumbnail', maxCount: 1 }
 ]), async (req, res) => {
     try {
-        const { title, abstract, status: requestedStatus = 'submitted', inviteeUserIds } = req.body;
+        const { title, abstract, status: requestedStatus = 'submitted', inviteeUserIds, cfpId } = req.body;
         const authorId = req.user.uid;
         const authorName = req.user.name || 'Author';
         const authorEmail = req.user.email || '';
@@ -107,6 +107,7 @@ router.post('/', authMiddleware_1.requireAuth, rateLimiter_1.uploadRateLimiter, 
             abstract,
             authorId, // Legacy field (submitter)
             participantIds, // New field for querying
+            cfpId: cfpId || null,
             authors: [
                 {
                     userId: authorId,
