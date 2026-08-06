@@ -90,13 +90,13 @@ export const PublishCFPModal: React.FC<PublishCFPModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-fade-in">
       <div 
-        className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-zinc-100 relative animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl border border-zinc-100 relative animate-in zoom-in-95 duration-200 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-100 pb-4 mb-6">
+        {/* Header (Fixed) */}
+        <div className="flex items-center justify-between px-6 py-4 sm:px-8 border-b border-zinc-100 bg-white shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold">
               <Send size={18} />
@@ -109,14 +109,14 @@ export const PublishCFPModal: React.FC<PublishCFPModalProps> = ({
           <button 
             onClick={onClose}
             disabled={isSubmitting}
-            className="text-zinc-400 hover:text-black p-2 rounded-lg hover:bg-zinc-100 transition-colors"
+            className="text-zinc-400 hover:text-black p-2 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* Options */}
-        <div className="space-y-6">
+        {/* Options Body (Scrollable) */}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
           {/* Notification Type Toggles */}
           <div className="space-y-3">
             <label className="flex items-center gap-3 cursor-pointer">
@@ -177,7 +177,7 @@ export const PublishCFPModal: React.FC<PublishCFPModalProps> = ({
             </span>
           </div>
 
-          {/* Email Policy Statement */}
+          {/* Validation Warning */}
           {(!hasAnyRecipient || !hasAnyChannel) && (
             <p className="text-[11px] font-bold text-rose-500 flex items-center gap-1.5">
               <AlertCircle size={13} />
@@ -185,6 +185,7 @@ export const PublishCFPModal: React.FC<PublishCFPModalProps> = ({
             </p>
           )}
 
+          {/* Email Policy Statement */}
           {sendEmail && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900 space-y-1.5 leading-relaxed">
               <p className="font-bold flex items-center gap-1.5 text-amber-950">
@@ -200,8 +201,8 @@ export const PublishCFPModal: React.FC<PublishCFPModalProps> = ({
           )}
         </div>
 
-        {/* Modal Actions */}
-        <div className="flex items-center justify-end gap-3 pt-6 border-t border-zinc-100 mt-6">
+        {/* Modal Actions (Fixed Footer) */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 sm:px-8 border-t border-zinc-100 bg-white shrink-0">
           <button
             type="button"
             onClick={onClose}

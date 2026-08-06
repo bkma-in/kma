@@ -349,7 +349,7 @@ router.post('/:id/publish', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
         if (sendInAppNotification !== false && targetRecipients.length > 0) {
             const notifBatch = firebase_1.db.batch();
             const deadlineText = cfpData.deadline
-                ? new Date(cfpData.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                ? new Date(cfpData.deadline).toLocaleDateString('en-GB')
                 : 'Open';
             for (const r of targetRecipients) {
                 if (r.userId) {

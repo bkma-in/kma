@@ -402,7 +402,7 @@ router.post('/:id/publish', requireAuth, requireRole(['admin']), async (req: Aut
     if (sendInAppNotification !== false && targetRecipients.length > 0) {
       const notifBatch = db.batch();
       const deadlineText = cfpData.deadline 
-        ? new Date(cfpData.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        ? new Date(cfpData.deadline).toLocaleDateString('en-GB')
         : 'Open';
 
       for (const r of targetRecipients) {

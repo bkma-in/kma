@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, CheckCircle2 } from 'lucide-react';
 import type { ImportantDateItem } from '../../types/cfp';
+import { formatDateDDMMYYYY } from '../../utils/dateHelpers';
 
 interface ImportantDatesCardProps {
   dates: ImportantDateItem[];
@@ -35,17 +36,7 @@ export const ImportantDatesCard: React.FC<ImportantDatesCardProps> = ({
   });
 
   const formatDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return dateStr;
-    }
+    return formatDateDDMMYYYY(dateStr);
   };
 
   return (

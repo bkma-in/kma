@@ -22,6 +22,7 @@ import {
   Layers
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { formatDateDDMMYYYY } from '../../utils/dateHelpers';
 import type { CallForPaper, CFPStatus } from '../../types/cfp';
 import { 
   getCFPs, 
@@ -460,7 +461,7 @@ const AdminCallForPapers = () => {
                         </td>
 
                         <td className="py-4 px-4 text-xs font-mono text-zinc-600">
-                          {cfp.openingDate ? new Date(cfp.openingDate).toLocaleDateString('en-GB') : '-'}
+                          {formatDateDDMMYYYY(cfp.openingDate)}
                         </td>
 
                         <td className="py-4 px-4">
@@ -545,21 +546,26 @@ const AdminCallForPapers = () => {
 
       {/* Create / Edit CFP Form Modal */}
       {isFormModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
           <div 
-            className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-zinc-100 relative my-8"
+            className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-zinc-100 relative overflow-hidden animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-zinc-100 pb-4 mb-6">
+            {/* Modal Header (Fixed) */}
+            <div className="flex items-center justify-between px-6 py-4 sm:px-8 border-b border-zinc-100 bg-white shrink-0">
               <h3 className="text-xl font-bold text-black font-['Outfit']">
                 {editingCfp ? 'Edit Call for Papers' : 'Create Call for Papers'}
               </h3>
-              <button onClick={() => setIsFormModalOpen(false)} className="text-zinc-400 hover:text-black p-2 rounded-lg">
+              <button 
+                onClick={() => setIsFormModalOpen(false)} 
+                className="text-zinc-400 hover:text-black p-2 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
+              >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-6 max-h-[75vh] overflow-y-auto pr-2">
+            {/* Modal Body (Scrollable) */}
+            <form id="cfp-modal-form" onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2 space-y-1">
                   <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Title *</label>
@@ -725,33 +731,35 @@ const AdminCallForPapers = () => {
                   />
                 </div>
               </div>
-
-              <div className="flex items-center justify-end gap-3 pt-6 border-t border-zinc-100">
-                <button
-                  type="button"
-                  onClick={() => setIsFormModalOpen(false)}
-                  disabled={isSaving}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-zinc-600 hover:text-black hover:bg-zinc-100 transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black bg-black text-white hover:bg-zinc-800 transition-all shadow-md cursor-pointer uppercase tracking-wider"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <span>Save Call for Papers</span>
-                  )}
-                </button>
-              </div>
             </form>
+
+            {/* Modal Footer (Fixed) */}
+            <div className="flex items-center justify-end gap-3 px-6 py-4 sm:px-8 border-t border-zinc-100 bg-white shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsFormModalOpen(false)}
+                disabled={isSaving}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-zinc-600 hover:text-black hover:bg-zinc-100 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                form="cfp-modal-form"
+                disabled={isSaving}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black bg-black text-white hover:bg-zinc-800 transition-all shadow-md cursor-pointer uppercase tracking-wider disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <span>Save Call for Papers</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
