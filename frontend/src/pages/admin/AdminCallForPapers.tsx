@@ -74,7 +74,7 @@ const AdminCallForPapers = () => {
     paperFormatRequirements: '',
     reviewProcess: '',
     importantDatesJson: '',
-    contactEmail: 'editor@bkma.in',
+    contactEmail: 'ktmsamuelms@gmail.com',
     contactPhone: ''
   });
 
@@ -83,12 +83,13 @@ const AdminCallForPapers = () => {
 
   const fetchCFPs = async () => {
     try {
-      const res = await getCFPs();
+      setLoading(true);
+      const res = await getCFPs({ status: activeTab !== 'all' ? activeTab : undefined });
       if (res.success) {
-        setCfps(res.cfps);
+        setCfps(res.cfps || []);
       }
-    } catch (err) {
-      console.error('Failed to fetch CFPs:', err);
+    } catch (err: any) {
+      showToast('Failed to load Calls for Papers', 'error');
     } finally {
       setLoading(false);
     }
@@ -96,7 +97,7 @@ const AdminCallForPapers = () => {
 
   useEffect(() => {
     fetchCFPs();
-  }, []);
+  }, [activeTab]);
 
   const resetForm = () => {
     setFormData({
@@ -115,7 +116,7 @@ const AdminCallForPapers = () => {
       paperFormatRequirements: '',
       reviewProcess: '',
       importantDatesJson: '',
-      contactEmail: 'editor@bkma.in',
+      contactEmail: 'ktmsamuelms@gmail.com',
       contactPhone: ''
     });
     setBannerFile(null);
@@ -146,7 +147,7 @@ const AdminCallForPapers = () => {
       paperFormatRequirements: cfp.paperFormatRequirements || '',
       reviewProcess: cfp.reviewProcess || '',
       importantDatesJson: cfp.importantDates ? JSON.stringify(cfp.importantDates, null, 2) : '',
-      contactEmail: cfp.contactEmail || 'editor@bkma.in',
+      contactEmail: cfp.contactEmail || 'ktmsamuelms@gmail.com',
       contactPhone: cfp.contactPhone || ''
     });
     setIsFormModalOpen(true);
