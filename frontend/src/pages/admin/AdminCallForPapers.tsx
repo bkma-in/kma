@@ -550,7 +550,7 @@ const AdminCallForPapers = () => {
       {isFormModalOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
           <div 
-            className="bg-white rounded-3xl max-w-3xl w-full max-h-[85vh] sm:max-h-[88vh] flex flex-col shadow-2xl border border-zinc-200/80 relative overflow-hidden animate-in zoom-in-95 duration-200"
+            className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full max-h-[85vh] sm:max-h-[88vh] flex flex-col shadow-2xl border border-zinc-200/80 relative overflow-hidden animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header (Fixed) */}
