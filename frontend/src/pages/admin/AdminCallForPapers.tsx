@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { formatDateDDMMYYYY } from '../../utils/dateHelpers';
+import { CustomDateInput } from '../../components/common/CustomDateInput';
 import type { CallForPaper, CFPStatus } from '../../types/cfp';
 import { 
   getCFPs, 
@@ -652,33 +653,27 @@ const AdminCallForPapers = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Opening Date *</label>
-                    <input
-                      type="date"
+                    <CustomDateInput
                       required
                       value={formData.openingDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, openingDate: e.target.value }))}
-                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                      onChange={(val) => setFormData(prev => ({ ...prev, openingDate: val }))}
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Deadline *</label>
-                    <input
-                      type="date"
+                    <CustomDateInput
                       required
                       value={formData.deadline}
-                      onChange={(e) => setFormData(prev => ({ ...prev, deadline: e.target.value }))}
-                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                      onChange={(val) => setFormData(prev => ({ ...prev, deadline: val }))}
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Expected Publication</label>
-                    <input
-                      type="date"
+                    <CustomDateInput
                       value={formData.publicationDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, publicationDate: e.target.value }))}
-                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                      onChange={(val) => setFormData(prev => ({ ...prev, publicationDate: val }))}
                     />
                   </div>
                 </div>
