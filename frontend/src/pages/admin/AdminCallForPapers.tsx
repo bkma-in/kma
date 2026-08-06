@@ -548,14 +548,22 @@ const AdminCallForPapers = () => {
       {isFormModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
           <div 
-            className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-zinc-100 relative overflow-hidden animate-in zoom-in-95 duration-200"
+            className="bg-white rounded-3xl max-w-3xl w-full max-h-[85vh] sm:max-h-[88vh] flex flex-col shadow-2xl border border-zinc-200/80 relative overflow-hidden animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header (Fixed) */}
-            <div className="flex items-center justify-between px-6 py-4 sm:px-8 border-b border-zinc-100 bg-white shrink-0">
-              <h3 className="text-xl font-bold text-black font-['Outfit']">
-                {editingCfp ? 'Edit Call for Papers' : 'Create Call for Papers'}
-              </h3>
+            <div className="flex items-center justify-between px-6 py-4 sm:px-8 border-b border-zinc-100 bg-zinc-50/50 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold">
+                  <Megaphone size={18} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-black font-['Outfit']">
+                    {editingCfp ? 'Edit Call for Papers' : 'Create Call for Papers'}
+                  </h3>
+                  <p className="text-xs text-zinc-500 font-medium">Define issue details, deadlines, and submission guidelines</p>
+                </div>
+              </div>
               <button 
                 onClick={() => setIsFormModalOpen(false)} 
                 className="text-zinc-400 hover:text-black p-2 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
@@ -564,182 +572,210 @@ const AdminCallForPapers = () => {
               </button>
             </div>
 
-            {/* Modal Body (Scrollable) */}
-            <form id="cfp-modal-form" onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2 space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Title *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="e.g. Call for Papers: Special Issue on Mathematical Physics"
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
+            {/* Modal Body (Scrollable with min-h-0) */}
+            <form id="cfp-modal-form" onSubmit={handleFormSubmit} className="flex-1 min-h-0 overflow-y-auto p-6 sm:p-8 space-y-6">
+              {/* Section 1: Call Details */}
+              <div className="bg-zinc-50/70 border border-zinc-200/80 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
+                  <FileText size={16} className="text-black" />
+                  <h4 className="text-xs font-black uppercase tracking-wider text-black font-['Outfit']">1. Journal Issue & Title</h4>
                 </div>
 
-                <div className="sm:col-span-2 space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Subtitle (Optional)</label>
-                  <input
-                    type="text"
-                    value={formData.subtitle}
-                    onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
-                    placeholder="e.g. Volume 2026, Issue 2"
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Title *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="e.g. Call for Papers: Special Issue on Mathematical Physics"
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Subtitle (Optional)</label>
+                    <input
+                      type="text"
+                      value={formData.subtitle}
+                      onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
+                      placeholder="e.g. Volume 2026, Issue 2"
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Volume *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.volume}
+                      onChange={(e) => setFormData(prev => ({ ...prev, volume: e.target.value }))}
+                      placeholder="e.g. 21"
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Issue *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.issue}
+                      onChange={(e) => setFormData(prev => ({ ...prev, issue: e.target.value }))}
+                      placeholder="e.g. 1"
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Theme / Special Issue (Optional)</label>
+                    <input
+                      type="text"
+                      value={formData.theme}
+                      onChange={(e) => setFormData(prev => ({ ...prev, theme: e.target.value }))}
+                      placeholder="e.g. Applied Topology & Differential Equations"
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Important Schedule & Deadlines */}
+              <div className="bg-zinc-50/70 border border-zinc-200/80 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
+                  <Calendar size={16} className="text-black" />
+                  <h4 className="text-xs font-black uppercase tracking-wider text-black font-['Outfit']">2. Milestone Dates</h4>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Volume *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.volume}
-                    onChange={(e) => setFormData(prev => ({ ...prev, volume: e.target.value }))}
-                    placeholder="e.g. 21"
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Opening Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.openingDate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, openingDate: e.target.value }))}
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Deadline *</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.deadline}
+                      onChange={(e) => setFormData(prev => ({ ...prev, deadline: e.target.value }))}
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Expected Publication</label>
+                    <input
+                      type="date"
+                      value={formData.publicationDate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, publicationDate: e.target.value }))}
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Scope, Guidelines & File Attachments */}
+              <div className="bg-zinc-50/70 border border-zinc-200/80 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
+                  <Layers size={16} className="text-black" />
+                  <h4 className="text-xs font-black uppercase tracking-wider text-black font-['Outfit']">3. Topics, Scope & Attachments</h4>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Issue *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.issue}
-                    onChange={(e) => setFormData(prev => ({ ...prev, issue: e.target.value }))}
-                    placeholder="e.g. 1"
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Topics Covered (Comma separated)</label>
+                    <input
+                      type="text"
+                      value={formData.topicsInput}
+                      onChange={(e) => setFormData(prev => ({ ...prev, topicsInput: e.target.value }))}
+                      placeholder="e.g. Algebra, Functional Analysis, Differential Equations, Fluid Dynamics"
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                    />
+                  </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Theme / Special Issue (Optional)</label>
-                  <input
-                    type="text"
-                    value={formData.theme}
-                    onChange={(e) => setFormData(prev => ({ ...prev, theme: e.target.value }))}
-                    placeholder="e.g. Applied Topology & Differential Equations"
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Description (Scope & Objectives)</label>
+                    <textarea
+                      rows={3}
+                      value={formData.description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Describe the scope, objectives, and research domains invited..."
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all resize-y"
+                    />
+                  </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Opening Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.openingDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, openingDate: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Author Guidelines</label>
+                    <textarea
+                      rows={2}
+                      value={formData.authorGuidelines}
+                      onChange={(e) => setFormData(prev => ({ ...prev, authorGuidelines: e.target.value }))}
+                      placeholder="Provide specific instructions for authors..."
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all resize-y"
+                    />
+                  </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Submission Deadline *</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.deadline}
-                    onChange={(e) => setFormData(prev => ({ ...prev, deadline: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Contact Email</label>
+                    <input
+                      type="email"
+                      value={formData.contactEmail}
+                      onChange={(e) => setFormData(prev => ({ ...prev, contactEmail: e.target.value }))}
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                    />
+                  </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Expected Publication Date</label>
-                  <input
-                    type="date"
-                    value={formData.publicationDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, publicationDate: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Contact Phone</label>
+                    <input
+                      type="text"
+                      value={formData.contactPhone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, contactPhone: e.target.value }))}
+                      placeholder="+91..."
+                      className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-black outline-none shadow-sm transition-all"
+                    />
+                  </div>
 
-                <div className="sm:col-span-2 space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Topics Covered (Comma separated)</label>
-                  <input
-                    type="text"
-                    value={formData.topicsInput}
-                    onChange={(e) => setFormData(prev => ({ ...prev, topicsInput: e.target.value }))}
-                    placeholder="e.g. Algebra, Functional Analysis, Differential Equations, Fluid Dynamics"
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Banner Image</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                      className="w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-zinc-200 file:text-black hover:file:bg-zinc-300 cursor-pointer"
+                    />
+                  </div>
 
-                <div className="sm:col-span-2 space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Description (Scope & Objectives)</label>
-                  <textarea
-                    rows={4}
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe the scope, objectives, and research domains invited..."
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
-
-                <div className="sm:col-span-2 space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Author Guidelines</label>
-                  <textarea
-                    rows={3}
-                    value={formData.authorGuidelines}
-                    onChange={(e) => setFormData(prev => ({ ...prev, authorGuidelines: e.target.value }))}
-                    placeholder="Provide specific instructions for authors..."
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Contact Email</label>
-                  <input
-                    type="email"
-                    value={formData.contactEmail}
-                    onChange={(e) => setFormData(prev => ({ ...prev, contactEmail: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Contact Phone</label>
-                  <input
-                    type="text"
-                    value={formData.contactPhone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, contactPhone: e.target.value }))}
-                    placeholder="+91..."
-                    className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-medium focus:ring-1 focus:ring-black outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Banner Image</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
-                    className="w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-zinc-100 file:text-black hover:file:bg-zinc-200 cursor-pointer"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Guidelines PDF Attachment</label>
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
-                    className="w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-zinc-100 file:text-black hover:file:bg-zinc-200 cursor-pointer"
-                  />
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-700">Guidelines PDF Attachment</label>
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                      className="w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-zinc-200 file:text-black hover:file:bg-zinc-300 cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
             </form>
 
             {/* Modal Footer (Fixed) */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 sm:px-8 border-t border-zinc-100 bg-white shrink-0">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 sm:px-8 border-t border-zinc-100 bg-zinc-50/50 shrink-0">
               <button
                 type="button"
                 onClick={() => setIsFormModalOpen(false)}
                 disabled={isSaving}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold text-zinc-600 hover:text-black hover:bg-zinc-100 transition-all cursor-pointer"
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-zinc-600 hover:text-black hover:bg-zinc-200/60 transition-all cursor-pointer"
               >
                 Cancel
               </button>
