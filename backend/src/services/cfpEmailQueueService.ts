@@ -103,26 +103,32 @@ export const buildCfpNotificationEmailHtml = (cfp: any, recipientName: string): 
     { label: 'Journal Issue', value: `Issue ${cfp.issue}` },
   ];
 
-  if (cfp.theme) {
-    rows.push({ label: 'Special Theme', value: cfp.theme });
+  const formatDateDDMMYYYY = (dateVal: any): string => {
+    if (!dateVal) return 'N/A';
+    if (typeof dateVal === 'string') {
+      const parts = dateVal.split('T')[0].split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return String(dateVal);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  if (cfp.openingDate) {
+    rows.push({ label: 'Opening Date', value: formatDateDDMMYYYY(cfp.openingDate) });
   }
 
   if (cfp.deadline) {
-    const formattedDeadline = new Date(cfp.deadline).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
-    rows.push({ label: 'Submission Deadline', value: formattedDeadline });
+    rows.push({ label: 'Submission Deadline', value: formatDateDDMMYYYY(cfp.deadline) });
   }
 
   if (cfp.publicationDate) {
-    const formattedPubDate = new Date(cfp.publicationDate).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
-    rows.push({ label: 'Expected Publication', value: formattedPubDate });
+    rows.push({ label: 'Expected Publication', value: formatDateDDMMYYYY(cfp.publicationDate) });
   }
 
   const publicUrl = `${process.env.FRONTEND_URL || 'https://www.bkma.in'}/call-for-papers/${cfp.id || cfp.cfpId}`;
