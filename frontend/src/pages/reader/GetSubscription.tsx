@@ -91,8 +91,8 @@ const GetSubscription = () => {
 
             if (verifyRes.success) {
               await refreshSubscriptionStatus();
-              showToast('Subscription activated successfully!', 'success');
-              navigate('/reader/dashboard');
+              showToast('Subscription activated successfully! Confirmation email sent.', 'success');
+              navigate('/reader/payments');
             } else {
               showToast(verifyRes.error || 'Payment verification failed', 'error');
             }
@@ -106,6 +106,10 @@ const GetSubscription = () => {
         onDismiss: () => {
           setIsLoading(false);
           showToast('Payment checkout cancelled', 'info');
+        },
+        onFailure: (error: any) => {
+          setIsLoading(false);
+          showToast(`Payment failed: ${error?.description || error?.reason || 'Transaction could not be completed'}`, 'error');
         }
       });
 
@@ -118,17 +122,23 @@ const GetSubscription = () => {
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="text-center mb-12">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200 mb-4">
-          <ShieldCheck size={12} className="text-emerald-600" /> Razorpay Test Gateway Active
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-200 mb-4">
+          <ShieldCheck size={12} className="text-amber-600" /> Module Under Active Development
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-black tracking-tight font-['Outfit'] mb-4">
           Upgrade Your Research Access
         </h1>
         <p className="text-zinc-500 text-lg max-w-2xl mx-auto">
           Choose a membership plan to unlock full journal access and features. <br />
-          <span className="text-emerald-600 font-bold text-sm">Official Razorpay Sandbox Enabled for Testing</span>
+          <span className="text-amber-600 font-bold text-sm">System Maintenance & Razorpay Setup in Progress</span>
         </p>
+      </div>
+
+      {/* Under Active Development Banner */}
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-8 text-center text-amber-800 text-sm font-semibold flex items-center justify-center gap-3">
+        <ShieldCheck size={18} className="text-amber-600 shrink-0" />
+        <span>This payment gateway module is currently under active development. Online checkout is temporarily disabled during system deployment and testing.</span>
       </div>
 
       <div className="grid md:grid-cols-2 gap-8 mb-16">
@@ -137,10 +147,10 @@ const GetSubscription = () => {
             key={plan.id}
             onClick={() => setSelectedPlan(plan.id as 'annual' | 'lifetime')}
             className={cn(
-              "relative bg-white border-2 rounded-[2.5rem] p-10 transition-all cursor-pointer group",
+              "relative bg-white border-2 rounded-[2.5rem] p-10 transition-all opacity-85",
               selectedPlan === plan.id
-                ? "border-black shadow-2xl scale-[1.02]"
-                : "border-zinc-100 hover:border-zinc-300 shadow-sm"
+                ? "border-amber-400 shadow-xl"
+                : "border-zinc-100 shadow-sm"
             )}
           >
             {plan.recommended && (
@@ -181,24 +191,16 @@ const GetSubscription = () => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleSubscribe(plan.id as 'annual' | 'lifetime');
+                // handleSubscribe(plan.id as 'annual' | 'lifetime');
+                showToast('Payment checkout is currently disabled for active development & testing.', 'info');
               }}
-              disabled={isLoading}
+              disabled={true}
               className={cn(
-                "w-full py-5 rounded-2xl font-bold text-sm tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase cursor-pointer",
-                selectedPlan === plan.id
-                  ? "bg-black text-white shadow-xl shadow-black/20 hover:bg-zinc-800"
-                  : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
+                "w-full py-5 rounded-2xl font-bold text-sm tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase cursor-not-allowed bg-zinc-200 text-zinc-500 opacity-80"
               )}
             >
-              {isLoading && selectedPlan === plan.id ? (
-                <Loader2 size={20} className="animate-spin" />
-              ) : (
-                <>
-                  <CreditCard size={18} />
-                  Subscribe with Razorpay
-                </>
-              )}
+              <CreditCard size={18} />
+              UNDER ACTIVE DEVELOPMENT
             </button>
           </div>
         ))}

@@ -20,13 +20,8 @@ export const loadRazorpayScript = (): Promise<boolean> => {
   });
 };
 
-export const createSubscriptionOrder = async (type: 'annual' | 'lifetime') => {
-  const response = await api.post('/subscriptions/create-order', { type });
-  return response.data;
-};
-
-export const createArticleOrder = async (articleId: string) => {
-  const response = await api.post('/subscriptions/create-article-order', { articleId });
+export const createSubscriptionOrder = async (plan: 'annual' | 'lifetime') => {
+  const response = await api.post('/subscriptions/create-order', { plan, type: plan });
   return response.data;
 };
 
@@ -41,6 +36,11 @@ export const verifyRazorpayPayment = async (paymentData: {
 
 export const getUserSubscriptions = async () => {
   const response = await api.get('/subscriptions/my-subscriptions');
+  return response.data;
+};
+
+export const getPaymentHistory = async () => {
+  const response = await api.get('/subscriptions/payment-history');
   return response.data;
 };
 
@@ -59,6 +59,7 @@ export interface RazorpayCheckoutOptions {
     razorpay_signature: string;
   }) => Promise<void> | void;
   onDismiss?: () => void;
+  onFailure?: (error: any) => void;
 }
 
 export const openRazorpayModal = async (options: RazorpayCheckoutOptions) => {
@@ -72,7 +73,7 @@ export const openRazorpayModal = async (options: RazorpayCheckoutOptions) => {
     amount: options.amount * 100, // paise
     currency: 'INR',
     name: options.name || 'Bulletin of BKMA',
-    description: options.description || 'Access Subscription / Article Purchase',
+    description: options.description || 'Subscription Membership Pass',
     order_id: options.orderId,
     prefill: {
       name: options.userName || '',
@@ -93,5 +94,12 @@ export const openRazorpayModal = async (options: RazorpayCheckoutOptions) => {
   };
 
   const rzp = new window.Razorpay(razorpayOptions);
+
+  if (options.onFailure) {
+    rzp.on('payment.failed', (response: any) => {
+      options.onFailure!(response.error);
+    });
+  }
+
   rzp.open();
 };
