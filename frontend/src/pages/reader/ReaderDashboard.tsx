@@ -6,6 +6,7 @@ import {
   Zap, 
   ChevronRight, 
   Bookmark, 
+  BookmarkCheck,
   FileText,
   Search,
   Filter,
@@ -27,6 +28,7 @@ import ArticlePreviewModal from '../../components/ArticlePreviewModal';
 import { getIssueDetailsString, ArticleScrollRow, parseMonthYear } from '../LandingPage';
 import { SkeletonArticleCard } from '../../components/skeletons/SkeletonArticleCard';
 import { ReaderDashboardSkeleton } from '../../components/skeletons/PageSkeletons';
+import { getLocalSavedArticles, saveLocalArticle, removeLocalSavedArticle, isLocalArticleSaved } from './ReaderSavedArticles';
 
 const ReaderDashboard = () => {
   const navigate = useNavigate();
@@ -36,6 +38,13 @@ const ReaderDashboard = () => {
   const [activeCFP, setActiveCFP] = useState<CallForPaper | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [previewArticle, setPreviewArticle] = useState<any | null>(null);
+  const [savedCount, setSavedCount] = useState<number>(getLocalSavedArticles().length);
+
+  useEffect(() => {
+    const updateSavedCount = () => setSavedCount(getLocalSavedArticles().length);
+    window.addEventListener('kma_saved_articles_updated', updateSavedCount);
+    return () => window.removeEventListener('kma_saved_articles_updated', updateSavedCount);
+  }, []);
 
   // Author Details Modal states
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
@@ -114,7 +123,7 @@ const ReaderDashboard = () => {
 
   const stats = [
     { label: 'Published Papers', value: articles.length.toString(), icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Saved Articles', value: isSubscribed ? '0' : '0', icon: Bookmark, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Saved Articles', value: savedCount.toString(), icon: Bookmark, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: 'BKMA Volume', value: 'Vol. 42', icon: BookOpen, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Recent Reads', value: isSubscribed ? '0' : '0', icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
@@ -306,13 +315,47 @@ const ReaderDashboard = () => {
                     onClick={() => setPreviewArticle(art)}
                     className="bg-white p-8 rounded-[2rem] border border-zinc-200 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col cursor-pointer group"
                   >
-                    <div className="flex items-center gap-2 mb-5 flex-wrap">
-                      {art.isOld && (
-                        <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">Legacy Edition</span>
-                      )}
-                      <span className="text-zinc-500 text-[11px] font-semibold">
-                        {getIssueDetailsString(art)}
-                      </span>
+                    <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {art.isOld && (
+                          <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">Legacy Edition</span>
+                        )}
+                        <span className="text-zinc-500 text-[11px] font-semibold">
+                          {getIssueDetailsString(art)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const isSaved = isLocalArticleSaved(art.id);
+                          if (isSaved) {
+                            removeLocalSavedArticle(art.id);
+                          } else {
+                            saveLocalArticle({
+                              id: art.id,
+                              title: art.title,
+                              author: art.author || (art.authors ? art.authors.map((a: any) => a.name).join(', ') : 'Author'),
+                              authors: art.authors,
+                              abstract: art.abstract,
+                              tag: art.tag || 'Mathematics',
+                              monthYear: art.monthYear,
+                              vol: art.vol || art.volume,
+                              issueNumber: art.issueNumber,
+                              issn: art.issn
+                            });
+                          }
+                        }}
+                        className={cn(
+                          "p-2 rounded-xl border transition-all cursor-pointer shrink-0",
+                          isLocalArticleSaved(art.id)
+                            ? "bg-purple-50 text-purple-600 border-purple-200"
+                            : "bg-zinc-50 text-zinc-400 hover:text-black border-zinc-100"
+                        )}
+                        title={isLocalArticleSaved(art.id) ? "Remove from saved" : "Save article"}
+                      >
+                        {isLocalArticleSaved(art.id) ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                      </button>
                     </div>
                     <h3 className="text-xl font-bold mb-4 leading-tight min-h-[3.5rem] group-hover:text-zinc-700 transition-colors">{art.title}</h3>
                     <p className="text-zinc-500 text-sm mb-8 leading-relaxed line-clamp-3 flex-1">{art.abstract}</p>
