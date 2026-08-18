@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import crypto from 'crypto';
+import axios from 'axios';
 import { db } from '../config/firebase';
 import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
 import Razorpay from 'razorpay';
@@ -11,6 +12,33 @@ const razorpay = new Razorpay({
   key_id: config.payments.razorpay.keyId,
   key_secret: config.payments.razorpay.keySecret,
 });
+
+async function createRazorpayOrderHelper(options: { amount: number; currency: string; receipt: string; notes?: any }) {
+  try {
+    return await razorpay.orders.create(options);
+  } catch (sdkErr: any) {
+    console.warn('[RAZORPAY-SDK-WARN] SDK create order failed, using direct REST fallback:', sdkErr.message || sdkErr);
+    const keyId = config.payments.razorpay.keyId;
+    const keySecret = config.payments.razorpay.keySecret;
+    const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+    try {
+      const response = await axios.post('https://api.razorpay.com/v1/orders', options, {
+        headers: {
+          Authorization: authHeader,
+          'Content-Type': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (axiosErr: any) {
+      if (axiosErr.response) {
+        const errorDesc = axiosErr.response.data?.error?.description || 'Razorpay API rejected request';
+        const code = axiosErr.response.status;
+        throw new Error(`Razorpay API Error (${code}): ${errorDesc}`);
+      }
+      throw new Error(`Razorpay connection error: ${axiosErr.message}`);
+    }
+  }
+}
 
 const router = Router();
 
@@ -149,7 +177,7 @@ router.post('/create-order', requireAuth, paymentRateLimiter, async (req: AuthRe
       }
     };
 
-    const order = await razorpay.orders.create(options);
+    const order = await createRazorpayOrderHelper(options);
 
     // Save pending subscription document in Firestore
     const subRef = db.collection('subscriptions').doc();
@@ -202,7 +230,8 @@ router.post('/create-order', requireAuth, paymentRateLimiter, async (req: AuthRe
 
   } catch (error: any) {
     console.error('Create subscription order error:', error);
-    res.status(500).json({ error: error.message || 'Failed to create payment order' });
+    const status = error.message?.includes('Razorpay API Error') || error.message?.includes('Invalid') ? 400 : 500;
+    res.status(status).json({ error: error.message || 'Failed to create payment order' });
   }
 });
 

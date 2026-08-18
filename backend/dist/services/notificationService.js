@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkAndSendReviewReminders = exports.sendArticleRejectedNotifications = exports.sendRevisionRequestedNotifications = exports.sendReviewerAssignedNotifications = exports.sendArticleSubmittedNotifications = exports.buildHtmlEmail = void 0;
+exports.sendSubscriptionPaymentSuccessNotification = exports.checkAndSendReviewReminders = exports.sendArticleRejectedNotifications = exports.sendRevisionRequestedNotifications = exports.sendReviewerAssignedNotifications = exports.sendArticleSubmittedNotifications = exports.buildHtmlEmail = void 0;
 const firebase_1 = require("../config/firebase");
 const env_1 = require("../config/env");
 const emailService_1 = require("./emailService");
@@ -718,3 +718,33 @@ const checkAndSendReviewReminders = async () => {
     }
 };
 exports.checkAndSendReviewReminders = checkAndSendReviewReminders;
+/**
+ * Sends a transactional payment confirmation email upon successful Razorpay payment verification.
+ */
+const sendSubscriptionPaymentSuccessNotification = async (payload) => {
+    try {
+        const planTitle = payload.plan === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription';
+        const formattedAmount = `₹${payload.amount}`;
+        const formattedDate = payload.date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+        const cardRows = [
+            { label: 'Subscription Plan', value: planTitle },
+            { label: 'Amount Paid', value: formattedAmount },
+            { label: 'Payment Date', value: formattedDate },
+            { label: 'Razorpay Payment ID', value: payload.razorpayPaymentId },
+            { label: 'Razorpay Order ID', value: payload.razorpayOrderId },
+            { label: 'Payment Method', value: payload.paymentMethod.toUpperCase() },
+            { label: 'Internal Ref ID', value: payload.internalOrderId }
+        ];
+        const bodyText = `Thank you for subscribing to the Bulletin of Kerala Mathematics Association. Your payment has been successfully processed and verified.`;
+        const bannerTitle = 'Payment Confirmation & Subscription Active';
+        const actionUrl = `${env_1.config.brevo.loginUrl}?redirect=/reader/payments`;
+        const emailHtml = (0, exports.buildHtmlEmail)(payload.name, bannerTitle, bodyText, 'Payment Details & Receipt Summary', cardRows, actionUrl, 'View Payment History & Receipt', 'Instant Journal Access Granted', 'Your membership benefits are now active on the BKMA platform. You can view and print your official payment receipt anytime from your member dashboard.', '💳', 'Secure Razorpay Transaction', '📜', 'Official Receipt Included');
+        await (0, emailService_1.sendTransactionalEmail)(payload.email, payload.name, `Payment Receipt & Subscription Active - ${planTitle}`, emailHtml);
+        console.log(`[NOTIF-SERVICE] Sent subscription payment success email to ${payload.email} for order ${payload.razorpayOrderId}`);
+    }
+    catch (error) {
+        console.error('[NOTIF-SERVICE] Error sending subscription payment success email:', error);
+        throw error;
+    }
+};
+exports.sendSubscriptionPaymentSuccessNotification = sendSubscriptionPaymentSuccessNotification;
