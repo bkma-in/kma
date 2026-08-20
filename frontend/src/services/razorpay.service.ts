@@ -83,6 +83,13 @@ export const openRazorpayModal = async (options: RazorpayCheckoutOptions) => {
     theme: {
       color: '#000000',
     },
+    method: {
+      upi: true,
+      card: true,
+      netbanking: true,
+      wallet: true,
+      paylater: true
+    },
     handler: async (response: any) => {
       await options.onSuccess(response);
     },

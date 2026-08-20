@@ -41,13 +41,14 @@ const GetSubscription = () => {
         'Standard member profile',
         'Basic research support'
       ],
-      recommended: true
+      recommended: false
     },
     {
       id: 'lifetime',
-      name: 'Life Member',
+      name: 'BKMA Life Member',
       price: '₹1000',
       period: 'one-time',
+      discountTag: '50% OFF',
       features: [
         'Lifetime unlimited access',
         'Physical copies of annual journals',
@@ -77,7 +78,7 @@ const GetSubscription = () => {
         keyId: orderData.keyId,
         amount: orderData.amount,
         name: 'BKMA Research Pass',
-        description: `${planId === 'lifetime' ? 'Life Member' : 'Annual Pass'} Subscription`,
+        description: `${planId === 'lifetime' ? 'BKMA Life Member' : 'Annual Pass'} Subscription`,
         userEmail: currentUser?.email || '',
         userName: currentUser?.name || '',
         onSuccess: async (paymentResponse) => {
@@ -122,23 +123,17 @@ const GetSubscription = () => {
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-200 mb-4">
-          <ShieldCheck size={12} className="text-amber-600" /> Module Under Active Development
+      <div className="text-center mb-12">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200 mb-4">
+          <ShieldCheck size={12} className="text-emerald-600" /> Razorpay Test Gateway Active
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-black tracking-tight font-['Outfit'] mb-4">
           Upgrade Your Research Access
         </h1>
         <p className="text-zinc-500 text-lg max-w-2xl mx-auto">
           Choose a membership plan to unlock full journal access and features. <br />
-          <span className="text-amber-600 font-bold text-sm">System Maintenance & Razorpay Setup in Progress</span>
+          <span className="text-emerald-600 font-bold text-sm">Official Razorpay Sandbox Enabled for Testing</span>
         </p>
-      </div>
-
-      {/* Under Active Development Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-8 text-center text-amber-800 text-sm font-semibold flex items-center justify-center gap-3">
-        <ShieldCheck size={18} className="text-amber-600 shrink-0" />
-        <span>This payment gateway module is currently under active development. Online checkout is temporarily disabled during system deployment and testing.</span>
       </div>
 
       <div className="grid md:grid-cols-2 gap-8 mb-16">
@@ -147,22 +142,22 @@ const GetSubscription = () => {
             key={plan.id}
             onClick={() => setSelectedPlan(plan.id as 'annual' | 'lifetime')}
             className={cn(
-              "relative bg-white border-2 rounded-[2.5rem] p-10 transition-all opacity-85",
+              "relative bg-white border-2 rounded-[2.5rem] p-10 transition-all cursor-pointer group",
               selectedPlan === plan.id
-                ? "border-amber-400 shadow-xl"
-                : "border-zinc-100 shadow-sm"
+                ? "border-black shadow-2xl scale-[1.02]"
+                : "border-zinc-100 hover:border-zinc-300 shadow-sm"
             )}
           >
-            {plan.recommended && (
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                <Zap size={12} className="fill-current text-yellow-400" />
-                Most Popular
-              </div>
-            )}
-
             <div className="flex justify-between items-start mb-8">
               <div>
-                <h3 className="text-2xl font-bold text-black mb-1">{plan.name}</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-2xl font-bold text-black">{plan.name}</h3>
+                  {plan.discountTag && (
+                    <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-black uppercase tracking-wider">
+                      {plan.discountTag}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-black text-black">{plan.price}</span>
                   <span className="text-zinc-400 text-sm font-medium">{plan.period}</span>
@@ -191,16 +186,24 @@ const GetSubscription = () => {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                // handleSubscribe(plan.id as 'annual' | 'lifetime');
-                showToast('Payment checkout is currently disabled for active development & testing.', 'info');
+                handleSubscribe(plan.id as 'annual' | 'lifetime');
               }}
-              disabled={true}
+              disabled={isLoading}
               className={cn(
-                "w-full py-5 rounded-2xl font-bold text-sm tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase cursor-not-allowed bg-zinc-200 text-zinc-500 opacity-80"
+                "w-full py-5 rounded-2xl font-bold text-sm tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase cursor-pointer",
+                selectedPlan === plan.id
+                  ? "bg-black text-white shadow-xl shadow-black/20 hover:bg-zinc-800"
+                  : "bg-zinc-100 text-zinc-400 hover:bg-zinc-200"
               )}
             >
-              <CreditCard size={18} />
-              UNDER ACTIVE DEVELOPMENT
+              {isLoading && selectedPlan === plan.id ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <>
+                  <CreditCard size={18} />
+                  Subscribe with Razorpay
+                </>
+              )}
             </button>
           </div>
         ))}
