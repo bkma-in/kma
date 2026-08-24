@@ -700,7 +700,7 @@ router.get('/readers', requireAuth, requireRole(['admin']), async (_req: AuthReq
   try {
     const snapshot = await db.collection('users').where('role', '==', 'reader').get();
     
-    // Also fetch all active subscriptions to check for life membership type
+    // Also fetch all active subscriptions to check for subscription plan and status
     const subsSnapshot = await db.collection('subscriptions').where('status', '==', 'active').get();
     const activeSubscribes = new Map();
     subsSnapshot.docs.forEach((doc: any) => {
@@ -711,12 +711,25 @@ router.get('/readers', requireAuth, requireRole(['admin']), async (_req: AuthReq
     const readers = snapshot.docs.map((doc: any) => {
       const data = doc.data();
       const subData = activeSubscribes.get(doc.id);
+      const isLifeMember = data.lifeMember === true || data.isLifeMember === true || subData?.type === 'lifetime' || subData?.type === 'life' || subData?.plan === 'lifetime';
+      const isSubscribed = isLifeMember || !!subData || data.isSubscribed === true;
+      const subscriptionPlan = isLifeMember ? 'lifetime' : (subData?.plan || subData?.type || null);
+      
       return {
         id: doc.id,
         name: data.name || 'Anonymous Reader',
         email: data.email || '',
+        phone: data.phone || '',
+        bio: data.bio || '',
+        designation: data.designation || '',
+        profileImage: data.profileImage || null,
         regDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString(),
-        isLifeMember: data.lifeMember === true || data.isLifeMember === true || subData?.type === 'lifetime' || subData?.type === 'life'
+        isLifeMember,
+        isSubscribed,
+        subscriptionPlan,
+        subscriptionStatus: isSubscribed ? 'active' : 'inactive',
+        subscriptionStartedAt: subData?.startedAt?.toDate ? subData.startedAt.toDate().toISOString() : subData?.startedAt || null,
+        subscriptionExpiresAt: subData?.expiresAt?.toDate ? subData.expiresAt.toDate().toISOString() : subData?.expiresAt || null
       };
     });
 
