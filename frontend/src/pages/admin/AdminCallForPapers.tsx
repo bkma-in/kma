@@ -19,7 +19,9 @@ import {
   Mail,
   X,
   Calendar,
-  Layers
+  Layers,
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { formatDateDDMMYYYY } from '../../utils/dateHelpers';
@@ -47,6 +49,7 @@ const AdminCallForPapers = () => {
 
   const [cfps, setCfps] = useState<CallForPaper[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -84,12 +87,16 @@ const AdminCallForPapers = () => {
   const fetchCFPs = async () => {
     try {
       setLoading(true);
-      const res = await getCFPs({ status: activeTab !== 'all' ? activeTab : undefined });
+      setFetchError(null);
+      const res = await getCFPs({ status: activeTab !== 'all' && activeTab !== 'queue' ? activeTab : undefined });
       if (res.success) {
         setCfps(res.cfps || []);
       }
     } catch (err: any) {
-      showToast('Failed to load Calls for Papers', 'error');
+      console.error('Failed to load CFPs:', err);
+      const msg = err.response?.data?.error || err.message || 'Unable to connect to server. It may be waking up.';
+      setFetchError(msg);
+      showToast('Failed to load Calls for Papers. Please retry.', 'error');
     } finally {
       setLoading(false);
     }
@@ -332,13 +339,25 @@ const AdminCallForPapers = () => {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreate}
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-black text-white font-black text-xs uppercase tracking-wider hover:bg-zinc-800 transition-all shadow-lg shadow-black/10 active:scale-95 cursor-pointer"
-        >
-          <Plus size={16} />
-          <span>Create Call for Papers</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchCFPs}
+            disabled={loading}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-3 rounded-xl bg-zinc-100 text-zinc-700 font-bold text-xs hover:bg-zinc-200 transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh Calls for Papers"
+          >
+            <RefreshCw size={15} className={cn(loading && "animate-spin")} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+
+          <button
+            onClick={handleOpenCreate}
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-black text-white font-black text-xs uppercase tracking-wider hover:bg-zinc-800 transition-all shadow-lg shadow-black/10 active:scale-95 cursor-pointer"
+          >
+            <Plus size={16} />
+            <span>Create Call for Papers</span>
+          </button>
+        </div>
       </div>
 
       {/* Overview Metric Cards */}
@@ -419,6 +438,21 @@ const AdminCallForPapers = () => {
             <div className="bg-white border border-zinc-200 rounded-2xl p-12 text-center text-zinc-500">
               <Loader2 size={24} className="animate-spin mx-auto mb-2" />
               <p className="text-xs font-semibold">Loading Call for Papers...</p>
+            </div>
+          ) : fetchError && cfps.length === 0 ? (
+            <div className="bg-white border border-rose-200 rounded-2xl p-10 text-center space-y-3 shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center mx-auto text-rose-600">
+                <AlertTriangle size={24} />
+              </div>
+              <h3 className="text-base font-bold text-zinc-900">Failed to Load Calls for Papers</h3>
+              <p className="text-xs text-zinc-500 max-w-md mx-auto">{fetchError}</p>
+              <button
+                onClick={fetchCFPs}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all cursor-pointer shadow-md"
+              >
+                <RefreshCw size={14} />
+                <span>Retry Connection</span>
+              </button>
             </div>
           ) : filteredCFPs.length === 0 ? (
             <div className="bg-white border border-zinc-200 rounded-2xl p-12 text-center">
