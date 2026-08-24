@@ -312,15 +312,15 @@ const AdminReadersList = () => {
           className={cn(
             "p-5 rounded-3xl border transition-all cursor-pointer shadow-sm",
             filterTab === 'all' 
-              ? "bg-zinc-100 border-zinc-400 ring-2 ring-black/10" 
+              ? "bg-blue-50/60 border-blue-300 ring-2 ring-blue-500/20" 
               : "bg-white border-zinc-200 hover:border-zinc-300"
           )}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-700">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
               <Users size={20} />
             </div>
-            <span className="text-[10px] font-bold text-zinc-400 uppercase">
+            <span className="text-[10px] font-bold text-blue-600 uppercase">
               All Users
             </span>
           </div>
@@ -354,20 +354,20 @@ const AdminReadersList = () => {
           className={cn(
             "p-5 rounded-3xl border transition-all cursor-pointer shadow-sm",
             filterTab === 'non_subscribers' 
-              ? "bg-blue-50/60 border-blue-300 ring-2 ring-blue-500/20" 
+              ? "bg-zinc-100 border-zinc-400 ring-2 ring-black/10" 
               : "bg-white border-zinc-200 hover:border-zinc-300"
           )}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+            <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-700">
               <User size={20} />
             </div>
-            <span className="text-[10px] font-bold text-blue-600 uppercase">
-              Standard
+            <span className="text-[10px] font-bold text-zinc-500 uppercase">
+              Non-Subscribers
             </span>
           </div>
           <h3 className="text-3xl font-bold text-black tracking-tighter mb-1">{nonSubscriberCount}</h3>
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Free Tier / Standard</p>
+          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Non-Subscribers</p>
         </div>
       </div>
 
