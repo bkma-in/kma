@@ -37,13 +37,7 @@ The system features a role-based architecture with dedicated dashboards for Auth
 - Routing: React Router
 - State & Structure: Modular and scalable architecture
 
----
 
-## 🧹 Project Improvements
-
-- ✅ Removed Vue files → standardized to React/TypeScript
-- ✅ Reorganized scalable folder structure
-- ✅ Fixed all import paths and routing
 
 ---
 

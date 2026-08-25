@@ -6,6 +6,7 @@ import { CFPHero } from '../components/cfp/CFPHero';
 import { CFPList } from '../components/cfp/CFPList';
 import type { CallForPaper } from '../types/cfp';
 import { getCFPs } from '../services/cfp.service';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export const CallForPapersPublic: React.FC = () => {
@@ -13,6 +14,7 @@ export const CallForPapersPublic: React.FC = () => {
 
   const [cfps, setCfps] = useState<CallForPaper[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('published'); // Current Calls by default
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('');
@@ -55,12 +57,15 @@ export const CallForPapersPublic: React.FC = () => {
 
   const fetchCFPs = async () => {
     try {
+      setLoading(true);
+      setFetchError(null);
       const res = await getCFPs();
       if (res.success) {
-        setCfps(res.cfps);
+        setCfps(res.cfps || []);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load CFPs:', err);
+      setFetchError(err.response?.data?.error || err.message || 'Failed to load calls for papers');
     } finally {
       setLoading(false);
     }
@@ -204,11 +209,28 @@ export const CallForPapersPublic: React.FC = () => {
         </div>
 
         {/* List of Call for Papers Cards */}
-        <CFPList
-          cfps={filteredCFPs}
-          loading={loading}
-          onReadMore={(cfp) => navigate(`/call-for-papers/${cfp.id}`)}
-        />
+        {fetchError && cfps.length === 0 && !loading ? (
+          <div className="bg-white border border-rose-200 rounded-3xl p-10 text-center space-y-4 shadow-sm max-w-xl mx-auto my-8">
+            <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center mx-auto text-rose-600">
+              <AlertTriangle size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-zinc-900">Unable to Load Calls for Papers</h3>
+            <p className="text-xs text-zinc-500 max-w-md mx-auto">{fetchError}</p>
+            <button
+              onClick={fetchCFPs}
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-black text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all cursor-pointer shadow-md"
+            >
+              <RefreshCw size={14} />
+              <span>Retry Connection</span>
+            </button>
+          </div>
+        ) : (
+          <CFPList
+            cfps={filteredCFPs}
+            loading={loading}
+            onReadMore={(cfp) => navigate(`/call-for-papers/${cfp.id}`)}
+          />
+        )}
       </main>
 
       <PublicFooter />

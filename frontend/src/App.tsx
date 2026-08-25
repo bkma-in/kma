@@ -265,8 +265,10 @@ function AuthorRoutes() {
         <Route path="submit" element={lazyRoute(SubmitArticle)} />
         <Route path="drafts" element={lazyRoute(Drafts)} />
         <Route path="revision-required" element={lazyRoute(AuthorRevisionRequired)} />
+        <Route path="revision required" element={<Navigate to="revision-required" replace />} />
         <Route path="notifications" element={lazyRoute(Notifications)} />
         <Route path="profile" element={lazyRoute(ReaderProfile)} />
+        <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Route>
     </Routes>
   );
@@ -279,15 +281,22 @@ function AdminRoutes() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={lazyRoute(AdminDashboard)} />
         <Route path="call-for-papers" element={lazyRoute(AdminCallForPapers)} />
+        <Route path="call for papers" element={<Navigate to="call-for-papers" replace />} />
         <Route path="cfp" element={<Navigate to="call-for-papers" replace />} />
         <Route path="reviewers" element={lazyRoute(AdminAuthors)} />
         <Route path="authors-list" element={lazyRoute(AdminAuthorsList)} />
+        <Route path="authors list" element={<Navigate to="authors-list" replace />} />
+        <Route path="authors" element={<Navigate to="authors-list" replace />} />
         <Route path="readers" element={lazyRoute(AdminReadersList)} />
         <Route path="articles" element={lazyRoute(AdminArticles)} />
         <Route path="ready-to-publish" element={lazyRoute(AdminReadyToPublish)} />
+        <Route path="ready to publish" element={<Navigate to="ready-to-publish" replace />} />
         <Route path="published-articles" element={lazyRoute(AdminPublishedArticles)} />
+        <Route path="published articles" element={<Navigate to="published-articles" replace />} />
+        <Route path="published" element={<Navigate to="published-articles" replace />} />
         <Route path="notifications" element={lazyRoute(Notifications)} />
         <Route path="profile" element={lazyRoute(ReaderProfile)} />
+        <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Route>
     </Routes>
   );
@@ -302,6 +311,7 @@ function ReviewerRoutes() {
         <Route path="articles" element={lazyRoute(ReviewerArticles)} />
         <Route path="notifications" element={lazyRoute(ReviewerNotifications)} />
         <Route path="profile" element={lazyRoute(ReaderProfile)} />
+        <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Route>
     </Routes>
   );
@@ -318,6 +328,8 @@ function ReaderRoutes() {
         <Route path="saved" element={lazyRoute(ReaderSavedArticles)} />
         <Route path="profile" element={lazyRoute(ReaderProfile)} />
         <Route path="get-subscription" element={lazyRoute(GetSubscription)} />
+        <Route path="get subscription" element={<Navigate to="get-subscription" replace />} />
+        <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Route>
     </Routes>
   );
@@ -332,6 +344,7 @@ function DeveloperRoutes() {
         <Route path="issues" element={lazyRoute(DeveloperIssues)} />
         <Route path="notifications" element={lazyRoute(DeveloperNotifications)} />
         <Route path="profile" element={lazyRoute(ReaderProfile)} />
+        <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Route>
     </Routes>
   );
