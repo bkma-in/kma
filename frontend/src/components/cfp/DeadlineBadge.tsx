@@ -1,6 +1,7 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { formatDateDDMMYYYY } from '../../utils/dateHelpers';
 
 interface DeadlineBadgeProps {
   deadline: string;
@@ -15,11 +16,7 @@ export const DeadlineBadge: React.FC<DeadlineBadgeProps> = ({ deadline, classNam
   const diffTime = targetDate.getTime() - now.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  const formattedDate = targetDate.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
+  const formattedDate = formatDateDDMMYYYY(deadline);
 
   let remainingText = '';
   let badgeColor = 'bg-zinc-100 text-zinc-700 border-zinc-200';
