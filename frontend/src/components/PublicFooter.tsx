@@ -121,14 +121,28 @@ const PublicFooter: React.FC = () => {
                   href="https://chetanbschool.org/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-zinc-900/80 border border-zinc-800 text-[10px] font-bold text-zinc-300 tracking-tight transition-colors hover:bg-zinc-800"
+                  className="inline-flex items-center justify-center px-2.5 xs:px-4 py-1.5 rounded-full bg-zinc-900/80 border border-zinc-800 text-[8.5px] xs:text-[9.5px] sm:text-[10px] font-bold text-zinc-300 tracking-tight transition-colors hover:bg-zinc-800 whitespace-nowrap"
                 >
                   Chetan Business School <span className="text-zinc-500 font-normal px-1">|</span> Hubballi-580031
                 </a>
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 mt-0.5">
-                  <span>Nandeesh MN</span>
+                  <a
+                    href="https://nandeeshmn.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors"
+                  >
+                    Nandeesh MN
+                  </a>
                   <span className="text-zinc-600 font-normal">•</span>
-                  <span>Shivanand VN</span>
+                  <a
+                    href="https://shivanandvn.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors"
+                  >
+                    Shivanand VN
+                  </a>
                 </div>
               </div>
             </div>
