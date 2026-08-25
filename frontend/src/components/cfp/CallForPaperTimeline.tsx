@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar, Clock, BookOpen, Send } from 'lucide-react';
+import { formatDateDDMMYYYY } from '../../utils/dateHelpers';
 
 interface CallForPaperTimelineProps {
   openingDate?: string;
@@ -14,17 +15,7 @@ export const CallForPaperTimeline: React.FC<CallForPaperTimelineProps> = ({
 }) => {
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'TBA';
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return dateStr;
-    }
+    return formatDateDDMMYYYY(dateStr);
   };
 
   const steps = [

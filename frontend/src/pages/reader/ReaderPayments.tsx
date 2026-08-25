@@ -10,22 +10,33 @@ import {
   FileText,
   Printer,
   X,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { ReceiptTemplate } from '../../components/ReceiptTemplate';
-import { getUserSubscriptions } from '../../services/razorpay.service';
+import { getPaymentHistory, getUserSubscriptions } from '../../services/razorpay.service';
 
-type PaymentStatus = 'Paid' | 'Pending' | 'Failed';
+type PaymentStatus = 'Paid' | 'Pending' | 'Failed' | 'Cancelled';
 
-interface Payment {
+interface PaymentAttemptItem {
   id: string;
+  attemptId: string;
+  internalOrderId?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
   amount: string;
+  amountRaw?: number;
   date: string;
   status: PaymentStatus;
+  rawStatus?: string;
   article: string;
+  plan?: string;
+  paymentMethod?: string;
+  failureReason?: string;
+  receiptAvailable?: boolean;
 }
 
 const ReaderPayments = () => {
@@ -33,16 +44,23 @@ const ReaderPayments = () => {
   const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<PaymentStatus | 'All'>('All');
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [payments, setPayments] = useState<PaymentAttemptItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchPayments = async () => {
       try {
         setLoading(true);
-        const data = await getUserSubscriptions();
-        if (data && data.success && Array.isArray(data.subscriptions)) {
-          setPayments(data.subscriptions);
+        // Fetch full payment attempts history
+        const data = await getPaymentHistory();
+        if (data && data.success && Array.isArray(data.attempts)) {
+          setPayments(data.attempts);
+        } else {
+          // Fallback to my-subscriptions if attempt history endpoint is empty
+          const fallbackData = await getUserSubscriptions();
+          if (fallbackData && fallbackData.success && Array.isArray(fallbackData.subscriptions)) {
+            setPayments(fallbackData.subscriptions);
+          }
         }
       } catch (err: any) {
         console.error('Failed to load payment history:', err);
@@ -54,16 +72,21 @@ const ReaderPayments = () => {
     fetchPayments();
   }, []);
 
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentAttemptItem | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleViewReceipt = (payment: Payment) => {
+  const handleViewReceipt = (payment: PaymentAttemptItem) => {
+    if (payment.status !== 'Paid' && !payment.receiptAvailable) {
+      showToast('Official receipts are issued exclusively for successful, verified payments.', 'info');
+      return;
+    }
     setSelectedPayment(payment);
     setIsModalOpen(true);
   };
 
   // Helper to format date YYYY-MM-DD to DD/MM/YYYY
   const formatDateString = (dateStr: string) => {
+    if (!dateStr) return '';
     const parts = dateStr.split('-');
     if (parts.length !== 3) return dateStr;
     const [year, month, day] = parts;
@@ -91,7 +114,9 @@ const ReaderPayments = () => {
 
   const filteredPayments = payments.filter(p => {
     const matchesSearch = p.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.article.toLowerCase().includes(searchTerm.toLowerCase());
+                          p.article.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (p.razorpayPaymentId && p.razorpayPaymentId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                          (p.razorpayOrderId && p.razorpayOrderId.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -100,138 +125,157 @@ const ReaderPayments = () => {
     <>
       <div className="space-y-8 animate-in fade-in duration-700 no-print">
         {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-bold text-black tracking-tight font-['Outfit']">Payment History</h1>
-          <p className="text-zinc-500 mt-1">Manage your transactions and download receipts.</p>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <h1 className="text-3xl font-bold text-black tracking-tight font-['Outfit']">Payment History</h1>
+            <p className="text-zinc-500 mt-1">Audit log of all your transaction attempts and official membership receipts.</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+              <input 
+                type="text"
+                placeholder="Search transaction ID..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black w-64 focus:ring-1 focus:ring-black outline-none transition-all shadow-sm"
+              />
+            </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+              <select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as PaymentStatus | 'All')}
+                className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black focus:ring-1 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm"
+              >
+                <option value="All">All Status</option>
+                <option value="Paid">Paid / Fulfilled</option>
+                <option value="Pending">Pending</option>
+                <option value="Failed">Failed</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-            <input 
-              type="text"
-              placeholder="Search payments..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black w-64 focus:ring-1 focus:ring-black outline-none transition-all shadow-sm"
-            />
-          </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as PaymentStatus | 'All')}
-              className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black focus:ring-1 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm"
-            >
-              <option value="All">All Status</option>
-              <option value="Paid">Paid</option>
-              <option value="Pending">Pending</option>
-              <option value="Failed">Failed</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Payments Table Container */}
-      <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-zinc-50 border-b border-zinc-200">
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Transaction</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Article</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Amount</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Receipt</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {filteredPayments.map((payment) => (
-                <tr key={payment.id} className="group hover:bg-zinc-50 transition-colors">
-                  <td className="px-6 py-5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-400 group-hover:text-black transition-colors">
-                        <CreditCard size={16} />
+        {/* Payments Table Container */}
+        <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-zinc-50 border-b border-zinc-200">
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Transaction / Payment ID</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Subscription Plan</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Amount</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Date</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Receipt</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100">
+                {filteredPayments.map((payment) => (
+                  <tr key={payment.id} className="group hover:bg-zinc-50 transition-colors">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-400 group-hover:text-black transition-colors">
+                          <CreditCard size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-black">{payment.razorpayPaymentId || payment.id}</p>
+                          {payment.razorpayOrderId && (
+                            <p className="text-[10px] text-zinc-400 font-mono">Order: {payment.razorpayOrderId}</p>
+                          )}
+                        </div>
                       </div>
-                      <span className="text-xs font-bold text-black">{payment.id}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-5">
-                    <p className="text-xs text-zinc-500 font-medium line-clamp-1 max-w-[200px]">{payment.article}</p>
-                  </td>
-                  <td className="px-6 py-5">
-                    <span className="text-sm font-black text-black">{payment.amount}</span>
-                  </td>
-                  <td className="px-6 py-5">
-                    <span className="text-[10px] text-zinc-400 font-bold uppercase">{payment.date}</span>
-                  </td>
-                  <td className="px-6 py-5">
-                    <span className={cn(
-                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                      payment.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                      payment.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
-                      'bg-rose-50 text-rose-600 border-rose-100'
-                    )}>
-                      {payment.status === 'Paid' ? <CheckCircle2 size={10} /> : 
-                       payment.status === 'Pending' ? <Clock size={10} /> : 
-                       <XCircle size={10} />}
-                      {payment.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-5 text-right">
-                    <button 
-                      onClick={() => handleViewReceipt(payment)}
-                      className={cn(
-                        "p-2 rounded-lg transition-all",
-                        payment.status === 'Paid' 
-                          ? "bg-zinc-50 hover:bg-black text-zinc-400 hover:text-white" 
-                          : "bg-zinc-100 text-zinc-300 opacity-50 cursor-not-allowed"
+                    </td>
+                    <td className="px-6 py-5">
+                      <p className="text-xs text-zinc-700 font-semibold">{payment.article}</p>
+                      {payment.paymentMethod && (
+                        <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider block mt-0.5">
+                          Method: {payment.paymentMethod}
+                        </span>
                       )}
-                      disabled={payment.status !== 'Paid'}
-                      aria-disabled={payment.status !== 'Paid'}
-                      title="View Receipt"
-                    >
-                      <Download size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3 text-zinc-400">
-                      <Loader2 size={28} className="animate-spin text-black" />
-                      <p className="text-xs font-bold uppercase tracking-widest">Loading transactions...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredPayments.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center gap-4 opacity-30">
-                      <FileText size={48} className="text-zinc-400" />
-                      <p className="text-xs font-bold uppercase tracking-widest text-zinc-600">No transactions found</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-sm font-black text-black">{payment.amount}</span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase">{payment.date}</span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div>
+                        <span className={cn(
+                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                          payment.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                          payment.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
+                          'bg-rose-50 text-rose-600 border-rose-100'
+                        )}>
+                          {payment.status === 'Paid' ? <CheckCircle2 size={10} /> : 
+                           payment.status === 'Pending' ? <Clock size={10} /> : 
+                           <XCircle size={10} />}
+                          {payment.status}
+                        </span>
+                        {payment.status === 'Failed' && payment.failureReason && (
+                          <p className="text-[10px] text-rose-500 font-medium mt-1 flex items-center gap-1 max-w-[200px] truncate" title={payment.failureReason}>
+                            <AlertCircle size={10} className="shrink-0" /> {payment.failureReason}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 text-right">
+                      <button 
+                        onClick={() => handleViewReceipt(payment)}
+                        className={cn(
+                          "p-2 rounded-lg transition-all",
+                          (payment.status === 'Paid' || payment.receiptAvailable)
+                            ? "bg-zinc-50 hover:bg-black text-zinc-400 hover:text-white cursor-pointer" 
+                            : "bg-zinc-100 text-zinc-300 opacity-50 cursor-not-allowed"
+                        )}
+                        disabled={payment.status !== 'Paid' && !payment.receiptAvailable}
+                        aria-disabled={payment.status !== 'Paid' && !payment.receiptAvailable}
+                        title={payment.status === 'Paid' || payment.receiptAvailable ? "View Official Receipt" : "Receipt unavailable for failed/pending attempt"}
+                      >
+                        <Download size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-16 text-center">
+                      <div className="flex flex-col items-center gap-3 text-zinc-400">
+                        <Loader2 size={28} className="animate-spin text-black" />
+                        <p className="text-xs font-bold uppercase tracking-widest">Loading transaction audit history...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredPayments.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-4 opacity-30">
+                        <FileText size={48} className="text-zinc-400" />
+                        <p className="text-xs font-bold uppercase tracking-widest text-zinc-600">No payment attempts recorded</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-    </div> {/* End of no-print page wrapper */}
+      </div> {/* End of no-print page wrapper */}
 
-      {/* Receipt Modal */}
+      {/* Official Receipt Modal */}
       {isModalOpen && selectedPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm receipt-modal-backdrop animate-in fade-in duration-300">
           <div className="bg-white rounded-3xl overflow-hidden shadow-2xl max-w-4xl w-full max-h-[95vh] flex flex-col border border-zinc-200 receipt-modal-card">
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50 no-print">
               <div>
-                <h3 className="text-sm font-black text-black uppercase tracking-wider">Receipt Preview</h3>
-                <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">Transaction Ref: {selectedPayment.id}</p>
+                <h3 className="text-sm font-black text-black uppercase tracking-wider">Official Payment Receipt Preview</h3>
+                <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">
+                  Transaction Ref: {selectedPayment.razorpayPaymentId || selectedPayment.id}
+                </p>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -245,15 +289,15 @@ const ReaderPayments = () => {
             {/* Modal Body / Scroll Container */}
             <div className="flex-1 overflow-y-auto p-6 bg-zinc-100/50 flex justify-center">
               <ReceiptTemplate 
-                receiptNumber={selectedPayment.id.replace('PAY-', '')}
+                receiptNumber={(selectedPayment.razorpayPaymentId || selectedPayment.id).replace('pay_', '').replace('PAY-', '')}
                 date={formatDateString(selectedPayment.date)}
-                memberName={currentUser?.name || localStorage.getItem('userName') || ''}
-                amount={selectedPayment.amount.replace('₹', '')}
-                amountInWords={numberToWords(parseInt(selectedPayment.amount.replace('₹', '')))}
-                membershipType="Article Subscription"
-                journalYear={selectedPayment.date.substring(0, 4)}
-                paymentMethod="Online Payment (UPI/Card)"
-                transactionId={`TXN-${selectedPayment.id}-${selectedPayment.date.replace(/-/g, '')}`}
+                memberName={currentUser?.name || localStorage.getItem('userName') || 'Member'}
+                amount={(selectedPayment.amountRaw || selectedPayment.amount).toString().replace('₹', '')}
+                amountInWords={numberToWords(parseInt((selectedPayment.amountRaw || selectedPayment.amount).toString().replace('₹', '')) || 2000)}
+                membershipType={selectedPayment.plan === 'lifetime' ? 'Life Membership Pass' : 'Annual Pass Subscription'}
+                journalYear={selectedPayment.date.substring(0, 4) || new Date().getFullYear().toString()}
+                paymentMethod={selectedPayment.paymentMethod ? `Online Payment (${selectedPayment.paymentMethod.toUpperCase()})` : 'Online Payment (Razorpay)'}
+                transactionId={selectedPayment.razorpayPaymentId || `TXN-${selectedPayment.id}`}
                 status="PAID"
               />
             </div>
