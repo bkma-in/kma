@@ -121,7 +121,7 @@ const PublicFooter: React.FC = () => {
                   href="https://chetanbschool.org/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-zinc-900/80 border border-zinc-800 text-[10px] font-bold text-zinc-300 tracking-tight transition-colors hover:bg-zinc-800"
+                  className="inline-flex items-center justify-center px-2.5 xs:px-4 py-1.5 rounded-full bg-zinc-900/80 border border-zinc-800 text-[8.5px] xs:text-[9.5px] sm:text-[10px] font-bold text-zinc-300 tracking-tight transition-colors hover:bg-zinc-800 whitespace-nowrap"
                 >
                   Chetan Business School <span className="text-zinc-500 font-normal px-1">|</span> Hubballi-580031
                 </a>
