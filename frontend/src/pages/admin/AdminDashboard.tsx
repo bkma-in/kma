@@ -17,12 +17,15 @@ import {
   Loader2,
   X,
   Search,
-  Megaphone
+  Megaphone,
+  BookOpen,
+  Sparkles,
+  Crown
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
 import { getArticles } from '../../services/article.service';
-import { getReviewers } from '../../services/user.service';
+import { getReviewers, getReaders } from '../../services/user.service';
 import { getCFPs } from '../../services/cfp.service';
 import type { CallForPaper } from '../../types/cfp';
 import { useProfile } from '../../hooks/useProfile';
@@ -36,6 +39,9 @@ const AdminDashboard = () => {
   const [articles, setArticles] = useState<any[]>([]);
   const [reviewerRequestsCount, setReviewerRequestsCount] = useState(0);
   const [cfps, setCfps] = useState<CallForPaper[]>([]);
+  const [readersCount, setReadersCount] = useState(0);
+  const [subscribersCount, setSubscribersCount] = useState(0);
+  const [lifeMembersCount, setLifeMembersCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [logsSearchTerm, setLogsSearchTerm] = useState('');
@@ -55,10 +61,11 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [articlesRes, reviewersRes, cfpRes] = await Promise.all([
+        const [articlesRes, reviewersRes, cfpRes, readersRes] = await Promise.all([
           getArticles(),
           getReviewers(),
-          getCFPs()
+          getCFPs(),
+          getReaders()
         ]);
         if (articlesRes.success) {
           setArticles(articlesRes.articles);
@@ -69,6 +76,11 @@ const AdminDashboard = () => {
         }
         if (cfpRes.success) {
           setCfps(cfpRes.cfps);
+        }
+        if (readersRes.success && Array.isArray(readersRes.readers)) {
+          setReadersCount(readersRes.readers.length);
+          setSubscribersCount(readersRes.readers.filter((r: any) => r.isSubscribed || r.isLifeMember).length);
+          setLifeMembersCount(readersRes.readers.filter((r: any) => r.isLifeMember).length);
         }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
@@ -257,10 +269,10 @@ const AdminDashboard = () => {
             <p className="text-xs text-zinc-500 mt-1">There are <span className="font-bold text-black">{reviewerRequestsCount} pending applications</span> for expert reviewer roles.</p>
           </div>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-zinc-100 hover:bg-zinc-200 text-black rounded-xl text-[10px] font-black tracking-widest transition-all uppercase">
+        <NavLink to="/admin/reviewers" className="flex items-center gap-2 px-6 py-3 bg-zinc-100 hover:bg-zinc-200 text-black rounded-xl text-[10px] font-black tracking-widest transition-all uppercase">
           View Requests
           <ArrowRight size={14} />
-        </button>
+        </NavLink>
       </div>
 
       {/* Main Grid Content */}
@@ -270,30 +282,44 @@ const AdminDashboard = () => {
           {/* Quick Actions Grid */}
           <div>
             <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase mb-4 px-1">Control Hub</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <NavLink to="/admin/articles" className="group p-6 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
-                    <FileText size={20} />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <NavLink to="/admin/articles" className="group p-5 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
+                    <FileText size={18} />
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-black uppercase tracking-widest">Manage Articles</h4>
-                    <p className="text-[10px] text-zinc-400 font-medium">Review and assign manuscripts</p>
-                  </div>
+                  <ChevronRight size={18} className="text-zinc-200 group-hover:text-black transition-all" />
                 </div>
-                <ChevronRight size={20} className="text-zinc-200 group-hover:text-black transition-all" />
+                <div>
+                  <h4 className="text-xs font-bold text-black uppercase tracking-wider mb-0.5">Manuscripts</h4>
+                  <p className="text-[10px] text-zinc-400 font-medium">{articles.length} in archive</p>
+                </div>
               </NavLink>
-              <NavLink to="/admin/reviewers" className="group p-6 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
-                    <Users size={20} />
+
+              <NavLink to="/admin/reviewers" className="group p-5 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
+                    <Users size={18} />
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-black uppercase tracking-widest">Manage Reviewers</h4>
-                    <p className="text-[10px] text-zinc-400 font-medium">Verify credentials and expertise</p>
-                  </div>
+                  <ChevronRight size={18} className="text-zinc-200 group-hover:text-black transition-all" />
                 </div>
-                <ChevronRight size={20} className="text-zinc-200 group-hover:text-black transition-all" />
+                <div>
+                  <h4 className="text-xs font-bold text-black uppercase tracking-wider mb-0.5">Reviewers</h4>
+                  <p className="text-[10px] text-zinc-400 font-medium">Verify credentials</p>
+                </div>
+              </NavLink>
+
+              <NavLink to="/admin/readers" className="group p-5 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">
+                    <BookOpen size={18} />
+                  </div>
+                  <ChevronRight size={18} className="text-zinc-200 group-hover:text-black transition-all" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-black uppercase tracking-wider mb-0.5">Readers & Pass</h4>
+                  <p className="text-[10px] text-zinc-400 font-medium">{subscribersCount} subscribers • {readersCount} users</p>
+                </div>
               </NavLink>
             </div>
           </div>

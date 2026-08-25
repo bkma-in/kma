@@ -11,8 +11,11 @@ import {
   Calendar,
   Hash,
   ShieldCheck,
+  Bookmark,
+  BookmarkCheck,
 } from 'lucide-react';
 import { getPdfUrl, getPublicPdfUrl } from '../services/article.service';
+import { isLocalArticleSaved, saveLocalArticle, removeLocalSavedArticle } from '../pages/reader/ReaderSavedArticles';
 
 interface Author {
   name: string;
@@ -140,12 +143,46 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X size={16} className="text-zinc-600" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const targetId = article.id || article.articleId;
+                const isSaved = isLocalArticleSaved(targetId);
+                if (isSaved) {
+                  removeLocalSavedArticle(targetId);
+                } else {
+                  saveLocalArticle({
+                    id: targetId,
+                    title: article.title,
+                    author: article.author || (authors ? authors.map((a: any) => a.name).join(', ') : 'Author'),
+                    authors: authors,
+                    abstract: article.abstract,
+                    tag: article.tag || 'Mathematics',
+                    monthYear: article.monthYear,
+                    vol: article.vol || article.volume,
+                    issueNumber: article.issueNumber,
+                    issn: article.issn
+                  });
+                }
+              }}
+              className="px-3 py-1.5 rounded-full text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer"
+              style={{
+                backgroundColor: isLocalArticleSaved(article.id || article.articleId) ? '#f3e8ff' : '#f4f4f5',
+                color: isLocalArticleSaved(article.id || article.articleId) ? '#7e22ce' : '#3f3f46',
+                borderColor: isLocalArticleSaved(article.id || article.articleId) ? '#e9d5ff' : '#e4e4e7'
+              }}
+              title={isLocalArticleSaved(article.id || article.articleId) ? "Saved in your collection" : "Save article"}
+            >
+              {isLocalArticleSaved(article.id || article.articleId) ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+              {isLocalArticleSaved(article.id || article.articleId) ? 'Saved' : 'Save'}
+            </button>
+            <button
+              onClick={onClose}
+              className="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X size={16} className="text-zinc-600" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Content */}

@@ -41,13 +41,14 @@ const GetSubscription = () => {
         'Standard member profile',
         'Basic research support'
       ],
-      recommended: true
+      recommended: false
     },
     {
       id: 'lifetime',
-      name: 'Life Member',
+      name: 'BKMA Life Member',
       price: '₹1000',
       period: 'one-time',
+      discountTag: '50% OFF',
       features: [
         'Lifetime unlimited access',
         'Physical copies of annual journals',
@@ -77,7 +78,7 @@ const GetSubscription = () => {
         keyId: orderData.keyId,
         amount: orderData.amount,
         name: 'BKMA Research Pass',
-        description: `${planId === 'lifetime' ? 'Life Member' : 'Annual Pass'} Subscription`,
+        description: `${planId === 'lifetime' ? 'BKMA Life Member' : 'Annual Pass'} Subscription`,
         userEmail: currentUser?.email || '',
         userName: currentUser?.name || '',
         onSuccess: async (paymentResponse) => {
@@ -91,8 +92,8 @@ const GetSubscription = () => {
 
             if (verifyRes.success) {
               await refreshSubscriptionStatus();
-              showToast('Subscription activated successfully!', 'success');
-              navigate('/reader/dashboard');
+              showToast('Subscription activated successfully! Confirmation email sent.', 'success');
+              navigate('/reader/payments');
             } else {
               showToast(verifyRes.error || 'Payment verification failed', 'error');
             }
@@ -106,6 +107,10 @@ const GetSubscription = () => {
         onDismiss: () => {
           setIsLoading(false);
           showToast('Payment checkout cancelled', 'info');
+        },
+        onFailure: (error: any) => {
+          setIsLoading(false);
+          showToast(`Payment failed: ${error?.description || error?.reason || 'Transaction could not be completed'}`, 'error');
         }
       });
 
@@ -143,16 +148,16 @@ const GetSubscription = () => {
                 : "border-zinc-100 hover:border-zinc-300 shadow-sm"
             )}
           >
-            {plan.recommended && (
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-black text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                <Zap size={12} className="fill-current text-yellow-400" />
-                Most Popular
-              </div>
-            )}
-
             <div className="flex justify-between items-start mb-8">
               <div>
-                <h3 className="text-2xl font-bold text-black mb-1">{plan.name}</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-2xl font-bold text-black">{plan.name}</h3>
+                  {plan.discountTag && (
+                    <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-full text-[10px] font-black uppercase tracking-wider">
+                      {plan.discountTag}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-black text-black">{plan.price}</span>
                   <span className="text-zinc-400 text-sm font-medium">{plan.period}</span>

@@ -349,7 +349,7 @@ router.post('/:id/publish', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
         if (sendInAppNotification !== false && targetRecipients.length > 0) {
             const notifBatch = firebase_1.db.batch();
             const deadlineText = cfpData.deadline
-                ? new Date(cfpData.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                ? new Date(cfpData.deadline).toLocaleDateString('en-GB')
                 : 'Open';
             for (const r of targetRecipients) {
                 if (r.userId) {
@@ -376,6 +376,12 @@ router.post('/:id/publish', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
             const campaignResult = await (0, cfpEmailQueueService_1.createCfpEmailCampaign)(cfpData, targetRecipients, publishedAt);
             emailEnqueuedCount = campaignResult.totalEnqueued;
             campaignId = campaignResult.campaignId;
+            // Trigger immediate email dispatch for today's quota (up to 100 emails instantly)
+            (0, cfpEmailQueueService_1.processPendingEmailQueueBatch)().then((dispatchRes) => {
+                console.log(`[CFP] Immediate email dispatch complete upon publish: ${dispatchRes.processedInCall} emails sent.`);
+            }).catch((err) => {
+                console.error('[CFP] Immediate email dispatch error upon publish:', err);
+            });
         }
         res.json({
             success: true,
