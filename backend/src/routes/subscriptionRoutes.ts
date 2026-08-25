@@ -1,19 +1,102 @@
 import { Router, Response } from 'express';
 import crypto from 'crypto';
+import axios from 'axios';
 import { db } from '../config/firebase';
 import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
 import Razorpay from 'razorpay';
 import { config } from '../config/env';
 import { paymentRateLimiter } from '../middleware/rateLimiter';
+import { fulfillSuccessfulSubscriptionPayment } from '../services/subscriptionFulfillment';
 
 const razorpay = new Razorpay({
   key_id: config.payments.razorpay.keyId,
   key_secret: config.payments.razorpay.keySecret,
 });
 
+async function createRazorpayOrderHelper(options: { amount: number; currency: string; receipt: string; notes?: any }) {
+  try {
+    return await razorpay.orders.create(options);
+  } catch (sdkErr: any) {
+    console.warn('[RAZORPAY-SDK-WARN] SDK create order failed, using direct REST fallback:', sdkErr.message || sdkErr);
+    const keyId = config.payments.razorpay.keyId;
+    const keySecret = config.payments.razorpay.keySecret;
+    const authHeader = 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+    try {
+      const response = await axios.post('https://api.razorpay.com/v1/orders', options, {
+        headers: {
+          Authorization: authHeader,
+          'Content-Type': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (axiosErr: any) {
+      if (axiosErr.response) {
+        const errorDesc = axiosErr.response.data?.error?.description || 'Razorpay API rejected request';
+        const code = axiosErr.response.status;
+        throw new Error(`Razorpay API Error (${code}): ${errorDesc}`);
+      }
+      throw new Error(`Razorpay connection error: ${axiosErr.message}`);
+    }
+  }
+}
+
 const router = Router();
 
-// List user's subscriptions and purchases
+// GET /subscriptions/payment-history - List user's payment attempt history (All attempts: pending, failed, fulfilled)
+router.get('/payment-history', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { uid } = req.user!;
+
+    // Query paymentAttempts collection for the authenticated user
+    const attemptsSnapshot = await db.collection('paymentAttempts')
+      .where('userId', '==', uid)
+      .get();
+
+    const attempts = attemptsSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      const createdAtDate = data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : new Date());
+      const dateStr = createdAtDate.toISOString().split('T')[0];
+
+      return {
+        attemptId: data.attemptId || doc.id,
+        id: data.attemptId || doc.id,
+        internalOrderId: data.internalOrderId,
+        razorpayOrderId: data.razorpayOrderId,
+        razorpayPaymentId: data.razorpayPaymentId || null,
+        plan: data.plan || 'annual',
+        article: data.plan === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription',
+        amount: data.amount ? `₹${data.amount}` : '₹2000',
+        amountRaw: data.amount || 2000,
+        currency: data.currency || 'INR',
+        date: dateStr,
+        createdAt: createdAtDate.toISOString(),
+        status: data.status === 'fulfilled' || data.status === 'paid' ? 'Paid' : 
+                data.status === 'failed' ? 'Failed' : 
+                data.status === 'cancelled' ? 'Cancelled' : 'Pending',
+        rawStatus: data.status,
+        paymentMethod: data.paymentMethod || 'online',
+        failureReason: data.failureReason || null,
+        errorCode: data.errorCode || null,
+        verifiedAt: data.verifiedAt?.toDate ? data.verifiedAt.toDate().toISOString() : data.verifiedAt || null,
+        fulfilledAt: data.fulfilledAt?.toDate ? data.fulfilledAt.toDate().toISOString() : data.fulfilledAt || null,
+        receiptAvailable: data.status === 'fulfilled' || data.status === 'paid'
+      };
+    });
+
+    // Sort newest first
+    attempts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    res.json({
+      success: true,
+      attempts
+    });
+  } catch (error: any) {
+    console.error('List payment history error:', error);
+    res.status(500).json({ error: 'Failed to retrieve payment history' });
+  }
+});
+
+// GET /subscriptions/my-subscriptions - List user's subscriptions
 router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.user!;
@@ -23,51 +106,28 @@ router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res: Respo
       .where('userId', '==', uid)
       .get();
 
-    // Fetch purchases
-    const purchaseSnapshot = await db.collection('purchases')
-      .where('userId', '==', uid)
-      .get();
-
     const subscriptions = subSnapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
         id: data.subscriptionId || doc.id,
         type: 'subscription',
-        planType: data.type || 'annual',
+        planType: data.type || data.plan || 'annual',
         amount: data.amount ? `₹${data.amount}` : (data.type === 'lifetime' ? '₹1000' : '₹2000'),
         date: data.createdAt?.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         status: data.status === 'active' ? 'Paid' : data.status === 'pending' ? 'Pending' : 'Failed',
         rawStatus: data.status,
-        article: data.type === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription',
-        paymentId: data.paymentId
+        article: data.type === 'lifetime' || data.plan === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription',
+        paymentId: data.razorpayPaymentId || data.razorpayOrderId || data.paymentId
       };
     });
-
-    const purchases = purchaseSnapshot.docs.map((doc: any) => {
-      const data = doc.data();
-      return {
-        id: data.purchaseId || doc.id,
-        type: 'purchase',
-        amount: `₹${data.amount || 499}`,
-        date: data.createdAt?.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        status: data.status === 'completed' ? 'Paid' : data.status === 'pending' ? 'Pending' : 'Failed',
-        rawStatus: data.status,
-        article: `Article Purchase (ID: ${data.articleId})`,
-        articleId: data.articleId,
-        paymentId: data.paymentId
-      };
-    });
-
-    const combined = [...subscriptions, ...purchases].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const hasActiveSubscription = subscriptions.some(s => s.rawStatus === 'active');
 
     res.json({ 
       success: true, 
       isSubscribed: hasActiveSubscription,
-      subscriptions: combined,
-      activeSubscriptions: subscriptions.filter(s => s.rawStatus === 'active'),
-      completedPurchases: purchases.filter(p => p.rawStatus === 'completed')
+      subscriptions: subscriptions,
+      activeSubscriptions: subscriptions.filter(s => s.rawStatus === 'active')
     });
   } catch (error) {
     console.error('List subscriptions error:', error);
@@ -75,102 +135,86 @@ router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res: Respo
   }
 });
 
-// Create Razorpay Order for Subscription
+// POST /subscriptions/create-order - Create Razorpay Order for Subscription (Annual: ₹2,000, Lifetime: ₹1,000)
 router.post('/create-order', requireAuth, paymentRateLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { uid, email } = req.user!;
-    const { issueId, type = 'annual' } = req.body; // type: "annual" (2000) or "lifetime" (1000)
+    const { type, plan } = req.body;
     
+    const requestedPlan = (type || plan || 'annual').toLowerCase().trim();
+
+    // SERVER-SIDE PRICE SECURITY: Strictly resolve prices on backend
     let orderAmount = 2000;
-    if (type === 'lifetime' || type === 'online') {
+    if (requestedPlan === 'lifetime') {
       orderAmount = 1000;
-    } else if (type === 'annual' || type === 'online_print') {
+    } else if (requestedPlan === 'annual') {
       orderAmount = 2000;
+    } else {
+      return res.status(400).json({ error: 'Invalid subscription plan requested. Allowed plans: annual, lifetime.' });
+    }
+
+    // Check if user already has an active subscription
+    const existingActiveSub = await db.collection('subscriptions')
+      .where('userId', '==', uid)
+      .where('status', '==', 'active')
+      .limit(1)
+      .get();
+
+    if (!existingActiveSub.empty) {
+      return res.status(400).json({ 
+        error: 'You already have an active BKMA subscription pass.' 
+      });
     }
 
     const options = {
       amount: orderAmount * 100, // amount in paise (INR)
       currency: "INR",
-      receipt: `sub_${Date.now()}_${uid.substring(0,5)}`,
+      receipt: `sub_${Date.now()}_${uid.substring(0, 5)}`,
       notes: {
         userId: uid,
         email: email || '',
-        issueId: issueId || 'all',
-        type: type
+        plan: requestedPlan
       }
     };
 
-    const order = await razorpay.orders.create(options);
+    const order = await createRazorpayOrderHelper(options);
 
-    // Save pending subscription in Firestore
+    // Save pending subscription document in Firestore
     const subRef = db.collection('subscriptions').doc();
     await subRef.set({
       subscriptionId: subRef.id,
       userId: uid,
-      issueId: issueId || null,
-      type,
+      type: requestedPlan,
+      plan: requestedPlan,
       amount: orderAmount,
+      amountInPaise: orderAmount * 100,
+      currency: 'INR',
       status: 'pending',
+      paymentStatus: 'pending',
+      fulfillmentStatus: 'pending',
+      razorpayOrderId: order.id,
       paymentId: order.id,
+      provider: 'razorpay',
+      environment: process.env.NODE_ENV === 'production' ? 'live' : 'test',
       createdAt: new Date(),
       updatedAt: new Date()
     });
 
-    res.json({ 
-      success: true, 
-      orderId: order.id,
-      paymentSessionId: order.id,
-      amount: orderAmount,
-      keyId: config.payments.razorpay.keyId
-    });
-
-  } catch (error: any) {
-    console.error('Create order error:', error);
-    res.status(500).json({ error: 'Failed to create payment order' });
-  }
-});
-
-// Create Razorpay Order for Single Article Purchase
-router.post('/create-article-order', requireAuth, paymentRateLimiter, async (req: AuthRequest, res: Response) => {
-  try {
-    const { uid, email } = req.user!;
-    const { articleId } = req.body;
-    
-    if (!articleId) {
-      return res.status(400).json({ error: 'Article ID is required' });
-    }
-
-    const articleDoc = await db.collection('articles').doc(articleId).get();
-    if (!articleDoc.exists) {
-      return res.status(404).json({ error: 'Article not found' });
-    }
-
-    const orderAmount = 499;
-
-    const options = {
-      amount: orderAmount * 100, // paise
-      currency: "INR",
-      receipt: `art_${Date.now()}_${uid.substring(0,5)}`,
-      notes: {
-        userId: uid,
-        email: email || '',
-        articleId: articleId,
-        type: 'article_purchase'
-      }
-    };
-
-    const order = await razorpay.orders.create(options);
-
-    // Save pending purchase in Firestore
-    const purchaseRef = db.collection('purchases').doc();
-    await purchaseRef.set({
-      purchaseId: purchaseRef.id,
+    // Create NEW pending paymentAttempt document (Append-Only log)
+    const attemptRef = db.collection('paymentAttempts').doc();
+    await attemptRef.set({
+      attemptId: attemptRef.id,
       userId: uid,
-      articleId,
+      internalOrderId: subRef.id,
+      razorpayOrderId: order.id,
+      razorpayPaymentId: null,
+      plan: requestedPlan,
       amount: orderAmount,
-      currency: "INR",
+      amountInPaise: orderAmount * 100,
+      currency: 'INR',
+      provider: 'razorpay',
+      environment: process.env.NODE_ENV === 'production' ? 'live' : 'test',
       status: 'pending',
-      paymentId: order.id,
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -178,24 +222,27 @@ router.post('/create-article-order', requireAuth, paymentRateLimiter, async (req
     res.json({ 
       success: true, 
       orderId: order.id,
+      attemptId: attemptRef.id,
       paymentSessionId: order.id,
       amount: orderAmount,
       keyId: config.payments.razorpay.keyId
     });
 
   } catch (error: any) {
-    console.error('Create article order error:', error);
-    res.status(500).json({ error: 'Failed to create payment order' });
+    console.error('Create subscription order error:', error);
+    const status = error.message?.includes('Razorpay API Error') || error.message?.includes('Invalid') ? 400 : 500;
+    res.status(status).json({ error: error.message || 'Failed to create payment order' });
   }
 });
 
-// Verify Razorpay Payment Signature
+// POST /subscriptions/verify-payment - Verify Razorpay Payment Signature
 router.post('/verify-payment', requireAuth, paymentRateLimiter, async (req: AuthRequest, res: Response) => {
   try {
+    const { uid } = req.user!;
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return res.status(400).json({ error: 'Missing payment verification parameters' });
+      return res.status(400).json({ error: 'Missing payment verification parameters (razorpay_order_id, razorpay_payment_id, razorpay_signature are required)' });
     }
 
     const secret = config.payments.razorpay.keySecret;
@@ -210,93 +257,48 @@ router.post('/verify-payment', requireAuth, paymentRateLimiter, async (req: Auth
       return res.status(400).json({ error: 'Invalid payment signature' });
     }
 
-    // Check subscriptions collection first
-    const subSnapshot = await db.collection('subscriptions')
-      .where('paymentId', '==', razorpay_order_id)
-      .limit(1)
-      .get();
-
-    if (!subSnapshot.empty) {
-      const docRef = subSnapshot.docs[0].ref;
-      await docRef.update({
-        status: 'active',
-        razorpayPaymentId: razorpay_payment_id,
-        razorpaySignature: razorpay_signature,
-        updatedAt: new Date()
-      });
-      console.log(`[VERIFY-PAYMENT] Subscription ${docRef.id} activated for order ${razorpay_order_id}`);
-      return res.json({ success: true, message: 'Payment verified and subscription activated', type: 'subscription' });
+    // Fetch payment details from Razorpay SDK to get method info
+    let paymentMethod = 'online';
+    try {
+      const razorpayPaymentObj = await razorpay.payments.fetch(razorpay_payment_id);
+      if (razorpayPaymentObj && razorpayPaymentObj.method) {
+        paymentMethod = razorpayPaymentObj.method;
+      }
+    } catch (rzpErr) {
+      console.warn('[VERIFY-PAYMENT] Failed to fetch payment details from Razorpay SDK:', rzpErr);
     }
 
-    // Check purchases collection
-    const purchaseSnapshot = await db.collection('purchases')
-      .where('paymentId', '==', razorpay_order_id)
-      .limit(1)
-      .get();
+    // Execute shared idempotent fulfillment
+    const result = await fulfillSuccessfulSubscriptionPayment(
+      razorpay_order_id,
+      razorpay_payment_id,
+      paymentMethod,
+      uid
+    );
 
-    if (!purchaseSnapshot.empty) {
-      const docRef = purchaseSnapshot.docs[0].ref;
-      await docRef.update({
-        status: 'completed',
-        razorpayPaymentId: razorpay_payment_id,
-        razorpaySignature: razorpay_signature,
-        updatedAt: new Date()
-      });
-      console.log(`[VERIFY-PAYMENT] Purchase ${docRef.id} completed for order ${razorpay_order_id}`);
-      return res.json({ success: true, message: 'Payment verified and article purchase completed', type: 'purchase' });
+    if (!result.success) {
+      return res.status(400).json({ error: result.error || 'Payment verification failed' });
     }
 
-    return res.status(404).json({ error: 'Order record not found in system' });
+    return res.json({
+      success: true,
+      message: result.message || 'Payment verified and subscription activated',
+      alreadyFulfilled: result.alreadyFulfilled,
+      subscriptionId: result.subscriptionId,
+      attemptId: result.attemptId
+    });
+
   } catch (error: any) {
     console.error('Verify payment error:', error);
     res.status(500).json({ error: 'Failed to verify payment' });
   }
 });
 
-// Dev-only: Simulate individual article payment completion in Firestore
-router.post('/simulate-article-payment', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const { uid } = req.user!;
-    const { articleId } = req.body;
-
-    if (!articleId) {
-      return res.status(400).json({ error: 'Article ID is required' });
-    }
-
-    // Check if there is a pending purchase
-    const snapshot = await db.collection('purchases')
-      .where('userId', '==', uid)
-      .where('articleId', '==', articleId)
-      .limit(1)
-      .get();
-
-    if (!snapshot.empty) {
-      await snapshot.docs[0].ref.update({
-        status: 'completed',
-        updatedAt: new Date()
-      });
-      return res.json({ success: true, message: 'Simulated payment completed successfully' });
-    }
-
-    // If no pending purchase, create a completed one directly
-    const purchaseRef = db.collection('purchases').doc();
-    await purchaseRef.set({
-      purchaseId: purchaseRef.id,
-      userId: uid,
-      articleId,
-      amount: 499,
-      currency: "INR",
-      status: 'completed',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-
-    res.json({ success: true, message: 'Simulated purchase created directly' });
-  } catch (error: any) {
-    console.error('Simulate article payment error:', error);
-    res.status(500).json({ error: 'Failed to simulate payment' });
-  }
+// Single-Article Payment creation endpoint (Disabled - Subscriptions only scope)
+router.post('/create-article-order', requireAuth, async (_req: AuthRequest, res: Response) => {
+  return res.status(400).json({ 
+    error: 'Single article purchase is disabled. Platform access is available strictly via Annual Pass or Lifetime Pass subscriptions.' 
+  });
 });
 
 export default router;
-
