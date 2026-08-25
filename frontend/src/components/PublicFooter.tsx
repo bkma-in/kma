@@ -126,9 +126,23 @@ const PublicFooter: React.FC = () => {
                   Chetan Business School <span className="text-zinc-500 font-normal px-1">|</span> Hubballi-580031
                 </a>
                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 mt-0.5">
-                  <span>Nandeesh MN</span>
+                  <a
+                    href="https://nandeeshmn.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors"
+                  >
+                    Nandeesh MN
+                  </a>
                   <span className="text-zinc-600 font-normal">•</span>
-                  <span>Shivanand VN</span>
+                  <a
+                    href="https://shivanandvn.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors"
+                  >
+                    Shivanand VN
+                  </a>
                 </div>
               </div>
             </div>
