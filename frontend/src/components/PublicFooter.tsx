@@ -35,44 +35,37 @@ const PublicFooter: React.FC = () => {
               </div>
             </div>
 
-            {/* Responsive Two-Column Grid for Links */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-5 pt-4 border-t border-white/5">
-              {/* Policies & Support */}
+            {/* Responsive Grid for Links */}
+            <div className="grid grid-cols-3 gap-x-3 gap-y-5 pt-4 border-t border-white/5">
+              {/* Policies */}
               <div className="space-y-3">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Policies</h4>
+                <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-zinc-500">Policies</h4>
                 <ul className="space-y-2">
-                  <li><button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Publication</button></li>
-                  <li><Link to="/copyright" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Copyright</Link></li>
-                  <li><Link to="/privacy-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Privacy Policy</Link></li>
-                  <li><Link to="/refund-policy" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Refund Policy</Link></li>
+                  <li><button className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Publication</button></li>
+                  <li><Link to="/copyright" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-zinc-400 hover:text-white transition-colors">Copyright</Link></li>
+                  <li><Link to="/privacy-policy" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-zinc-400 hover:text-white transition-colors">Privacy Policy</Link></li>
+                  <li><Link to="/refund-policy" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-zinc-400 hover:text-white transition-colors">Refund Policy</Link></li>
                 </ul>
               </div>
 
+              {/* Support */}
               <div className="space-y-3">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Support</h4>
+                <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-zinc-500">Support</h4>
                 <ul className="space-y-2">
-                  <li><Link to="/contact-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Contact Us</Link></li>
-                  <li><button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Help Center</button></li>
-                  <li><button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Report Issue</button></li>
+                  <li><Link to="/contact-us" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-zinc-400 hover:text-white transition-colors">Contact Us</Link></li>
+                  <li><button className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Help Center</button></li>
+                  <li><button className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Report Issue</button></li>
                 </ul>
               </div>
 
-              {/* Access & About */}
-              <div className="space-y-3 pt-2">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Access</h4>
+              {/* Access */}
+              <div className="space-y-3">
+                <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-zinc-500">Access</h4>
                 <ul className="space-y-2">
-                  <li><Link to="/pricing" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Pricing</Link></li>
-                  <li><Link to="/service-description" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Service Description</Link></li>
-                  <li><Link to="/about-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Editorial Board</Link></li>
-                  <li><Link to="/terms" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Terms & Conditions</Link></li>
-                </ul>
-              </div>
-
-              <div className="space-y-3 pt-2">
-                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">About</h4>
-                <ul className="space-y-2">
-                  <li><Link to="/about-us" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">About KMA</Link></li>
-                  <li><button className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Guidelines</button></li>
+                  <li><Link to="/pricing" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-zinc-400 hover:text-white transition-colors">Pricing</Link></li>
+                  <li><Link to="/service-description" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-zinc-400 hover:text-white transition-colors">Service Description</Link></li>
+                  <li><Link to="/about-us" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-zinc-400 hover:text-white transition-colors text-left">Editorial Board</Link></li>
+                  <li><Link to="/terms" className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider sm:tracking-widest text-zinc-400 hover:text-white transition-colors">Terms & Conditions</Link></li>
                 </ul>
               </div>
             </div>
