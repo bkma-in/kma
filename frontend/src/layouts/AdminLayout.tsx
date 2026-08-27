@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud, ChevronDown, ChevronUp, UserCheck, BookOpen, User, CheckCircle2, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, X, Search, HelpCircle, Bell, UploadCloud, ChevronDown, ChevronUp, UserCheck, BookOpen, User, CheckCircle2, Megaphone, Crown } from 'lucide-react';
 import { cn } from '../utils/cn';
 import SidebarHeader from '../components/SidebarHeader';
 import GlobalHeader from '../components/GlobalHeader';
@@ -85,15 +85,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
     }
   }, [location.pathname, clearUnread]);
 
-  // Auto-expand users dropdown if we are on user directory paths
+  // Auto-expand/collapse users dropdown based on current active route
   useEffect(() => {
-    if (
+    const isUserRoute = (
       location.pathname.startsWith('/admin/reviewers') ||
       location.pathname.startsWith('/admin/authors') ||
-      location.pathname.startsWith('/admin/readers')
-    ) {
-      setIsUsersDropdownOpen(true);
-    }
+      location.pathname.startsWith('/admin/readers') ||
+      location.pathname.startsWith('/admin/life-members')
+    );
+    setIsUsersDropdownOpen(isUserRoute);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -150,7 +150,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
       children: [
         { name: 'Reviewers', path: '/admin/reviewers', icon: UserCheck, badge: formatBadgeCount(counts.reviewers) },
         { name: 'Authors', path: '/admin/authors-list', icon: User },
-        { name: 'Readers', path: '/admin/readers', icon: BookOpen }
+        { name: 'Readers', path: '/admin/readers', icon: BookOpen },
+        { name: 'Life Members', path: '/admin/life-members', icon: Crown }
       ]
     },
     { name: 'Articles', path: '/admin/articles', icon: FileText },
@@ -254,7 +255,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ isLoadingSkeleton = false }) 
                 key={item.name}
                 to={item.path!}
                 end={item.end}
-                onClick={() => setIsSidebarOpen(false)}
+                onClick={() => {
+                  setIsSidebarOpen(false);
+                  setIsUsersDropdownOpen(false);
+                }}
                 className={({ isActive }) =>
                   cn(
                     "flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 relative",
