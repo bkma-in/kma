@@ -7,6 +7,7 @@ import Razorpay from 'razorpay';
 import { config } from '../config/env';
 import { paymentRateLimiter } from '../middleware/rateLimiter';
 import { fulfillSuccessfulSubscriptionPayment } from '../services/subscriptionFulfillment';
+import { sendLifeMemberOtpEmail } from '../services/notificationService';
 
 const razorpay = new Razorpay({
   key_id: config.payments.razorpay.keyId,
@@ -135,23 +136,119 @@ router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res: Respo
   }
 });
 
-// POST /subscriptions/create-order - Create Razorpay Order for Subscription (Annual: ₹2,000, Lifetime: ₹1,000)
+// Helper to mask email address: e.g. j***e@domain.com
+const maskEmail = (email: string): string => {
+  if (!email) return '***';
+  const parts = email.split('@');
+  if (parts.length !== 2) return '***';
+  const user = parts[0];
+  const domain = parts[1];
+  if (user.length <= 2) return `${user[0]}***@${domain}`;
+  return `${user[0]}***${user[user.length - 1]}@${domain}`;
+};
+
+// POST /subscriptions/request-life-member-otp - Verify membership and send 6-digit OTP
+router.post('/request-life-member-otp', requireAuth, paymentRateLimiter, async (req: AuthRequest, res: Response) => {
+  try {
+    const { email } = req.user!;
+    const { uniqueId } = req.body;
+
+    if (!uniqueId || typeof uniqueId !== 'string' || !uniqueId.trim()) {
+      return res.status(400).json({ error: 'Please provide your Unique Life Member ID.' });
+    }
+
+    const normUniqueId = uniqueId.trim().toUpperCase();
+    const userEmailLower = (email || '').toLowerCase().trim();
+
+    // 1. Look up Life Member record by Unique ID
+    let memberData: any = null;
+    const memberDoc = await db.collection('life_members').doc(normUniqueId).get();
+    
+    if (memberDoc.exists) {
+      memberData = memberDoc.data();
+    } else {
+      // Fallback: search by uniqueId field
+      const querySnap = await db.collection('life_members').where('uniqueId', '==', normUniqueId).limit(1).get();
+      if (!querySnap.empty) {
+        memberData = querySnap.docs[0].data();
+      } else {
+        // Fallback: search in users collection for isLifeMember and membershipNumber
+        const userQuery = await db.collection('users')
+          .where('isLifeMember', '==', true)
+          .where('membershipNumber', '==', normUniqueId)
+          .limit(1)
+          .get();
+        if (!userQuery.empty) {
+          memberData = userQuery.docs[0].data();
+        }
+      }
+    }
+
+    if (!memberData) {
+      return res.status(404).json({ 
+        error: `Unique Member ID "${normUniqueId}" was not found in the official KMA Life Members registry. Please check your ID or contact administration.` 
+      });
+    }
+
+    // 2. Validate email matching
+    const memberEmailLower = (memberData.emailLower || memberData.email || '').toLowerCase().trim();
+    if (memberEmailLower !== userEmailLower) {
+      return res.status(403).json({ 
+        error: `Member ID "${normUniqueId}" is registered to a different email address. Please sign in with the registered email account (${maskEmail(memberEmailLower)}) or contact support.` 
+      });
+    }
+
+    // 3. Check if an active subscription is already linked to this Unique ID
+    const activeSubSnap = await db.collection('subscriptions')
+      .where('membershipId', '==', normUniqueId)
+      .where('status', '==', 'active')
+      .limit(1)
+      .get();
+
+    if (!activeSubSnap.empty) {
+      return res.status(400).json({ 
+        error: `An active subscription pass is already active for Life Member ID "${normUniqueId}".` 
+      });
+    }
+
+    // 4. Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // 5. Store in life_member_otps collection
+    const otpDocId = `${req.user!.uid}_${normUniqueId}`;
+    await db.collection('life_member_otps').doc(otpDocId).set({
+      userId: req.user!.uid,
+      email: email,
+      uniqueId: normUniqueId,
+      otp,
+      expiresAt,
+      verified: false,
+      createdAt: new Date()
+    });
+
+    // 6. Send OTP Email using Brevo transactional email
+    const memberName = memberData.name || req.user!.name || 'Life Member';
+    await sendLifeMemberOtpEmail(email, memberName, normUniqueId, otp);
+
+    res.json({
+      success: true,
+      message: `A 6-digit confirmation code has been sent to your registered email (${maskEmail(email)}).`,
+      maskedEmail: maskEmail(email),
+      uniqueId: normUniqueId
+    });
+  } catch (error: any) {
+    console.error('Request Life Member OTP error:', error);
+    res.status(500).json({ error: error.message || 'Failed to send verification OTP' });
+  }
+});
+
+// POST /subscriptions/create-order - Create Razorpay Order for Annual Subscription
+// Standard: ₹2,000 / year | KMA Life Member: ₹1,000 / year (50% Concession with verified OTP)
 router.post('/create-order', requireAuth, paymentRateLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { uid, email } = req.user!;
-    const { type, plan } = req.body;
-    
-    const requestedPlan = (type || plan || 'annual').toLowerCase().trim();
-
-    // SERVER-SIDE PRICE SECURITY: Strictly resolve prices on backend
-    let orderAmount = 2000;
-    if (requestedPlan === 'lifetime') {
-      orderAmount = 1000;
-    } else if (requestedPlan === 'annual') {
-      orderAmount = 2000;
-    } else {
-      return res.status(400).json({ error: 'Invalid subscription plan requested. Allowed plans: annual, lifetime.' });
-    }
+    const { applyLifeMemberDiscount, uniqueId, otp } = req.body;
 
     // Check if user already has an active subscription
     const existingActiveSub = await db.collection('subscriptions')
@@ -166,6 +263,50 @@ router.post('/create-order', requireAuth, paymentRateLimiter, async (req: AuthRe
       });
     }
 
+    let orderAmount = 2000;
+    let concessionApplied = false;
+    let verifiedUniqueId: string | null = null;
+
+    if (applyLifeMemberDiscount === true) {
+      if (!uniqueId || !otp) {
+        return res.status(400).json({ 
+          error: 'Unique Membership ID and email verification OTP are required for the 50% concession rate.' 
+        });
+      }
+
+      const normUniqueId = uniqueId.trim().toUpperCase();
+      const otpDocId = `${uid}_${normUniqueId}`;
+      const otpDoc = await db.collection('life_member_otps').doc(otpDocId).get();
+
+      if (!otpDoc.exists) {
+        return res.status(400).json({ 
+          error: 'No active OTP verification found. Please request a verification code.' 
+        });
+      }
+
+      const otpData = otpDoc.data()!;
+      const expiryTime = otpData.expiresAt?.toDate ? otpData.expiresAt.toDate().getTime() : new Date(otpData.expiresAt).getTime();
+
+      if (Date.now() > expiryTime) {
+        return res.status(400).json({ 
+          error: 'Verification code has expired. Please request a new OTP code.' 
+        });
+      }
+
+      if (otpData.otp !== String(otp).trim()) {
+        return res.status(400).json({ 
+          error: 'Invalid verification OTP code. Please check your email and try again.' 
+        });
+      }
+
+      // Mark OTP as verified/used
+      await otpDoc.ref.update({ verified: true, usedAt: new Date() });
+
+      orderAmount = 1000;
+      concessionApplied = true;
+      verifiedUniqueId = normUniqueId;
+    }
+
     const options = {
       amount: orderAmount * 100, // amount in paise (INR)
       currency: "INR",
@@ -173,7 +314,9 @@ router.post('/create-order', requireAuth, paymentRateLimiter, async (req: AuthRe
       notes: {
         userId: uid,
         email: email || '',
-        plan: requestedPlan
+        plan: 'annual',
+        concessionApplied: String(concessionApplied),
+        membershipId: verifiedUniqueId || ''
       }
     };
 
@@ -184,10 +327,13 @@ router.post('/create-order', requireAuth, paymentRateLimiter, async (req: AuthRe
     await subRef.set({
       subscriptionId: subRef.id,
       userId: uid,
-      type: requestedPlan,
-      plan: requestedPlan,
+      email: email || '',
+      type: 'annual',
+      plan: 'annual',
       amount: orderAmount,
       amountInPaise: orderAmount * 100,
+      concessionApplied: concessionApplied,
+      membershipId: verifiedUniqueId,
       currency: 'INR',
       status: 'pending',
       paymentStatus: 'pending',
@@ -200,7 +346,7 @@ router.post('/create-order', requireAuth, paymentRateLimiter, async (req: AuthRe
       updatedAt: new Date()
     });
 
-    // Create NEW pending paymentAttempt document (Append-Only log)
+    // Create pending paymentAttempt document
     const attemptRef = db.collection('paymentAttempts').doc();
     await attemptRef.set({
       attemptId: attemptRef.id,
@@ -208,7 +354,9 @@ router.post('/create-order', requireAuth, paymentRateLimiter, async (req: AuthRe
       internalOrderId: subRef.id,
       razorpayOrderId: order.id,
       razorpayPaymentId: null,
-      plan: requestedPlan,
+      plan: 'annual',
+      concessionApplied: concessionApplied,
+      membershipId: verifiedUniqueId,
       amount: orderAmount,
       amountInPaise: orderAmount * 100,
       currency: 'INR',
@@ -225,6 +373,7 @@ router.post('/create-order', requireAuth, paymentRateLimiter, async (req: AuthRe
       attemptId: attemptRef.id,
       paymentSessionId: order.id,
       amount: orderAmount,
+      concessionApplied,
       keyId: config.payments.razorpay.keyId
     });
 

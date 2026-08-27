@@ -913,3 +913,106 @@ export const sendSubscriptionPaymentSuccessNotification = async (payload: Paymen
   }
 };
 
+/**
+ * Sends a 6-digit confirmation OTP email to verify KMA Life Member 50% subscription concession.
+ */
+export const sendLifeMemberOtpEmail = async (
+  toEmail: string,
+  toName: string,
+  uniqueId: string,
+  otp: string
+) => {
+  try {
+    const cardRows: EmailRow[] = [
+      { label: 'Life Member ID', value: uniqueId },
+      { label: 'Verification Code (OTP)', value: otp },
+      { label: 'Discount Benefit', value: '50% Concession (₹1,000 / Year)' },
+      { label: 'Code Validity', value: '10 Minutes' }
+    ];
+
+    const bodyText = `You recently requested to apply your verified KMA Life Member 50% concession for annual research journal access on the BKMA platform. Please use the verification code below to complete your authentication.`;
+    const bannerTitle = 'KMA Life Member Verification Code';
+
+    const emailHtml = buildHtmlEmail(
+      toName || 'KMA Life Member',
+      bannerTitle,
+      bodyText,
+      'One-Time Confirmation Code',
+      cardRows,
+      '',
+      '',
+      'Security & Authentication Notice',
+      'This code is confidential and intended solely for your verified account. Never share this OTP with anyone. If you did not initiate this subscription request, please disregard this email or contact the BKMA office immediately.',
+      '🔐',
+      'Secure 2-Factor Verification',
+      '👑',
+      'KMA Life Member Benefit'
+    );
+
+    await sendTransactionalEmail(
+      toEmail,
+      toName || 'KMA Life Member',
+      `KMA Life Member Verification Code: ${otp}`,
+      emailHtml
+    );
+
+    console.log(`[NOTIF-SERVICE] Sent Life Member OTP email to ${toEmail} for ID ${uniqueId}`);
+  } catch (error) {
+    console.error('[NOTIF-SERVICE] Error sending Life Member OTP email:', error);
+    throw error;
+  }
+};
+
+/**
+ * Sends a welcome onboarding email to a newly added KMA Life Member.
+ */
+export const sendLifeMemberWelcomeEmail = async (
+  toEmail: string,
+  toName: string,
+  uniqueId: string,
+  tempPassword?: string
+) => {
+  try {
+    const cardRows: EmailRow[] = [
+      { label: 'Full Name', value: toName },
+      { label: 'Unique Membership ID', value: uniqueId },
+      { label: 'Registered Email', value: toEmail },
+      ...(tempPassword ? [{ label: 'Temporary Password', value: tempPassword }] : []),
+      { label: 'Life Member Benefit', value: '50% Subscription Concession (₹1,000 / Year)' }
+    ];
+
+    const bodyText = `Welcome! Your institutional membership record as a Life Member of the Kerala Mathematical Association (KMA) has been officially synchronized with the BKMA Research Platform.`;
+    const bannerTitle = 'Welcome to KMA Life Members Portal';
+    const actionUrl = config.brevo.loginUrl;
+
+    const emailHtml = buildHtmlEmail(
+      toName,
+      bannerTitle,
+      bodyText,
+      'Your Membership Credentials',
+      cardRows,
+      actionUrl,
+      'Access Portal',
+      'Life Member Privileges',
+      'As a registered Life Member, you are entitled to a 50% concession on annual journal subscriptions, priority submission reviews, and permanent association recognition.',
+      '👑',
+      'Life Member Privileges',
+      '📚',
+      'Annual Research Access'
+    );
+
+    await sendTransactionalEmail(
+      toEmail,
+      toName,
+      `Welcome to Kerala Mathematical Association - Life Member #${uniqueId}`,
+      emailHtml
+    );
+
+    console.log(`[NOTIF-SERVICE] Sent Life Member Welcome email to ${toEmail} for ID ${uniqueId}`);
+  } catch (error) {
+    console.error('[NOTIF-SERVICE] Error sending Life Member Welcome email:', error);
+    // Non-blocking in dev
+  }
+};
+
+
