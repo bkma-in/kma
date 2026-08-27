@@ -433,20 +433,20 @@ const PublishedArticlesSection: React.FC<PublishedArticlesSectionProps> = React.
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-16 border-t border-zinc-100 pt-8 flex-wrap gap-4">
+                  <div className="flex items-center justify-center sm:justify-between mt-16 border-t border-zinc-100 pt-8 flex-nowrap gap-1 sm:gap-4 max-w-full overflow-hidden">
                     <button
                       onClick={() => handlePageChange(activePage - 1)}
                       disabled={activePage === 1}
-                      className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-black disabled:text-zinc-300 disabled:pointer-events-none transition-colors px-3 py-2 cursor-pointer"
+                      className="flex items-center gap-1 sm:gap-2 text-[9px] sm:text-xs font-black uppercase tracking-normal sm:tracking-widest text-zinc-400 hover:text-black disabled:text-zinc-300 disabled:pointer-events-none transition-colors px-1.5 sm:px-3 py-2 cursor-pointer shrink-0"
                     >
                       ← Previous
                     </button>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                       {getPageNumbers().map((page, idx) => {
                         if (page === '...') {
                           return (
-                            <span key={idx} className="px-2 py-2 text-zinc-400 text-xs font-bold">
+                            <span key={idx} className="px-1 py-2 text-zinc-400 text-[11px] sm:text-xs font-bold shrink-0">
                               ...
                             </span>
                           );
@@ -455,7 +455,7 @@ const PublishedArticlesSection: React.FC<PublishedArticlesSectionProps> = React.
                           <button
                             key={idx}
                             onClick={() => handlePageChange(page as number)}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${
+                            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold transition-all cursor-pointer shrink-0 ${
                               activePage === page
                                 ? 'bg-black text-white shadow-md'
                                 : 'text-zinc-500 hover:bg-zinc-200/50 hover:text-black'
@@ -470,7 +470,7 @@ const PublishedArticlesSection: React.FC<PublishedArticlesSectionProps> = React.
                     <button
                       onClick={() => handlePageChange(activePage + 1)}
                       disabled={activePage === totalPages}
-                      className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-black disabled:text-zinc-300 disabled:pointer-events-none transition-colors px-3 py-2 cursor-pointer"
+                      className="flex items-center gap-1 sm:gap-2 text-[9px] sm:text-xs font-black uppercase tracking-normal sm:tracking-widest text-zinc-400 hover:text-black disabled:text-zinc-300 disabled:pointer-events-none transition-colors px-1.5 sm:px-3 py-2 cursor-pointer shrink-0"
                     >
                       Next →
                     </button>

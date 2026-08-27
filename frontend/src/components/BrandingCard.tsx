@@ -39,7 +39,7 @@ const BrandingCard: React.FC = () => {
         <div>
           <Link to="/" className="group">
             <h1 className="text-2xl sm:text-3xl lg:text-[2.25rem] font-bold text-white tracking-[-0.03em] leading-[1.15] text-center md:text-left group-hover:text-zinc-200 transition-colors font-['Playfair_Display']">
-              Bulletin Of{' '}
+              Bulletin of{' '}
               <br className="hidden md:block" />
               Kerala{' '}
               <br className="hidden md:block" />

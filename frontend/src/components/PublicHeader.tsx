@@ -34,11 +34,11 @@ const PublicHeader: React.FC = () => {
               </div>
               <h1 className="font-['Playfair_Display'] font-black leading-[1.1] sm:leading-tight tracking-[-0.01em] [word-spacing:0.18em] text-black min-w-0">
                 {/* On mobile, full name wrapped max 2 lines. On desktop, large font inline */}
-                <span className="block sm:hidden text-[14px] text-center leading-tight font-extrabold uppercase line-clamp-2 max-w-[230px] xs:max-w-xs">
-                  Bulletin Of Kerala Mathematics Association
+                <span className="block sm:hidden text-[14px] text-center leading-tight font-extrabold line-clamp-2 max-w-[230px] xs:max-w-xs">
+                  Bulletin of Kerala Mathematics Association
                 </span>
                 <span className="hidden sm:inline text-lg md:text-xl lg:text-3xl xl:text-4xl lg:whitespace-nowrap">
-                  Bulletin Of Kerala Mathematics Association
+                  Bulletin of Kerala Mathematics Association
                 </span>
               </h1>
             </Link>
