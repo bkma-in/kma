@@ -40,15 +40,15 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) => {
               <div className="mt-1"><CheckCircle2 className="text-emerald-500" size={18} /></div>
               <div>
                 <p className="font-bold text-white mb-1">Annual Subscription</p>
-                <p>Rs. 1000/- each in India.</p>
+                <p>Rs. 2,000/- per year across India.</p>
               </div>
             </div>
 
             <div className="bg-zinc-900/50 p-5 rounded-2xl border border-white/5 flex gap-4">
               <div className="mt-1"><CheckCircle2 className="text-emerald-500" size={18} /></div>
               <div>
-                <p className="font-bold text-white mb-1">Life Members</p>
-                <p>Life members will receive a <strong className="text-emerald-400">50% concession</strong> in the subscription charges.</p>
+                <p className="font-bold text-white mb-1">KMA Life Members</p>
+                <p>Life members will receive a <strong className="text-emerald-400">50% concession (Rs. 1,000/- per year)</strong> on subscription charges.</p>
               </div>
             </div>
           </div>
