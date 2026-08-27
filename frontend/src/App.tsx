@@ -47,6 +47,7 @@ const AdminAuthorsList = lazy(() => import('./pages/admin/AdminAuthorsList'));
 const AdminArticles = lazy(() => import('./pages/admin/AdminArticles'));
 const AdminReadyToPublish = lazy(() => import('./pages/admin/AdminReadyToPublish'));
 const AdminReadersList = lazy(() => import('./pages/admin/AdminReadersList'));
+const AdminLifeMembers = lazy(() => import('./pages/admin/AdminLifeMembers'));
 const AdminPublishedArticles = lazy(() => import('./pages/admin/AdminPublishedArticles'));
 const AdminCallForPapers = lazy(() => import('./pages/admin/AdminCallForPapers'));
 
@@ -288,6 +289,10 @@ function AdminRoutes() {
         <Route path="authors list" element={<Navigate to="authors-list" replace />} />
         <Route path="authors" element={<Navigate to="authors-list" replace />} />
         <Route path="readers" element={lazyRoute(AdminReadersList)} />
+        <Route path="life-members" element={lazyRoute(AdminLifeMembers)} />
+        <Route path="life-members-list" element={<Navigate to="life-members" replace />} />
+        <Route path="life members" element={<Navigate to="life-members" replace />} />
+        <Route path="lifemembers" element={<Navigate to="life-members" replace />} />
         <Route path="articles" element={lazyRoute(AdminArticles)} />
         <Route path="ready-to-publish" element={lazyRoute(AdminReadyToPublish)} />
         <Route path="ready to publish" element={<Navigate to="ready-to-publish" replace />} />

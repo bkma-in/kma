@@ -1,1 +1,0 @@
-var e=e=>{if(!e)return`N/A`;if(typeof e==`string`){let t=new Date(e);return isNaN(t.getTime())?`N/A`:t.toLocaleDateString()}let t=e._seconds??e.seconds;if(t!==void 0)return new Date(t*1e3).toLocaleDateString();if(typeof e==`object`)return`N/A`;let n=new Date(e);return isNaN(n.getTime())?`N/A`:n.toLocaleDateString()};export{e as t};

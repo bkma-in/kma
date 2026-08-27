@@ -133,6 +133,32 @@ const fulfillSuccessfulSubscriptionPayment = async (razorpayOrderId, razorpayPay
                 message: 'Subscription was already active and fulfilled'
             };
         }
+        // Step 2.5: Synchronize user profile and life member record
+        try {
+            const userUpdatePayload = {
+                isSubscribed: true,
+                updatedAt: new Date()
+            };
+            if (subData.concessionApplied === true && subData.membershipId) {
+                userUpdatePayload.isLifeMember = true;
+                userUpdatePayload.lifeMember = true;
+                userUpdatePayload.membershipNumber = subData.membershipId;
+                // Update life_members doc
+                const lifeMemberRef = firebase_1.db.collection('life_members').doc(subData.membershipId);
+                lifeMemberRef.set({
+                    hasActiveSubscription: true,
+                    subscriptionId: transactionResult.subscriptionId,
+                    lastSubscribedAt: new Date(),
+                    updatedAt: new Date()
+                }, { merge: true }).catch(err => {
+                    console.warn('[SUBSCRIPTION-FULFILLMENT] Could not update life_members doc:', err);
+                });
+            }
+            await firebase_1.db.collection('users').doc(userId).set(userUpdatePayload, { merge: true });
+        }
+        catch (syncErr) {
+            console.warn('[SUBSCRIPTION-FULFILLMENT] Non-critical user sync warning:', syncErr);
+        }
         // Step 3: Post-Transaction Deterministic Email Dispatch
         // Uses a deterministic notification ID `receipt_notif_<internalOrderId>` to prevent duplicate emails
         const deterministicNotifId = `receipt_notif_${internalOrderId}`;

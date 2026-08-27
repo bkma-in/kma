@@ -1,9 +1,11 @@
 import { Router, Response } from 'express';
+import * as XLSX from 'xlsx';
 import { db, auth } from '../config/firebase';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/authMiddleware';
-import { upload } from '../middleware/uploadMiddleware';
+import { upload, spreadsheetUpload } from '../middleware/uploadMiddleware';
 import { uploadImage, deleteImage } from '../services/cloudinaryService';
 import { sendTransactionalEmail } from '../services/emailService';
+import { sendLifeMemberWelcomeEmail } from '../services/notificationService';
 import { logAuditEvent } from '../services/auditService';
 
 import { config } from '../config/env';
@@ -937,5 +939,548 @@ router.post('/reviewers/:id/resend-credentials', requireAuth, requireRole(['admi
   }
 });
 
+// ==========================================
+// KMA LIFE MEMBERS MANAGEMENT (ADMIN)
+// ==========================================
+
+// Helper to normalize and match spreadsheet keys
+const extractRowField = (row: any, fieldKeys: string[]): string => {
+  const normalizedRowKeys = Object.keys(row).map(k => ({
+    orig: k,
+    norm: k.toLowerCase().replace(/[^a-z0-9]/g, '')
+  }));
+
+  for (const field of fieldKeys) {
+    const normField = field.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const found = normalizedRowKeys.find(k => k.norm === normField || k.norm.includes(normField));
+    if (found && row[found.orig] !== undefined && row[found.orig] !== null) {
+      return String(row[found.orig]).trim();
+    }
+  }
+  return '';
+};
+
+// Admin: Get all KMA Life Members
+router.get('/life-members', requireAuth, requireRole(['admin']), async (_req: AuthRequest, res: Response) => {
+  try {
+    // 1. Fetch all records from life_members collection
+    const lifeMembersSnap = await db.collection('life_members').get();
+    
+    // 2. Fetch active subscriptions to check who has an active discounted pass
+    const activeSubsSnap = await db.collection('subscriptions')
+      .where('status', '==', 'active')
+      .get();
+    
+    const activeSubsByEmail = new Map<string, any>();
+    const activeSubsById = new Map<string, any>();
+    activeSubsSnap.docs.forEach((doc: any) => {
+      const data = doc.data();
+      if (data.email) activeSubsByEmail.set(data.email.toLowerCase(), { id: doc.id, ...data });
+      if (data.membershipId) activeSubsById.set(data.membershipId.toUpperCase(), { id: doc.id, ...data });
+    });
+
+    // 3. Fetch registered users with isLifeMember = true to cross-reference
+    const usersSnap = await db.collection('users').where('isLifeMember', '==', true).get();
+    const registeredUsersMap = new Map<string, any>();
+    usersSnap.docs.forEach((doc: any) => {
+      const data = doc.data();
+      if (data.email) registeredUsersMap.set(data.email.toLowerCase(), { id: doc.id, ...data });
+      if (data.membershipNumber) registeredUsersMap.set(data.membershipNumber.toUpperCase(), { id: doc.id, ...data });
+    });
+
+    const members: any[] = [];
+    const seenUniqueIds = new Set<string>();
+
+    lifeMembersSnap.docs.forEach((doc: any) => {
+      const data = doc.data();
+      const uniqueId = (data.uniqueId || doc.id).toUpperCase().trim();
+      seenUniqueIds.add(uniqueId);
+
+      const emailLower = (data.email || '').toLowerCase().trim();
+      const sub = activeSubsById.get(uniqueId) || activeSubsByEmail.get(emailLower);
+      const regUser = registeredUsersMap.get(emailLower) || registeredUsersMap.get(uniqueId);
+
+      members.push({
+        id: doc.id,
+        uniqueId: uniqueId,
+        name: data.name || regUser?.name || 'Life Member',
+        email: data.email || regUser?.email || '',
+        phone: data.phone || regUser?.phone || '',
+        designation: data.designation || regUser?.designation || '',
+        affiliation: data.affiliation || regUser?.affiliation || '',
+        address: data.address || '',
+        notes: data.notes || '',
+        source: data.source || 'admin_enrolled',
+        status: data.status || 'Active',
+        enrolledDate: data.enrolledDate?.toDate ? data.enrolledDate.toDate().toISOString() : data.enrolledDate || data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+        hasActiveSubscription: !!sub,
+        subscriptionId: sub?.id || null,
+        subscriptionPlan: sub ? 'Annual Pass (50% Concession)' : null,
+        subscriptionExpiresAt: sub?.expiresAt?.toDate ? sub.expiresAt.toDate().toISOString() : sub?.expiresAt || null,
+        isUserRegistered: !!regUser,
+        userId: regUser?.id || null,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt || new Date().toISOString()
+      });
+    });
+
+    // Also include any users marked as isLifeMember in users collection that were not yet in life_members collection
+    registeredUsersMap.forEach((regUser, key) => {
+      const memId = (regUser.membershipNumber || key).toUpperCase().trim();
+      if (!seenUniqueIds.has(memId)) {
+        seenUniqueIds.add(memId);
+        const emailLower = (regUser.email || '').toLowerCase().trim();
+        const sub = activeSubsById.get(memId) || activeSubsByEmail.get(emailLower);
+
+        members.push({
+          id: regUser.id,
+          uniqueId: memId,
+          name: regUser.name || 'Life Member',
+          email: regUser.email || '',
+          phone: regUser.phone || '',
+          designation: regUser.designation || '',
+          affiliation: regUser.affiliation || '',
+          address: '',
+          notes: '',
+          source: regUser.lifeMemberSource || 'admin_enrolled',
+          status: 'Active',
+          enrolledDate: regUser.createdAt?.toDate ? regUser.createdAt.toDate().toISOString() : regUser.createdAt || new Date().toISOString(),
+          hasActiveSubscription: !!sub,
+          subscriptionId: sub?.id || null,
+          subscriptionPlan: sub ? 'Annual Pass (50% Concession)' : null,
+          subscriptionExpiresAt: sub?.expiresAt?.toDate ? sub.expiresAt.toDate().toISOString() : sub?.expiresAt || null,
+          isUserRegistered: true,
+          userId: regUser.id,
+          createdAt: regUser.createdAt?.toDate ? regUser.createdAt.toDate().toISOString() : regUser.createdAt || new Date().toISOString()
+        });
+      }
+    });
+
+    // Sort by enrolledDate descending
+    members.sort((a, b) => new Date(b.enrolledDate).getTime() - new Date(a.enrolledDate).getTime());
+
+    res.json({ success: true, members });
+  } catch (error: any) {
+    console.error('Get life members error:', error);
+    res.status(500).json({ error: 'Failed to fetch life members list' });
+  }
+});
+
+// Admin: Add a single KMA Life Member
+router.post('/life-members', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
+  const adminId = req.user!.uid;
+  try {
+    const { uniqueId, name, email, phone, designation, affiliation, address, notes, enrolledDate, sendWelcomeEmail } = req.body;
+
+    if (!uniqueId || !email) {
+      return res.status(400).json({ error: 'Unique Membership ID and Email Address are required.' });
+    }
+
+    const normUniqueId = uniqueId.trim().toUpperCase();
+    const emailLower = email.trim().toLowerCase();
+    const cleanName = (name && typeof name === 'string' && name.trim()) ? name.trim() : emailLower.split('@')[0];
+
+    // Check if uniqueId already exists in life_members collection
+    const existingById = await db.collection('life_members').doc(normUniqueId).get();
+    if (existingById.exists) {
+      return res.status(400).json({ error: `A Life Member with Unique ID "${normUniqueId}" already exists.` });
+    }
+
+    // Check if email already exists in life_members collection
+    const existingByEmail = await db.collection('life_members').where('emailLower', '==', emailLower).get();
+    if (!existingByEmail.empty) {
+      return res.status(400).json({ error: `A Life Member with email address "${emailLower}" already exists.` });
+    }
+
+    const memberData: any = {
+      uniqueId: normUniqueId,
+      name: cleanName,
+      email: email.trim(),
+      emailLower: emailLower,
+      phone: phone ? phone.trim() : '',
+      designation: designation ? designation.trim() : '',
+      affiliation: affiliation ? affiliation.trim() : '',
+      address: address ? address.trim() : '',
+      notes: notes ? notes.trim() : '',
+      source: 'admin_enrolled',
+      status: 'Active',
+      enrolledDate: enrolledDate ? new Date(enrolledDate) : new Date(),
+      createdByAdmin: adminId,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // 1. Save to life_members collection
+    await db.collection('life_members').doc(normUniqueId).set(memberData);
+
+    // 2. Synchronize with users collection if account already exists with this email
+    const userQuery = await db.collection('users').where('emailLower', '==', emailLower).limit(1).get();
+    let isUserRegistered = false;
+    let userId = null;
+
+    if (!userQuery.empty) {
+      const userDoc = userQuery.docs[0];
+      isUserRegistered = true;
+      userId = userDoc.id;
+      await userDoc.ref.update({
+        isLifeMember: true,
+        lifeMember: true,
+        membershipNumber: normUniqueId,
+        affiliation: affiliation ? affiliation.trim() : userDoc.data()?.affiliation || '',
+        designation: designation ? designation.trim() : userDoc.data()?.designation || '',
+        updatedAt: new Date()
+      });
+    }
+
+    // 3. Log audit event
+    await logAuditEvent('Life Member Enrolled', normUniqueId, adminId);
+
+    // 4. Send Welcome Email if requested
+    if (sendWelcomeEmail === true) {
+      sendLifeMemberWelcomeEmail(email.trim(), cleanName, normUniqueId).catch(err => {
+        console.error('Failed to send Life Member welcome email:', err);
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Life Member ${cleanName} (${normUniqueId}) added successfully.`,
+      member: {
+        id: normUniqueId,
+        ...memberData,
+        enrolledDate: memberData.enrolledDate.toISOString(),
+        createdAt: memberData.createdAt.toISOString(),
+        isUserRegistered,
+        userId,
+        hasActiveSubscription: false
+      }
+    });
+  } catch (error: any) {
+    console.error('Add life member error:', error);
+    res.status(500).json({ error: error.message || 'Failed to add life member' });
+  }
+});
+
+// Admin: Bulk import KMA Life Members from CSV or Excel (.csv, .xlsx, .xls)
+router.post('/life-members/import', requireAuth, requireRole(['admin']), spreadsheetUpload.single('file'), async (req: AuthRequest, res: Response) => {
+  const adminId = req.user!.uid;
+  try {
+    let rows: any[] = [];
+
+    // Support both file upload and raw JSON payload
+    if (req.file) {
+      const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const firstSheetName = workbook.SheetNames[0];
+      if (!firstSheetName) {
+        return res.status(400).json({ error: 'Spreadsheet contains no sheets.' });
+      }
+      const worksheet = workbook.Sheets[firstSheetName];
+      rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+    } else if (req.body.rows && Array.isArray(req.body.rows)) {
+      rows = req.body.rows;
+    } else {
+      return res.status(400).json({ error: 'Please upload a CSV or Excel file or provide rows array.' });
+    }
+
+    if (!rows || rows.length === 0) {
+      return res.status(400).json({ error: 'Spreadsheet is empty or no valid rows found.' });
+    }
+
+    // Pre-fetch all existing life member IDs and emails to prevent collisions and detect updates
+    const conflictMode = (req.body.conflictMode || req.query.conflictMode || 'skip').toString().toLowerCase(); // 'skip' or 'overwrite'
+    const existingSnap = await db.collection('life_members').get();
+    const existingIds = new Set<string>();
+    const existingEmails = new Map<string, string>(); // emailLower -> uniqueId
+
+    existingSnap.docs.forEach((doc: any) => {
+      const data = doc.data();
+      const id = (data.uniqueId || doc.id || '').toString().toUpperCase().trim();
+      if (id) existingIds.add(id);
+      if (doc.id) existingIds.add(doc.id.toString().toUpperCase().trim());
+
+      const emailVal = (data.emailLower || data.email || '').toString().toLowerCase().trim();
+      if (emailVal) {
+        existingEmails.set(emailVal, id);
+      }
+    });
+
+    let importedCount = 0;
+    let updatedCount = 0;
+    let duplicateCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+    const inBatchIds = new Set<string>();
+    const inBatchEmails = new Set<string>();
+
+    const writeBatches: Array<{ docRef: any; data: any }> = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNum = i + 2; // header is row 1
+
+      const rawId = extractRowField(row, ['uniqueid', 'membershipid', 'memberid', 'membershipnumber', 'id', 'lmid', 'lm_id', 'unique_id', 'membership']);
+      const name = extractRowField(row, ['name', 'fullname', 'membername', 'full_name', 'member_name']);
+      const email = extractRowField(row, ['email', 'emailid', 'mail', 'emailaddress', 'email_id', 'email_address', 'email_ids', 'mail_id']);
+      const phone = extractRowField(row, ['phone', 'phonenumber', 'mobile', 'contact', 'mobile_number', 'phone_number']);
+      const affiliation = extractRowField(row, ['affiliation', 'institution', 'organization', 'college', 'university', 'department']);
+      const designation = extractRowField(row, ['designation', 'role', 'title', 'position']);
+      const address = extractRowField(row, ['address', 'location', 'place', 'city']);
+      const enrolledDateRaw = extractRowField(row, ['enrolleddate', 'datejoined', 'joiningdate', 'date', 'membershipdate']);
+
+      if (!email) {
+        errors.push(`Row ${rowNum}: Email address is missing. Skipped.`);
+        skippedCount++;
+        continue;
+      }
+
+      const emailLower = email.toLowerCase().trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailLower)) {
+        errors.push(`Row ${rowNum}: Invalid email format "${email}". Skipped.`);
+        skippedCount++;
+        continue;
+      }
+
+      // Generate or normalize uniqueId
+      let uniqueId = rawId ? rawId.toUpperCase().trim() : '';
+      if (!uniqueId) {
+        uniqueId = `LM-${Date.now().toString().slice(-4)}${i + 1}`;
+      }
+
+      const cleanName = (name && name.trim()) ? name.trim() : emailLower.split('@')[0];
+
+      // In-file duplicate checking
+      if (inBatchIds.has(uniqueId)) {
+        errors.push(`Row ${rowNum} (${uniqueId}): Duplicate Unique ID in spreadsheet. Skipped.`);
+        duplicateCount++;
+        skippedCount++;
+        continue;
+      }
+      if (inBatchEmails.has(emailLower)) {
+        errors.push(`Row ${rowNum} (${emailLower}): Duplicate email in spreadsheet. Skipped.`);
+        duplicateCount++;
+        skippedCount++;
+        continue;
+      }
+
+      inBatchIds.add(uniqueId);
+      inBatchEmails.add(emailLower);
+
+      const isExisting = existingIds.has(uniqueId) || existingEmails.has(emailLower);
+
+      // Handle duplicate/existing according to admin choice (skip vs overwrite)
+      if (isExisting && conflictMode === 'skip') {
+        duplicateCount++;
+        errors.push(`Row ${rowNum} (${uniqueId} - ${emailLower}): Already exists in registry. Skipped.`);
+        continue;
+      }
+
+      let enrolledDate = new Date();
+      if (enrolledDateRaw) {
+        const parsed = new Date(enrolledDateRaw);
+        if (!isNaN(parsed.getTime())) {
+          enrolledDate = parsed;
+        }
+      }
+
+      const docRef = db.collection('life_members').doc(uniqueId);
+
+      const memberPayload = {
+        uniqueId,
+        name: cleanName,
+        email: email.trim(),
+        emailLower: emailLower,
+        phone: phone || '',
+        designation: designation || '',
+        affiliation: affiliation || '',
+        address: address || '',
+        source: 'imported',
+        status: 'Active',
+        enrolledDate: enrolledDate,
+        updatedAt: new Date(),
+        ...(isExisting ? {} : { createdAt: new Date(), createdByAdmin: adminId })
+      };
+
+      writeBatches.push({ docRef, data: memberPayload });
+
+      if (isExisting) {
+        updatedCount++;
+      } else {
+        importedCount++;
+      }
+    }
+
+    // Execute Firestore batches in chunks of 450 (Firestore limit is 500)
+    const chunkSize = 450;
+    for (let i = 0; i < writeBatches.length; i += chunkSize) {
+      const chunk = writeBatches.slice(i, i + chunkSize);
+      const batch = db.batch();
+      chunk.forEach(item => {
+        batch.set(item.docRef, item.data, { merge: true });
+      });
+      await batch.commit();
+    }
+
+    // Sync isLifeMember: true to any existing accounts in users collection
+    const allImportedEmails = Array.from(inBatchEmails);
+    for (let i = 0; i < allImportedEmails.length; i += 30) {
+      const emailChunk = allImportedEmails.slice(i, i + 30);
+      const userMatches = await db.collection('users').where('emailLower', 'in', emailChunk).get();
+      if (!userMatches.empty) {
+        const userBatch = db.batch();
+        userMatches.docs.forEach((uDoc: any) => {
+          const uEmail = (uDoc.data()?.email || '').toLowerCase();
+          const matchItem = writeBatches.find(b => b.data.emailLower === uEmail);
+          userBatch.update(uDoc.ref, {
+            isLifeMember: true,
+            lifeMember: true,
+            membershipNumber: matchItem?.data.uniqueId || uDoc.data()?.membershipNumber || 'LM-IMPORTED',
+            updatedAt: new Date()
+          });
+        });
+        await userBatch.commit();
+      }
+    }
+
+    // Record audit event
+    await logAuditEvent('Life Members Bulk Imported', `${importedCount} added, ${updatedCount} updated, ${duplicateCount} duplicates`, adminId);
+
+    let resultMessage = '';
+    if (importedCount === 0 && duplicateCount > 0 && conflictMode === 'skip') {
+      resultMessage = `All ${duplicateCount} records already exist in the Life Members registry. No new records added.`;
+    } else if (conflictMode === 'skip' && duplicateCount > 0) {
+      resultMessage = `Import complete: ${importedCount} new members enrolled, ${duplicateCount} existing duplicates skipped.`;
+    } else if (conflictMode === 'overwrite' && updatedCount > 0) {
+      resultMessage = `Import complete: ${importedCount} new members enrolled, ${updatedCount} existing members updated.`;
+    } else {
+      resultMessage = `Import complete: ${importedCount} new members enrolled.`;
+    }
+
+    res.json({
+      success: true,
+      message: resultMessage,
+      summary: {
+        total: rows.length,
+        imported: importedCount,
+        updated: updatedCount,
+        duplicates: duplicateCount,
+        skipped: skippedCount + (conflictMode === 'skip' ? duplicateCount : 0),
+        errors
+      }
+    });
+  } catch (error: any) {
+    console.error('Import life members error:', error);
+    res.status(500).json({ error: error.message || 'Failed to import life members spreadsheet' });
+  }
+});
+
+// Admin: Update KMA Life Member
+router.put('/life-members/:id', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
+  const adminId = req.user!.uid;
+  try {
+    const id = req.params.id as string;
+    const { name, email, phone, designation, affiliation, address, notes, status, uniqueId } = req.body;
+
+    const memberRef = db.collection('life_members').doc(id);
+    const memberDoc = await memberRef.get();
+
+    if (!memberDoc.exists) {
+      return res.status(404).json({ error: 'Life Member record not found.' });
+    }
+
+    const currentData = memberDoc.data()!;
+    const updateData: any = {
+      updatedAt: new Date()
+    };
+
+    if (name !== undefined) updateData.name = name.trim();
+    if (phone !== undefined) updateData.phone = phone.trim();
+    if (designation !== undefined) updateData.designation = designation.trim();
+    if (affiliation !== undefined) updateData.affiliation = affiliation.trim();
+    if (address !== undefined) updateData.address = address.trim();
+    if (notes !== undefined) updateData.notes = notes.trim();
+    if (status !== undefined) updateData.status = status;
+
+    if (email !== undefined && email.trim().toLowerCase() !== currentData.emailLower) {
+      const newEmailLower = email.trim().toLowerCase();
+      // Verify email uniqueness
+      const checkEmail = await db.collection('life_members').where('emailLower', '==', newEmailLower).get();
+      if (!checkEmail.empty && checkEmail.docs[0].id !== id) {
+        return res.status(400).json({ error: `Email "${newEmailLower}" is already assigned to another Life Member.` });
+      }
+      updateData.email = email.trim();
+      updateData.emailLower = newEmailLower;
+    }
+
+    await memberRef.update(updateData);
+
+    // Sync with users collection if registered
+    const emailToMatch = updateData.emailLower || currentData.emailLower;
+    const userQuery = await db.collection('users').where('emailLower', '==', emailToMatch).limit(1).get();
+    if (!userQuery.empty) {
+      await userQuery.docs[0].ref.update({
+        name: updateData.name || currentData.name,
+        affiliation: updateData.affiliation || currentData.affiliation,
+        designation: updateData.designation || currentData.designation,
+        phone: updateData.phone || currentData.phone,
+        updatedAt: new Date()
+      });
+    }
+
+    await logAuditEvent('Life Member Updated', id, adminId);
+
+    res.json({
+      success: true,
+      message: 'Life Member details updated successfully.',
+      member: {
+        id,
+        ...currentData,
+        ...updateData
+      }
+    });
+  } catch (error: any) {
+    console.error('Update life member error:', error);
+    res.status(500).json({ error: error.message || 'Failed to update life member' });
+  }
+});
+
+// Admin: Delete/Remove KMA Life Member
+router.delete('/life-members/:id', requireAuth, requireRole(['admin']), async (req: AuthRequest, res: Response) => {
+  const adminId = req.user!.uid;
+  try {
+    const id = req.params.id as string;
+    const memberRef = db.collection('life_members').doc(id);
+    const memberDoc = await memberRef.get();
+
+    if (!memberDoc.exists) {
+      return res.status(404).json({ error: 'Life Member record not found.' });
+    }
+
+    const memberData = memberDoc.data()!;
+
+    // Remove from life_members collection
+    await memberRef.delete();
+
+    // If user has an active profile, revoke isLifeMember flag
+    if (memberData.emailLower) {
+      const userQuery = await db.collection('users').where('emailLower', '==', memberData.emailLower).limit(1).get();
+      if (!userQuery.empty) {
+        await userQuery.docs[0].ref.update({
+          isLifeMember: false,
+          lifeMember: false,
+          updatedAt: new Date()
+        });
+      }
+    }
+
+    await logAuditEvent('Life Member Removed', id, adminId);
+
+    res.json({ success: true, message: `Life Member ${memberData.name} (${id}) removed successfully.` });
+  } catch (error: any) {
+    console.error('Delete life member error:', error);
+    res.status(500).json({ error: error.message || 'Failed to remove life member' });
+  }
+});
+
 export default router;
+
 
