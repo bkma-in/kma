@@ -87,3 +87,58 @@ export const resendReviewerCredentials = async (id: string) => {
   return response.data;
 };
 
+// ==========================================
+// KMA LIFE MEMBERS
+// ==========================================
+
+export const getLifeMembers = async () => {
+  const response = await api.get('/users/life-members');
+  return response.data;
+};
+
+export const addLifeMember = async (memberData: {
+  uniqueId: string;
+  name: string;
+  email: string;
+  phone?: string;
+  designation?: string;
+  affiliation?: string;
+  address?: string;
+  notes?: string;
+  enrolledDate?: string;
+  sendWelcomeEmail?: boolean;
+}) => {
+  const response = await api.post('/users/life-members', memberData);
+  return response.data;
+};
+
+export const importLifeMembers = async (
+  formDataOrData: FormData | { rows: any[]; conflictMode?: string },
+  conflictMode: 'skip' | 'overwrite' = 'skip'
+) => {
+  if (formDataOrData instanceof FormData) {
+    if (!formDataOrData.has('conflictMode')) {
+      formDataOrData.append('conflictMode', conflictMode);
+    }
+    const response = await api.post(`/users/life-members/import?conflictMode=${conflictMode}`, formDataOrData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+  const response = await api.post('/users/life-members/import', { ...formDataOrData, conflictMode });
+  return response.data;
+};
+
+export const updateLifeMember = async (id: string, data: any) => {
+  const response = await api.put(`/users/life-members/${id}`, data);
+  return response.data;
+};
+
+export const deleteLifeMember = async (id: string) => {
+  const response = await api.delete(`/users/life-members/${id}`);
+  return response.data;
+};
+
+

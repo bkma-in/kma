@@ -20,8 +20,24 @@ export const loadRazorpayScript = (): Promise<boolean> => {
   });
 };
 
-export const createSubscriptionOrder = async (plan: 'annual' | 'lifetime') => {
-  const response = await api.post('/subscriptions/create-order', { plan, type: plan });
+export const requestLifeMemberOtp = async (uniqueId: string) => {
+  const response = await api.post('/subscriptions/request-life-member-otp', { uniqueId });
+  return response.data;
+};
+
+export const createSubscriptionOrder = async (options?: {
+  plan?: 'annual';
+  applyLifeMemberDiscount?: boolean;
+  uniqueId?: string;
+  otp?: string;
+}) => {
+  const payload = {
+    plan: options?.plan || 'annual',
+    applyLifeMemberDiscount: options?.applyLifeMemberDiscount === true,
+    uniqueId: options?.uniqueId,
+    otp: options?.otp
+  };
+  const response = await api.post('/subscriptions/create-order', payload);
   return response.data;
 };
 
