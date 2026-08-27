@@ -23,3 +23,30 @@ export const upload = multer({
     }
   }
 });
+
+export const spreadsheetUpload = multer({
+  storage,
+  limits: {
+    fileSize: 15 * 1024 * 1024, // 15 MB limit
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedMimeTypes = [
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'application/octet-stream',
+      'application/wps-office.xlsx',
+      'application/x-excel'
+    ];
+
+    const fileName = (file.originalname || '').toLowerCase();
+    const isSpreadsheetExt = fileName.endsWith('.csv') || fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+
+    if (allowedMimeTypes.includes(file.mimetype) || isSpreadsheetExt) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only CSV, XLSX, and XLS spreadsheet files are allowed.'));
+    }
+  }
+});
