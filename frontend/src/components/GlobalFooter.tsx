@@ -62,7 +62,7 @@ const GlobalFooter = ({
           </div>
 
           {/* Developed By (Right) */}
-          <div className="flex flex-col items-center gap-1.5 text-center mt-3 md:mt-0">
+          <div className="flex flex-col items-center gap-1.5 text-center mt-3 md:mt-0 md:ml-auto">
             <h4 className="text-[10px] font-semibold tracking-wider uppercase text-zinc-500">
               Designed And Developed By
             </h4>
