@@ -26,6 +26,7 @@ import { getArticles, assignReviewers as assignReviewersService, updateArticleSt
 import { getReviewers } from '../../services/user.service';
 import { formatDate } from '../../utils/dateHelpers';
 import { SkeletonTable } from '../../components/skeletons/SkeletonTable';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 // Types
 type ArticleStatus = 
@@ -499,19 +500,20 @@ const AdminArticles = () => {
               className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium w-64 focus:ring-2 focus:ring-black outline-none transition-all"
             />
           </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-            <select 
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer"
-            >
-              <option value="All">All Workflow States</option>
-              {['Submitted', 'Revised Submitted', 'Need Improvements', 'Revision Requested', 'Ready to Publish', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected', 'Awaiting Decision'].map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val as any)}
+            icon={<Filter size={15} />}
+            align="right"
+            buttonClassName="py-2.5 text-xs w-full sm:w-auto min-w-[180px]"
+            options={[
+              { value: 'All', label: 'All Workflow States' },
+              ...['Submitted', 'Revised Submitted', 'Need Improvements', 'Revision Requested', 'Ready to Publish', 'Published', 'Rejected', 'Sent to Reviewer', 'Under Review', 'Desk Rejected', 'Awaiting Decision'].map(s => ({
+                value: s,
+                label: s
+              }))
+            ]}
+          />
         </div>
       </div>
 
