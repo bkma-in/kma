@@ -68,15 +68,71 @@
 
 /* Custom Scrollbar for premium feel */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-accent;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-zinc-300 rounded-full border-2 border-accent hover:bg-zinc-400;
+  background: #27272a;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #000000;
+}
+
+/* Dark Sidebars and Dark Containers Scrollbars */
+aside,
+aside nav,
+.bg-black,
+.bg-zinc-900,
+.bg-zinc-950,
+.dark-scrollbar {
+  scrollbar-color: #27272a #000000;
+  scrollbar-width: thin;
+}
+
+aside::-webkit-scrollbar,
+aside nav::-webkit-scrollbar,
+.bg-black::-webkit-scrollbar,
+.bg-zinc-900::-webkit-scrollbar,
+.bg-zinc-950::-webkit-scrollbar,
+.dark-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+aside::-webkit-scrollbar-track,
+aside nav::-webkit-scrollbar-track,
+.bg-black::-webkit-scrollbar-track,
+.bg-zinc-900::-webkit-scrollbar-track,
+.bg-zinc-950::-webkit-scrollbar-track,
+.dark-scrollbar::-webkit-scrollbar-track {
+  background: #000000 !important;
+}
+
+aside::-webkit-scrollbar-thumb,
+aside nav::-webkit-scrollbar-thumb,
+.bg-black::-webkit-scrollbar-thumb,
+.bg-zinc-900::-webkit-scrollbar-thumb,
+.bg-zinc-950::-webkit-scrollbar-thumb,
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: #27272a !important;
+  border-radius: 9999px;
+  border: 1px solid #000000;
+}
+
+aside::-webkit-scrollbar-thumb:hover,
+aside nav::-webkit-scrollbar-thumb:hover,
+.bg-black::-webkit-scrollbar-thumb:hover,
+.bg-zinc-900::-webkit-scrollbar-thumb:hover,
+.bg-zinc-950::-webkit-scrollbar-thumb:hover,
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46 !important;
 }
 
 /* Hide browser-native password reveal icons */
