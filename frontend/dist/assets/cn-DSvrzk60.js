@@ -1,0 +1,1 @@
+import{a as e,i as t}from"./vendor-others-Rgr3LWN4.js";function n(...n){return t(e(n))}export{n as t};

@@ -228,9 +228,9 @@ const GetSubscription = () => {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-12 gap-8 items-start mb-16">
-        {/* Left: Main Standard Pass Card (7 Cols) */}
-        <div className="md:col-span-7 bg-white border-2 border-black rounded-[2.5rem] p-8 sm:p-10 shadow-xl shadow-black/5 relative overflow-hidden">
+      <div className="grid md:grid-cols-2 gap-8 items-stretch mb-16">
+        {/* Left: Main Standard Pass Card */}
+        <div className="bg-white border-2 border-black rounded-[2.5rem] p-8 sm:p-10 shadow-xl shadow-black/5 relative overflow-hidden h-full flex flex-col">
           <div className="flex justify-between items-start mb-6">
             <div>
               <span className="px-3 py-1 bg-zinc-100 text-zinc-800 rounded-full text-[10px] font-black uppercase tracking-wider">
@@ -279,8 +279,8 @@ const GetSubscription = () => {
           </button>
         </div>
 
-        {/* Right: KMA Life Member 50% Concession Section (5 Cols) */}
-        <div className="md:col-span-5 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-2 border-amber-300 rounded-[2.5rem] p-8 shadow-lg shadow-amber-500/5 relative">
+        {/* Right: KMA Life Member 50% Concession Section */}
+        <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-2 border-amber-300 rounded-[2.5rem] p-8 sm:p-10 shadow-lg shadow-amber-500/5 relative h-full flex flex-col">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-amber-500 text-black flex items-center justify-center font-bold shadow-md shadow-amber-500/20">
               <Crown size={20} />
@@ -343,7 +343,7 @@ const GetSubscription = () => {
             </button>
           </form>
 
-          <div className="mt-4 pt-4 border-t border-amber-200/50 flex items-center gap-2 text-[10px] text-zinc-500">
+          <div className="mt-auto pt-4 border-t border-amber-200/50 flex items-center gap-2 text-[10px] text-zinc-500">
             <ShieldCheck size={14} className="text-amber-600 shrink-0" />
             <span>2-Factor Email OTP verification required at checkout</span>
           </div>

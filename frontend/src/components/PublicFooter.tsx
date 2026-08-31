@@ -113,36 +113,38 @@ const PublicFooter: React.FC = () => {
               <div className="w-[1px] self-stretch bg-zinc-900" />
 
               {/* Right Developer Details */}
-              <div className="flex flex-col items-center gap-1.5 text-center flex-1">
-                <span className="text-[9px] font-bold tracking-wider uppercase text-zinc-500">
-                  Design and developed by
-                </span>
-                <a
-                  href="https://chetanbschool.org/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-2.5 xs:px-4 py-1.5 rounded-full bg-zinc-900/80 border border-zinc-800 text-[8.5px] xs:text-[9.5px] sm:text-[10px] font-bold text-zinc-300 tracking-tight transition-colors hover:bg-zinc-800 whitespace-nowrap"
-                >
-                  Chetan Business School <span className="text-zinc-500 font-normal px-1">|</span> Hubballi-580031
-                </a>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 mt-0.5">
+              <div className="flex-1 flex justify-end pl-2">
+                <div className="flex flex-col items-center gap-1.5 text-center">
+                  <span className="text-[9px] font-bold tracking-wider uppercase text-zinc-500">
+                    Design and developed by
+                  </span>
                   <a
-                    href="https://nandeeshmn.vercel.app/"
+                    href="https://chetanbschool.org/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-white transition-colors"
+                    className="inline-flex items-center justify-center px-2.5 xs:px-4 py-1.5 rounded-full bg-zinc-900/80 border border-zinc-800 text-[8.5px] xs:text-[9.5px] sm:text-[10px] font-bold text-zinc-300 tracking-tight transition-colors hover:bg-zinc-800 whitespace-nowrap"
                   >
-                    Nandeesh MN
+                    Chetan Business School <span className="text-zinc-500 font-normal px-1">|</span> Hubballi-580031
                   </a>
-                  <span className="text-zinc-600 font-normal">•</span>
-                  <a
-                    href="https://shivanandvn.vercel.app/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-white transition-colors"
-                  >
-                    Shivanand VN
-                  </a>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 mt-0.5">
+                    <a
+                      href="https://nandeeshmn.vercel.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-white transition-colors"
+                    >
+                      Nandeesh MN
+                    </a>
+                    <span className="text-zinc-600 font-normal">•</span>
+                    <a
+                      href="https://shivanandvn.vercel.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-white transition-colors"
+                    >
+                      Shivanand VN
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
