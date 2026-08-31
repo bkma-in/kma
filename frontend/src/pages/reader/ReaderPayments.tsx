@@ -18,6 +18,7 @@ import { useNotification } from '../../utils/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { ReceiptTemplate } from '../../components/ReceiptTemplate';
 import { getPaymentHistory, getUserSubscriptions } from '../../services/razorpay.service';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 type PaymentStatus = 'Paid' | 'Pending' | 'Failed' | 'Cancelled';
 
@@ -142,19 +143,19 @@ const ReaderPayments = () => {
                 className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black w-64 focus:ring-1 focus:ring-black outline-none transition-all shadow-sm"
               />
             </div>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-              <select 
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as PaymentStatus | 'All')}
-                className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black focus:ring-1 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm"
-              >
-                <option value="All">All Status</option>
-                <option value="Paid">Paid / Fulfilled</option>
-                <option value="Pending">Pending</option>
-                <option value="Failed">Failed</option>
-              </select>
-            </div>
+            <CustomSelect
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val as any)}
+              icon={<Filter size={15} />}
+              align="right"
+              buttonClassName="py-2.5 text-xs w-full sm:w-auto min-w-[160px]"
+              options={[
+                { value: 'All', label: 'All Status' },
+                { value: 'Paid', label: 'Paid / Fulfilled' },
+                { value: 'Pending', label: 'Pending' },
+                { value: 'Failed', label: 'Failed' },
+              ]}
+            />
           </div>
         </div>
 

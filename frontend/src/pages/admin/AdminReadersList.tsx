@@ -21,6 +21,7 @@ import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { getReaders } from '../../services/user.service';
 import { SkeletonTable } from '../../components/skeletons/SkeletonTable';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 interface Reader {
   id: string;
@@ -267,20 +268,20 @@ const AdminReadersList = () => {
             />
           </div>
 
-          <div className="relative">
-            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={15} />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="pl-9 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm text-zinc-700 w-full"
-            >
-              <option value="subscribers_first">Sort: Subscribers First</option>
-              <option value="newest">Sort: Newest Registered</option>
-              <option value="oldest">Sort: Oldest Registered</option>
-              <option value="name_asc">Sort: Name (A - Z)</option>
-              <option value="name_desc">Sort: Name (Z - A)</option>
-            </select>
-          </div>
+          <CustomSelect<SortOption>
+            value={sortBy}
+            onChange={(val) => setSortBy(val)}
+            icon={<ArrowUpDown size={15} />}
+            align="right"
+            buttonClassName="py-2.5 text-xs w-full sm:w-auto min-w-[200px]"
+            options={[
+              { value: 'subscribers_first', label: 'Sort: Subscribers First' },
+              { value: 'newest', label: 'Sort: Newest Registered' },
+              { value: 'oldest', label: 'Sort: Oldest Registered' },
+              { value: 'name_asc', label: 'Sort: Name (A - Z)' },
+              { value: 'name_desc', label: 'Sort: Name (Z - A)' },
+            ]}
+          />
         </div>
       </div>
 
