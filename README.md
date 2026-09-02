@@ -36,6 +36,7 @@ The system features a role-based architecture with dedicated dashboards for Auth
 - Styling: Modern UI (Glassmorphism)
 - Routing: React Router
 - State & Structure: Modular and scalable architecture
+- Email Service: Brevo
 
 
 
