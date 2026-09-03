@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyCodeRateLimiter = exports.sendVerificationRateLimiter = exports.webhookRateLimiter = exports.archiveRateLimiter = exports.paymentRateLimiter = exports.downloadRateLimiter = exports.signedUrlRateLimiter = exports.uploadRateLimiter = exports.pdfRateLimiter = exports.authRateLimiter = exports.globalRateLimiter = exports.getClientIp = exports.isTrustedProxy = exports.PRIVATE_IPV6_CIDRS = exports.PRIVATE_IPV4_CIDRS = exports.CLOUDFLARE_IPV6_CIDRS = exports.CLOUDFLARE_IPV4_CIDRS = void 0;
+exports.verifyCodeRateLimiter = exports.sendVerificationRateLimiter = exports.archiveRateLimiter = exports.paymentRateLimiter = exports.downloadRateLimiter = exports.signedUrlRateLimiter = exports.uploadRateLimiter = exports.pdfRateLimiter = exports.authRateLimiter = exports.globalRateLimiter = exports.getClientIp = exports.isTrustedProxy = exports.PRIVATE_IPV6_CIDRS = exports.PRIVATE_IPV4_CIDRS = exports.CLOUDFLARE_IPV6_CIDRS = exports.CLOUDFLARE_IPV4_CIDRS = void 0;
 exports.isCloudflareIp = isCloudflareIp;
 exports.isPrivateIp = isPrivateIp;
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
@@ -340,19 +340,6 @@ exports.archiveRateLimiter = (0, express_rate_limit_1.default)({
     keyGenerator,
     skip: skipAdmin,
     handler: createRateLimiterHandler('Archive Operations', 'Too many archive processing requests. Please try again later.')
-});
-/**
- * 9. Razorpay Webhook Dedicated Rate Limiter (100 requests / 1 minute / IP)
- * Dedicated IP-based rate limiting for Razorpay webhooks.
- * Active for ALL webhook traffic (no Admin skip).
- */
-exports.webhookRateLimiter = (0, express_rate_limit_1.default)({
-    windowMs: env_1.config.rateLimit.webhookWindowMs,
-    max: env_1.config.rateLimit.webhookMax,
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: ipKeyGenerator,
-    handler: createRateLimiterHandler('Razorpay Webhook', 'Too many webhook requests.')
 });
 /**
  * 10. Send Verification Email Rate Limiter (5 requests / 15 minutes / UID or IP)

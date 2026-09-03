@@ -24,7 +24,6 @@ const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const articleRoutes_1 = __importDefault(require("./routes/articleRoutes"));
 const issueRoutes_1 = __importDefault(require("./routes/issueRoutes"));
 const subscriptionRoutes_1 = __importDefault(require("./routes/subscriptionRoutes"));
-const webhookRoutes_1 = __importDefault(require("./routes/webhookRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const notificationRoutes_1 = __importDefault(require("./routes/notificationRoutes"));
 const archiveRoutes_1 = __importDefault(require("./routes/archiveRoutes"));
@@ -40,8 +39,6 @@ app.use((0, compression_1.default)());
 app.use((0, cors_1.default)({
     exposedHeaders: ['Retry-After']
 }));
-// Razorpay Webhooks: Dedicated rate limiter + raw body parsing for signature verification
-app.use('/api/webhooks', rateLimiter_1.webhookRateLimiter, express_1.default.raw({ type: 'application/json' }), webhookRoutes_1.default);
 // General Request Payload Size Limits (1MB for JSON and URL-encoded data)
 app.use(express_1.default.json({ limit: '1mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '1mb' }));

@@ -6,7 +6,8 @@ import {
   Camera,
   MapPin,
   Calendar,
-  Award
+  Award,
+  Loader2
 } from 'lucide-react';
 import { useProfile } from '../../hooks/useProfile';
 import ProfileModal from '../../components/ProfileModal';
@@ -18,6 +19,7 @@ const ReaderProfile = () => {
   const { showToast } = useNotification();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
 
   return (
     <div className="max-w-4xl mx-auto animate-in fade-in duration-700">
@@ -31,8 +33,13 @@ const ReaderProfile = () => {
           <div className="relative p-8 md:p-12 flex flex-col md:flex-row items-center md:items-center gap-8 z-20">
             {/* Profile Image (Now inside) */}
             <div className="relative group shrink-0">
-              <div className="w-40 h-40 rounded-full bg-white/10 border-4 border-white/20 overflow-hidden shadow-2xl flex items-center justify-center backdrop-blur-sm">
-                {profile?.profileImage ? (
+              <div className="w-40 h-40 rounded-full bg-white/10 border-4 border-white/20 overflow-hidden shadow-2xl flex items-center justify-center backdrop-blur-sm relative">
+                {isUpdatingPhoto ? (
+                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2">
+                    <Loader2 size={24} className="text-white animate-spin" />
+                    <span className="text-[9px] font-bold text-white uppercase tracking-wider">Updating...</span>
+                  </div>
+                ) : profile?.profileImage ? (
                   <img src={profile.profileImage} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <User size={64} className="text-white/20" />
@@ -40,7 +47,8 @@ const ReaderProfile = () => {
               </div>
               <button 
                 onClick={() => setIsPhotoModalOpen(true)}
-                className="absolute bottom-2 right-2 w-10 h-10 bg-white text-black rounded-full flex items-center justify-center shadow-xl hover:bg-zinc-200 transition-all active:scale-90 border-4 border-black z-20"
+                disabled={isUpdatingPhoto}
+                className="absolute bottom-2 right-2 w-10 h-10 bg-white text-black rounded-full flex items-center justify-center shadow-xl hover:bg-zinc-200 transition-all active:scale-90 border-4 border-black z-20 cursor-pointer disabled:opacity-50"
                 title="Change Profile Photo"
               >
                 <Camera size={18} />
@@ -156,11 +164,16 @@ const ReaderProfile = () => {
             showToast('Unable to update photo: Profile not loaded', 'error');
             return;
           }
-          const result = await updateProfile({ ...profile, profileImage: newImage });
-          if (result.success) {
-            showToast(newImage ? 'Profile photo updated' : 'Photo removed successfully', 'success');
-          } else {
-            showToast(result.error || 'Failed to update photo', 'error');
+          setIsUpdatingPhoto(true);
+          try {
+            const result = await updateProfile(profile, newImage);
+            if (result.success) {
+              showToast(newImage ? 'Profile photo updated successfully' : 'Photo removed successfully', 'success');
+            } else {
+              showToast(result.error || 'Failed to update photo', 'error');
+            }
+          } finally {
+            setIsUpdatingPhoto(false);
           }
         }}
       />

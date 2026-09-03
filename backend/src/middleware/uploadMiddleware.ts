@@ -50,3 +50,21 @@ export const spreadsheetUpload = multer({
     }
   }
 });
+
+export const proofUpload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5 MB strict limit
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    const fileName = (file.originalname || '').toLowerCase();
+    const hasAllowedExt = fileName.endsWith('.pdf') || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png');
+
+    if (allowedMimeTypes.includes(file.mimetype) || hasAllowedExt) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPG, JPEG, PNG, and PDF files under 5MB are allowed.'));
+    }
+  }
+});

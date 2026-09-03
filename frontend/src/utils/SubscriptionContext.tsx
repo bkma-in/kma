@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getUserSubscriptions } from '../services/razorpay.service';
+import { getMySubscriptions } from '../services/payment.service';
 import { auth } from '../config/firebase';
 
 interface SubscriptionContextType {
@@ -23,7 +23,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setLoading(false);
         return;
       }
-      const data = await getUserSubscriptions();
+      const data = await getMySubscriptions();
       if (data && data.success) {
         setIsSubscribed(!!data.isSubscribed);
       }

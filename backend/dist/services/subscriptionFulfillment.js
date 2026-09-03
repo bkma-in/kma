@@ -1,239 +1,158 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fulfillSuccessfulSubscriptionPayment = void 0;
+exports.fulfillManualSubscriptionPayment = void 0;
 const firebase_1 = require("../config/firebase");
 const notificationService_1 = require("./notificationService");
 /**
- * Shared idempotent fulfillment helper for successful Razorpay subscription payments.
- * Executed by:
- * - POST /subscriptions/verify-payment
- * - payment.captured webhook
- * - order.paid webhook
+ * Shared atomic fulfillment helper for approved manual bank transfer payments.
+ * Executed by Admin Approval endpoint: POST /subscriptions/admin/approve/:paymentId
  */
-const fulfillSuccessfulSubscriptionPayment = async (razorpayOrderId, razorpayPaymentId, paymentMethod = 'online', expectedUserId) => {
+const fulfillManualSubscriptionPayment = async (paymentAttemptId, adminUserId, adminName = 'Administrator') => {
     try {
-        if (!razorpayOrderId || !razorpayPaymentId) {
-            return { success: false, alreadyFulfilled: false, error: 'Razorpay order ID and payment ID are required' };
+        if (!paymentAttemptId) {
+            return { success: false, alreadyFulfilled: false, error: 'Payment attempt ID is required' };
         }
-        console.log(`[SUBSCRIPTION-FULFILLMENT] Initiating fulfillment check for Razorpay Order: ${razorpayOrderId}, Payment: ${razorpayPaymentId}`);
-        // Step 1: Find internal subscription record by razorpayOrderId or paymentId
-        const subSnapshot = await firebase_1.db.collection('subscriptions')
-            .where('razorpayOrderId', '==', razorpayOrderId)
-            .limit(1)
-            .get();
-        let subDoc = subSnapshot.empty ? null : subSnapshot.docs[0];
-        // Fallback: check legacy paymentId field if razorpayOrderId search returned nothing
-        if (!subDoc) {
-            const fallbackSnapshot = await firebase_1.db.collection('subscriptions')
-                .where('paymentId', '==', razorpayOrderId)
-                .limit(1)
-                .get();
-            if (!fallbackSnapshot.empty) {
-                subDoc = fallbackSnapshot.docs[0];
-            }
+        console.log(`[MANUAL-FULFILLMENT] Initiating approval transaction for Payment Attempt: ${paymentAttemptId} by Admin: ${adminUserId}`);
+        // Step 1: Find payment attempt document
+        const attemptRef = firebase_1.db.collection('paymentAttempts').doc(paymentAttemptId);
+        const attemptDoc = await attemptRef.get();
+        if (!attemptDoc.exists) {
+            return { success: false, alreadyFulfilled: false, error: 'Payment record not found' };
         }
-        if (!subDoc) {
-            console.warn(`[SUBSCRIPTION-FULFILLMENT] No subscription order found for Razorpay Order ID: ${razorpayOrderId}`);
-            return { success: false, alreadyFulfilled: false, error: 'Subscription order record not found' };
+        const attemptData = attemptDoc.data();
+        // Idempotency Check: Verify status is PENDING_VERIFICATION
+        if (attemptData.status === 'APPROVED' || attemptData.status === 'fulfilled') {
+            return {
+                success: true,
+                alreadyFulfilled: true,
+                attemptId: paymentAttemptId,
+                message: 'Payment has already been approved and subscription activated.'
+            };
         }
-        const subData = subDoc.data();
-        // Verify ownership if expectedUserId is provided
-        if (expectedUserId && subData.userId !== expectedUserId) {
-            console.error(`[SUBSCRIPTION-FULFILLMENT] Security mismatch: Order ${razorpayOrderId} belongs to user ${subData.userId}, expected ${expectedUserId}`);
-            return { success: false, alreadyFulfilled: false, error: 'Subscription order does not belong to authenticated user' };
+        if (attemptData.status === 'REJECTED') {
+            return {
+                success: false,
+                alreadyFulfilled: false,
+                error: 'Cannot approve a payment that was previously rejected.'
+            };
         }
-        const userId = subData.userId;
-        const plan = subData.type || subData.plan || 'annual';
-        const amount = subData.amount || (plan === 'lifetime' ? 1000 : 2000);
-        const amountInPaise = amount * 100;
-        const internalOrderId = subDoc.id;
+        const userId = attemptData.userId;
+        const internalOrderId = attemptData.internalOrderId;
+        const plan = attemptData.plan || 'annual';
+        const expectedAmount = attemptData.expectedAmount || attemptData.amount || (plan === 'lifetime' ? 1000 : 2000);
+        const transactionRef = attemptData.transactionReference || attemptData.transactionRef || 'N/A';
         // Step 2: Atomic Firestore Transaction for State Transition
-        let attemptDocIdToReturn;
         const transactionResult = await firebase_1.db.runTransaction(async (transaction) => {
-            const freshSubDoc = await transaction.get(subDoc.ref);
-            if (!freshSubDoc.exists) {
-                throw new Error('Subscription document no longer exists');
+            const freshAttempt = await transaction.get(attemptRef);
+            if (!freshAttempt.exists) {
+                throw new Error('Payment record no longer exists');
             }
-            const currentData = freshSubDoc.data();
-            // Check if already fulfilled
-            if (currentData.fulfillmentStatus === 'fulfilled' || currentData.razorpayPaymentId === razorpayPaymentId) {
-                console.log(`[SUBSCRIPTION-FULFILLMENT] Order ${razorpayOrderId} already fulfilled. Skipping duplicate state transition.`);
-                return { alreadyFulfilled: true, subscriptionId: freshSubDoc.id };
+            const freshAttemptData = freshAttempt.data();
+            if (freshAttemptData.status === 'APPROVED') {
+                return { alreadyFulfilled: true };
             }
             const now = new Date();
             let expiresAt = null;
-            if (plan === 'annual' || plan === 'online_print') {
+            if (plan === 'annual') {
                 expiresAt = new Date(now);
                 expiresAt.setFullYear(expiresAt.getFullYear() + 1);
             }
-            // Update Subscription document
-            transaction.update(freshSubDoc.ref, {
+            // Update paymentAttempt document
+            transaction.update(attemptRef, {
+                status: 'APPROVED',
+                paymentStatus: 'paid',
+                fulfillmentStatus: 'fulfilled',
+                verifiedAt: now,
+                verifiedBy: adminUserId,
+                verifiedByName: adminName,
+                approvedAt: now,
+                updatedAt: now
+            });
+            // Update or Create Subscription document
+            let subRef;
+            if (internalOrderId) {
+                subRef = firebase_1.db.collection('subscriptions').doc(internalOrderId);
+            }
+            else {
+                subRef = firebase_1.db.collection('subscriptions').doc();
+            }
+            transaction.set(subRef, {
+                subscriptionId: subRef.id,
+                userId: userId,
+                type: plan,
+                plan: plan,
+                amount: expectedAmount,
+                currency: 'INR',
                 status: 'active',
                 paymentStatus: 'paid',
                 fulfillmentStatus: 'fulfilled',
-                razorpayPaymentId: razorpayPaymentId,
-                razorpayOrderId: razorpayOrderId,
-                paymentMethod: paymentMethod,
+                paymentMethod: 'MANUAL_BANK_TRANSFER',
+                provider: 'manual_bank_transfer',
                 startedAt: now,
                 expiresAt: expiresAt,
                 verifiedAt: now,
-                fulfilledAt: now,
-                updatedAt: now
-            });
-            // Find or create corresponding paymentAttempts document using razorpayPaymentId as primary key
-            const attemptSnapshot = await firebase_1.db.collection('paymentAttempts')
-                .where('razorpayPaymentId', '==', razorpayPaymentId)
-                .limit(1)
-                .get();
-            let attemptRef;
-            if (!attemptSnapshot.empty) {
-                attemptRef = attemptSnapshot.docs[0].ref;
-            }
-            else {
-                // Find pending attempt for this order ID if payment ID was not attached earlier
-                const pendingAttemptSnapshot = await firebase_1.db.collection('paymentAttempts')
-                    .where('internalOrderId', '==', internalOrderId)
-                    .where('status', '==', 'pending')
-                    .limit(1)
-                    .get();
-                if (!pendingAttemptSnapshot.empty) {
-                    attemptRef = pendingAttemptSnapshot.docs[0].ref;
-                }
-                else {
-                    attemptRef = firebase_1.db.collection('paymentAttempts').doc();
-                }
-            }
-            attemptDocIdToReturn = attemptRef.id;
-            transaction.set(attemptRef, {
-                attemptId: attemptRef.id,
-                userId: userId,
-                internalOrderId: internalOrderId,
-                razorpayOrderId: razorpayOrderId,
-                razorpayPaymentId: razorpayPaymentId,
-                plan: plan,
-                amount: amount,
-                amountInPaise: amountInPaise,
-                currency: 'INR',
-                provider: 'razorpay',
-                environment: process.env.NODE_ENV === 'production' ? 'live' : 'test',
-                status: 'fulfilled',
-                paymentMethod: paymentMethod,
-                verifiedAt: now,
-                fulfilledAt: now,
-                createdAt: now,
+                verifiedBy: adminUserId,
+                verifiedByName: adminName,
+                transactionReference: transactionRef,
                 updatedAt: now
             }, { merge: true });
-            return { alreadyFulfilled: false, subscriptionId: freshSubDoc.id, attemptId: attemptRef.id };
+            // Synchronize User profile
+            const userRef = firebase_1.db.collection('users').doc(userId);
+            transaction.set(userRef, {
+                isSubscribed: true,
+                subscriptionStatus: 'active',
+                updatedAt: now
+            }, { merge: true });
+            return { alreadyFulfilled: false, subscriptionId: subRef.id };
         });
         if (transactionResult.alreadyFulfilled) {
             return {
                 success: true,
                 alreadyFulfilled: true,
-                subscriptionId: transactionResult.subscriptionId,
-                message: 'Subscription was already active and fulfilled'
+                message: 'Payment was already approved'
             };
         }
-        // Step 2.5: Synchronize user profile and life member record
+        // Step 3: Send Approval Email Notification
+        const notifLockId = `manual_appr_notif_${paymentAttemptId}`;
+        const notifRef = firebase_1.db.collection('notifications').doc(notifLockId);
         try {
-            const userUpdatePayload = {
-                isSubscribed: true,
-                updatedAt: new Date()
-            };
-            if (subData.concessionApplied === true && subData.membershipId) {
-                userUpdatePayload.isLifeMember = true;
-                userUpdatePayload.lifeMember = true;
-                userUpdatePayload.membershipNumber = subData.membershipId;
-                // Update life_members doc
-                const lifeMemberRef = firebase_1.db.collection('life_members').doc(subData.membershipId);
-                lifeMemberRef.set({
-                    hasActiveSubscription: true,
-                    subscriptionId: transactionResult.subscriptionId,
-                    lastSubscribedAt: new Date(),
-                    updatedAt: new Date()
-                }, { merge: true }).catch(err => {
-                    console.warn('[SUBSCRIPTION-FULFILLMENT] Could not update life_members doc:', err);
+            const userDoc = await firebase_1.db.collection('users').doc(userId).get();
+            const userData = userDoc.exists ? userDoc.data() : null;
+            const userEmail = userData?.email || attemptData.userEmail;
+            const userName = userData?.name || attemptData.userName || 'Member';
+            if (userEmail) {
+                (0, notificationService_1.sendPaymentApprovedNotification)({
+                    email: userEmail,
+                    name: userName,
+                    plan: plan,
+                    amount: expectedAmount,
+                    transactionRef: transactionRef,
+                    date: new Date(),
+                    verifiedByName: adminName
+                }).catch(err => {
+                    console.error('[MANUAL-FULFILLMENT] Notification dispatch failed:', err);
                 });
-            }
-            await firebase_1.db.collection('users').doc(userId).set(userUpdatePayload, { merge: true });
-        }
-        catch (syncErr) {
-            console.warn('[SUBSCRIPTION-FULFILLMENT] Non-critical user sync warning:', syncErr);
-        }
-        // Step 3: Post-Transaction Deterministic Email Dispatch
-        // Uses a deterministic notification ID `receipt_notif_<internalOrderId>` to prevent duplicate emails
-        const deterministicNotifId = `receipt_notif_${internalOrderId}`;
-        const notifRef = firebase_1.db.collection('notifications').doc(deterministicNotifId);
-        try {
-            let shouldSendEmail = false;
-            await firebase_1.db.runTransaction(async (notifTransaction) => {
-                const notifDoc = await notifTransaction.get(notifRef);
-                if (!notifDoc.exists || notifDoc.data()?.status !== 'sent') {
-                    notifTransaction.set(notifRef, {
-                        notificationId: deterministicNotifId,
-                        userId: userId,
-                        internalOrderId: internalOrderId,
-                        razorpayOrderId: razorpayOrderId,
-                        razorpayPaymentId: razorpayPaymentId,
-                        type: 'PAYMENT_SUCCESS_EMAIL',
-                        status: 'sending',
-                        attempts: (notifDoc.data()?.attempts || 0) + 1,
-                        createdAt: notifDoc.exists ? notifDoc.data()?.createdAt : new Date(),
-                        updatedAt: new Date()
-                    }, { merge: true });
-                    shouldSendEmail = true;
-                }
-                else {
-                    console.log(`[SUBSCRIPTION-FULFILLMENT] Confirmation email already sent for order ${internalOrderId}. Skipping.`);
-                }
-            });
-            if (shouldSendEmail) {
-                // Fetch user email details
-                const userDoc = await firebase_1.db.collection('users').doc(userId).get();
-                const userData = userDoc.exists ? userDoc.data() : null;
-                const userEmail = userData?.email || subData.email;
-                const userName = userData?.name || 'Member';
-                if (userEmail) {
-                    (0, notificationService_1.sendSubscriptionPaymentSuccessNotification)({
-                        email: userEmail,
-                        name: userName,
-                        plan: plan,
-                        amount: amount,
-                        razorpayOrderId: razorpayOrderId,
-                        razorpayPaymentId: razorpayPaymentId,
-                        date: new Date(),
-                        paymentMethod: paymentMethod,
-                        internalOrderId: internalOrderId
-                    }).then(() => {
-                        notifRef.update({ status: 'sent', sentAt: new Date(), updatedAt: new Date() }).catch(err => {
-                            console.error('[SUBSCRIPTION-FULFILLMENT] Failed to mark email status sent:', err);
-                        });
-                    }).catch(err => {
-                        console.error('[SUBSCRIPTION-FULFILLMENT] Email sending failed:', err);
-                        notifRef.update({ status: 'failed', lastError: err.message || String(err), updatedAt: new Date() }).catch(() => { });
-                    });
-                }
             }
         }
         catch (emailErr) {
-            console.error('[SUBSCRIPTION-FULFILLMENT] Deterministic notification tracking error:', emailErr);
-            // Non-blocking: email failures must not roll back fulfillment
+            console.error('[MANUAL-FULFILLMENT] Non-critical notification error:', emailErr);
         }
-        console.log(`[SUBSCRIPTION-FULFILLMENT] Order ${razorpayOrderId} successfully fulfilled for user ${userId}`);
+        console.log(`[MANUAL-FULFILLMENT] Payment ${paymentAttemptId} approved successfully by Admin ${adminName}`);
         return {
             success: true,
             alreadyFulfilled: false,
             subscriptionId: transactionResult.subscriptionId,
-            attemptId: transactionResult.attemptId || attemptDocIdToReturn,
-            message: 'Payment verified and subscription activated successfully'
+            attemptId: paymentAttemptId,
+            message: 'Payment verified and subscription activated successfully.'
         };
     }
     catch (error) {
-        console.error('[SUBSCRIPTION-FULFILLMENT] Error fulfilling subscription payment:', error);
+        console.error('[MANUAL-FULFILLMENT] Error approving manual payment:', error);
         return {
             success: false,
             alreadyFulfilled: false,
-            error: error.message || 'Failed to fulfill subscription payment'
+            error: error.message || 'Failed to approve payment'
         };
     }
 };
-exports.fulfillSuccessfulSubscriptionPayment = fulfillSuccessfulSubscriptionPayment;
+exports.fulfillManualSubscriptionPayment = fulfillManualSubscriptionPayment;
