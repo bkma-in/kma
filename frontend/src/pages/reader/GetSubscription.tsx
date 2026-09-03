@@ -4,29 +4,38 @@ import {
   CheckCircle2,
   ShieldCheck,
   Clock,
-  Award,
-  ArrowRight,
-  CreditCard,
-  Loader2,
   Crown,
   KeyRound,
   Mail,
   Sparkles,
   AlertCircle,
   X,
-  RefreshCw,
-  Check
+  Upload,
+  Building2,
+  QrCode,
+  FileCheck,
+  AlertTriangle,
+  Receipt,
+  FileText,
+  CreditCard,
+  Eye,
+  Printer,
+  ExternalLink,
+  XCircle
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { useSubscription } from '../../utils/SubscriptionContext';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  createSubscriptionOrder, 
-  openRazorpayModal, 
-  verifyRazorpayPayment,
-  requestLifeMemberOtp 
-} from '../../services/razorpay.service';
+import { ReceiptTemplate, formatReceiptNo } from '../../components/ReceiptTemplate';
+import {
+  getBankDetails,
+  requestLifeMemberOtp,
+  submitPaymentProof,
+  getPaymentHistory,
+  getPaymentProofUrl
+} from '../../services/payment.service';
+import type { BankDetails, PaymentAttemptItem } from '../../services/payment.service';
 
 const GetSubscription = () => {
   const navigate = useNavigate();
@@ -34,15 +43,113 @@ const GetSubscription = () => {
   const { refreshSubscriptionStatus } = useSubscription();
   const { currentUser } = useAuth();
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [bankInfo, setBankInfo] = useState<BankDetails>({
+    accountName: 'M.S.SAMUEL',
+    bankName: 'Bank of Baroda',
+    accountNumber: '92660100000105',
+    ifsc: 'BARB0DBKOTT',
+    branch: 'Good Shepherd Road Branch, Kottayam - 686001'
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [membershipId, setMembershipId] = useState((currentUser as any)?.membershipNumber || '');
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [otp, setOtp] = useState('');
   const [maskedEmail, setMaskedEmail] = useState('');
-  const [isOtpVerified, setIsOtpVerified] = useState(false);
-  const [verifiedUniqueId, setVerifiedUniqueId] = useState('');
+  const [isOtpVerified, setIsOtpVerified] = useState(Boolean((currentUser as any)?.isLifeMember));
+  const [verifiedUniqueId, setVerifiedUniqueId] = useState((currentUser as any)?.membershipNumber || '');
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Form State for Manual Bank Transfer Proof Submission
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [transactionRef, setTransactionRef] = useState('');
+  const [remarks, setRemarks] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Recent Submissions & History State
+  const [recentAttempt, setRecentAttempt] = useState<PaymentAttemptItem | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentAttemptItem[]>([]);
+  const [selectedReceiptPayment, setSelectedReceiptPayment] = useState<PaymentAttemptItem | null>(null);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+
+  const [proofPreviewUrl, setProofPreviewUrl] = useState<string | null>(null);
+  const [isProofPreviewModalOpen, setIsProofPreviewModalOpen] = useState(false);
+  const [previewingFileName, setPreviewingFileName] = useState('');
+  const [isLoadingProofUrl, setIsLoadingProofUrl] = useState(false);
+
+  useEffect(() => {
+    getBankDetails().then(data => setBankInfo(data)).catch(() => {});
+    loadRecentAttempt();
+  }, []);
+
+  const loadRecentAttempt = async () => {
+    try {
+      const attempts = await getPaymentHistory();
+      if (attempts && attempts.length > 0) {
+        setPaymentHistory(attempts);
+        setRecentAttempt(attempts[0]);
+      }
+    } catch (err) {
+      console.warn('Could not fetch payment history:', err);
+    }
+  };
+
+  const handleViewReceipt = (payment: PaymentAttemptItem) => {
+    if (payment.status !== 'APPROVED') {
+      showToast('Official receipts are issued exclusively for successful, approved payments.', 'info');
+      return;
+    }
+    setSelectedReceiptPayment(payment);
+    setIsReceiptModalOpen(true);
+  };
+
+  const handleViewProof = async (payment: PaymentAttemptItem) => {
+    if (!payment.proofStorageKey) {
+      showToast('Payment proof file unavailable.', 'error');
+      return;
+    }
+    setIsLoadingProofUrl(true);
+    try {
+      const url = await getPaymentProofUrl(payment.proofStorageKey);
+      setProofPreviewUrl(url);
+      setPreviewingFileName(payment.proofFileName || 'Payment Proof');
+      setIsProofPreviewModalOpen(true);
+    } catch (err: any) {
+      console.error('Failed to load proof preview URL:', err);
+      showToast('Failed to load payment proof file preview', 'error');
+    } finally {
+      setIsLoadingProofUrl(false);
+    }
+  };
+
+  // Helper to format date YYYY-MM-DD to DD/MM/YYYY
+  const formatDateString = (dateStr: string) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
+  };
+
+  // Helper to convert number to Indian words
+  const numberToWords = (num: number): string => {
+    const a = [
+      '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+      'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+    ];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+    const helper = (n: number): string => {
+      if (n < 20) return a[n];
+      if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
+      if (n < 1000) return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' and ' + helper(n % 100) : '');
+      return '';
+    };
+
+    if (num === 0) return 'Zero';
+    return `${helper(num)} Rupees Only`;
+  };
 
   // Resend timer countdown
   useEffect(() => {
@@ -52,14 +159,8 @@ const GetSubscription = () => {
     }
   }, [resendCooldown]);
 
-  const features = [
-    'Unlimited access to all peer-reviewed research articles',
-    'High-resolution PDF downloads and offline reading',
-    'Real-time email notifications for newly published issues',
-    'Official Bulletin of Kerala Mathematics Association publications',
-    'Verified researcher reading badge & account certificate',
-    '24/7 technical and reader assistance'
-  ];
+  const payableAmount = isOtpVerified ? 1000 : 2000;
+  const membershipTitle = isOtpVerified ? 'Verified KMA Life Member' : 'Regular Member';
 
   // Request Life Member OTP
   const handleRequestOtp = async (e?: React.FormEvent) => {
@@ -89,353 +190,737 @@ const GetSubscription = () => {
     }
   };
 
-  // Standard checkout (₹2,000 / year)
-  const handleStandardSubscribe = async () => {
-    setIsLoading(true);
-    try {
-      const orderData = await createSubscriptionOrder({ plan: 'annual', applyLifeMemberDiscount: false });
+  // Verify OTP locally for frontend price display unlocked
+  const handleVerifyOtpCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp.trim() || otp.trim().length !== 6) {
+      showToast('Please enter the 6-digit OTP code sent to your email.', 'error');
+      return;
+    }
+    setIsOtpVerified(true);
+    setIsOtpModalOpen(false);
+    showToast('Life Member ID verified! 50% Concession rate applied (₹1,000).', 'success');
+  };
 
-      if (!orderData.success || !orderData.orderId) {
-        throw new Error(orderData.error || 'Failed to create Razorpay order');
+  // Handle File Selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('File size exceeds maximum limit of 5MB.', 'error');
+        setSelectedFile(null);
+        e.target.value = '';
+        return;
       }
-
-      await openRazorpayModal({
-        orderId: orderData.orderId,
-        keyId: orderData.keyId,
-        amount: orderData.amount,
-        name: 'BKMA Annual Pass',
-        description: 'Standard Annual Research Subscription',
-        userEmail: currentUser?.email || '',
-        userName: currentUser?.name || '',
-        onSuccess: async (paymentResponse) => {
-          try {
-            const verifyRes = await verifyRazorpayPayment({
-              razorpay_order_id: paymentResponse.razorpay_order_id,
-              razorpay_payment_id: paymentResponse.razorpay_payment_id,
-              razorpay_signature: paymentResponse.razorpay_signature,
-            });
-
-            if (verifyRes.success) {
-              await refreshSubscriptionStatus();
-              showToast('Annual Subscription activated successfully! Receipt sent.', 'success');
-              navigate('/reader/payments');
-            } else {
-              showToast(verifyRes.error || 'Payment verification failed', 'error');
-            }
-          } catch (err: any) {
-            showToast(err?.response?.data?.error || 'Payment verification failed', 'error');
-          } finally {
-            setIsLoading(false);
-          }
-        },
-        onDismiss: () => {
-          setIsLoading(false);
-          showToast('Payment checkout cancelled', 'info');
-        },
-        onFailure: (error: any) => {
-          setIsLoading(false);
-          showToast(`Payment failed: ${error?.description || error?.reason || 'Transaction could not be completed'}`, 'error');
-        }
-      });
-    } catch (error: any) {
-      console.error('Razorpay subscription error:', error);
-      showToast(error?.response?.data?.error || error.message || 'Failed to initiate payment', 'error');
-      setIsLoading(false);
+      setSelectedFile(file);
     }
   };
 
-  // Life Member concession checkout (₹1,000 / year with verified OTP)
-  const handleLifeMemberSubscribeWithOtp = async (e: React.FormEvent) => {
+  // Submit Payment Proof
+  const handleSubmitProof = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otp.trim() || otp.trim().length !== 6) {
-      showToast('Please enter the valid 6-digit OTP sent to your email.', 'error');
+
+    if (!selectedFile) {
+      showToast('Please select and upload your payment proof receipt (JPG, PNG, or PDF).', 'error');
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const orderData = await createSubscriptionOrder({
-        plan: 'annual',
-        applyLifeMemberDiscount: true,
-        uniqueId: verifiedUniqueId || membershipId.trim(),
-        otp: otp.trim()
-      });
+    if (!paymentDate.trim()) {
+      showToast('Please select the date payment was transferred.', 'error');
+      return;
+    }
 
-      if (!orderData.success || !orderData.orderId) {
-        throw new Error(orderData.error || 'Failed to verify OTP or create concession order');
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append('proof', selectedFile);
+      formData.append('transactionRef', transactionRef.trim() || 'N/A');
+      formData.append('paymentDate', paymentDate.trim());
+      if (remarks.trim()) formData.append('remarks', remarks.trim());
+      if (isOtpVerified && verifiedUniqueId) {
+        formData.append('uniqueId', verifiedUniqueId);
+        formData.append('otp', otp.trim());
       }
 
-      setIsOtpModalOpen(false);
+      const res = await submitPaymentProof(formData);
 
-      await openRazorpayModal({
-        orderId: orderData.orderId,
-        keyId: orderData.keyId,
-        amount: orderData.amount,
-        name: 'BKMA Life Member Pass',
-        description: `KMA Life Member 50% Concession Pass (${verifiedUniqueId})`,
-        userEmail: currentUser?.email || '',
-        userName: currentUser?.name || '',
-        onSuccess: async (paymentResponse) => {
-          try {
-            const verifyRes = await verifyRazorpayPayment({
-              razorpay_order_id: paymentResponse.razorpay_order_id,
-              razorpay_payment_id: paymentResponse.razorpay_payment_id,
-              razorpay_signature: paymentResponse.razorpay_signature,
-            });
-
-            if (verifyRes.success) {
-              await refreshSubscriptionStatus();
-              showToast('Life Member Subscription activated at 50% concession! Receipt sent.', 'success');
-              navigate('/reader/payments');
-            } else {
-              showToast(verifyRes.error || 'Payment verification failed', 'error');
-            }
-          } catch (err: any) {
-            showToast(err?.response?.data?.error || 'Payment verification failed', 'error');
-          } finally {
-            setIsLoading(false);
-          }
-        },
-        onDismiss: () => {
-          setIsLoading(false);
-          showToast('Payment checkout cancelled', 'info');
-        },
-        onFailure: (error: any) => {
-          setIsLoading(false);
-          showToast(`Payment failed: ${error?.description || error?.reason || 'Transaction could not be completed'}`, 'error');
-        }
-      });
-
+      if (res.success) {
+        showToast('Payment proof submitted successfully! Pending administrator verification.', 'success');
+        await loadRecentAttempt();
+        await refreshSubscriptionStatus();
+      } else {
+        showToast(res.error || 'Submission failed', 'error');
+      }
     } catch (error: any) {
-      console.error('Concession subscription error:', error);
-      showToast(error?.response?.data?.error || error.message || 'OTP verification failed.', 'error');
-      setIsLoading(false);
+      console.error('Submit proof error:', error);
+      showToast(error?.response?.data?.error || error.message || 'Failed to submit payment proof.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // Generate Official NPCI Direct Account + IFSC UPI QR Payload
+  const npciAccountVpa = `${bankInfo.accountNumber.trim()}@${bankInfo.ifsc.trim().toUpperCase()}.ifsc.npci`;
+  const npciQrPayload = `upi://pay?pa=${encodeURIComponent(npciAccountVpa)}&pn=${encodeURIComponent(bankInfo.accountName)}&am=${payableAmount}&cu=INR`;
+  const accountIfscQrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(npciQrPayload)}`;
+
   return (
-    <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 font-['Outfit'] pb-12">
+    <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 font-['Outfit'] pb-16">
       {/* Header Banner */}
       <div className="text-center mb-10">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200 mb-4 shadow-sm">
-          <ShieldCheck size={12} className="text-emerald-600" /> Official BKMA Research Pass
+          <ShieldCheck size={12} className="text-emerald-600" /> Manual Bank Transfer Payment System
         </div>
         <h1 className="text-4xl md:text-5xl font-bold text-black tracking-tight mb-3">
           Annual Research Subscription
         </h1>
         <p className="text-zinc-500 text-base max-w-xl mx-auto leading-relaxed">
-          Access the complete archive of peer-reviewed mathematical research papers. Standard annual subscription is <strong className="text-black font-semibold">₹2,000 / year</strong>.
+          Access the complete archive of peer-reviewed mathematical research papers via manual bank transfer verification.
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8 items-stretch mb-16">
-        {/* Left: Main Standard Pass Card */}
-        <div className="bg-white border-2 border-black rounded-[2.5rem] p-8 sm:p-10 shadow-xl shadow-black/5 relative overflow-hidden h-full flex flex-col">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <span className="px-3 py-1 bg-zinc-100 text-zinc-800 rounded-full text-[10px] font-black uppercase tracking-wider">
-                Full Journal Access
+      {/* PENDING VERIFICATION ALERT BANNER */}
+      {recentAttempt && recentAttempt.status === 'PENDING_VERIFICATION' && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-6 sm:p-8 mb-10 shadow-lg shadow-amber-500/5">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+              <Clock size={24} className="animate-pulse" />
+            </div>
+            <div className="flex-1">
+              <span className="inline-block px-2.5 py-0.5 bg-amber-200/60 text-amber-900 rounded-full text-[10px] font-black uppercase tracking-wider mb-2">
+                Verification Pending
               </span>
-              <h2 className="text-3xl font-bold text-black tracking-tight mt-2">Annual Pass</h2>
-              <p className="text-xs text-zinc-400 mt-0.5">1-Year Full Platform Access</p>
-            </div>
-            <div className="text-right">
-              <div className="flex items-baseline justify-end gap-1">
-                <span className="text-4xl font-black text-black">₹2,000</span>
-                <span className="text-zinc-400 text-xs font-medium">/ year</span>
-              </div>
-              <span className="text-[10px] text-zinc-400 font-medium block mt-0.5">Standard Reader Rate</span>
-            </div>
-          </div>
-
-          <hr className="border-zinc-100 mb-6" />
-
-          {/* Included Features */}
-          <ul className="space-y-3.5 mb-8">
-            {features.map((feature, idx) => (
-              <li key={idx} className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5 border border-emerald-200/60">
-                  <Check size={12} />
+              <h3 className="text-xl font-bold text-amber-950 mb-1">
+                Your Payment Proof is Awaiting Administrator Verification
+              </h3>
+              <p className="text-amber-800/90 text-sm leading-relaxed mb-4">
+                We have received your payment proof and UTR reference (<strong className="font-mono text-amber-950">{recentAttempt.transactionRef}</strong>) submitted on {recentAttempt.date}. Access will be activated automatically once an administrator verifies the transfer with our bank account.
+              </p>
+              <div className="flex flex-wrap gap-4 pt-2 border-t border-amber-200/80">
+                <div className="text-xs text-amber-900">
+                  <span className="text-amber-700">Submitted Amount:</span> <strong>{recentAttempt.amount}</strong>
                 </div>
-                <span className="text-zinc-600 text-xs sm:text-sm leading-relaxed">{feature}</span>
-              </li>
-            ))}
-          </ul>
-
-          {/* Subscribe Button (Standard ₹2,000) */}
-          <button
-            onClick={handleStandardSubscribe}
-            disabled={isLoading}
-            className="w-full py-4.5 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-xs tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase cursor-pointer shadow-xl shadow-black/10 active:scale-95 disabled:opacity-50"
-          >
-            {isLoading ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <>
-                <CreditCard size={18} />
-                <span>Subscribe Standard Pass (₹2,000)</span>
-              </>
-            )}
-          </button>
+                <div className="text-xs text-amber-900">
+                  <span className="text-amber-700">Payment Date:</span> <strong>{recentAttempt.paymentDate}</strong>
+                </div>
+                {recentAttempt.proofUrl && (
+                  <a
+                    href={recentAttempt.proofUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-amber-800 underline hover:text-amber-950 font-medium inline-flex items-center gap-1 ml-auto"
+                  >
+                    <FileText size={12} /> View Uploaded Proof
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
+      )}
 
-        {/* Right: KMA Life Member 50% Concession Section */}
-        <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-2 border-amber-300 rounded-[2.5rem] p-8 sm:p-10 shadow-lg shadow-amber-500/5 relative h-full flex flex-col">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-black flex items-center justify-center font-bold shadow-md shadow-amber-500/20">
-              <Crown size={20} />
+      {/* REJECTED ALERT BANNER */}
+      {recentAttempt && recentAttempt.status === 'REJECTED' && (
+        <div className="bg-rose-50 border-2 border-rose-300 rounded-3xl p-6 sm:p-8 mb-10 shadow-lg shadow-rose-500/5">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+              <AlertTriangle size={24} />
             </div>
-            <div>
-              <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest block">
-                Exclusive Concession
+            <div className="flex-1">
+              <span className="inline-block px-2.5 py-0.5 bg-rose-200/80 text-rose-900 rounded-full text-[10px] font-black uppercase tracking-wider mb-2">
+                Verification Unsuccessful
               </span>
-              <h3 className="text-xl font-bold text-black">KMA Life Members</h3>
-            </div>
-          </div>
-
-          <div className="p-4 bg-white/80 backdrop-blur-sm rounded-2xl border border-amber-200/80 mb-6 space-y-2">
-            <div className="flex items-baseline justify-between">
-              <span className="text-xs font-bold text-zinc-700">Concession Rate</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-amber-700">₹1,000</span>
-                <span className="text-zinc-400 text-xs">/ year</span>
-              </div>
-            </div>
-            <p className="text-[11px] text-zinc-500 leading-relaxed">
-              Official Life Members receive a <strong className="text-black">50% discount</strong> on annual subscriptions verified using your registered Unique Member ID and email OTP.
-            </p>
-          </div>
-
-          <form onSubmit={handleRequestOtp} className="space-y-3.5">
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600 block mb-1.5">
-                Enter Your Unique Membership ID
-              </label>
-              <div className="relative">
-                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" size={15} />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. LM-1042"
-                  value={membershipId}
-                  onChange={(e) => setMembershipId(e.target.value.toUpperCase())}
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-zinc-200 rounded-xl text-xs font-mono font-bold uppercase focus:ring-2 focus:ring-amber-500 outline-none shadow-sm"
-                />
-              </div>
-              <p className="text-[10px] text-zinc-400 mt-1">
-                Must match the email of your active login account: <strong className="text-zinc-600">{currentUser?.email}</strong>
+              <h3 className="text-xl font-bold text-rose-950 mb-1">
+                Your Previous Payment Proof Could Not Be Verified
+              </h3>
+              <p className="text-rose-900 text-sm leading-relaxed mb-3">
+                Reason given by administrator: <strong className="bg-rose-100 px-2 py-1 rounded text-rose-950 block mt-1 font-mono text-xs">{recentAttempt.rejectionReason || 'Transaction could not be verified in bank records.'}</strong>
+              </p>
+              <p className="text-xs text-rose-800 font-medium">
+                Please double-check your bank UTR transaction number and submit a clear, fresh payment proof below.
               </p>
             </div>
+          </div>
+        </div>
+      )}
 
+      {/* APPROVED ALERT BANNER */}
+      {recentAttempt && recentAttempt.status === 'APPROVED' && (
+        <div className="bg-emerald-50 border-2 border-emerald-300 rounded-3xl p-6 sm:p-8 mb-10 shadow-lg shadow-emerald-500/5">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+              <CheckCircle2 size={24} />
+            </div>
+            <div className="flex-1">
+              <span className="inline-block px-2.5 py-0.5 bg-emerald-200 text-emerald-900 rounded-full text-[10px] font-black uppercase tracking-wider mb-2">
+                Active Subscription
+              </span>
+              <h3 className="text-xl font-bold text-emerald-950 mb-1">
+                Your Subscription is Active & Fully Verified
+              </h3>
+              <p className="text-emerald-800 text-sm leading-relaxed mb-3">
+                Your payment of {recentAttempt.amount} has been verified by an administrator. You have full access to all research papers.
+              </p>
+              <button
+                onClick={() => navigate('/reader/payments')}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-md"
+              >
+                <Receipt size={14} /> View Official Receipt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Grid Section */}
+      <div className="grid lg:grid-cols-12 gap-8 items-start mb-16">
+        
+        {/* Left Column: Bank Details & QR (5 cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          
+          {/* Life Member Concession Unlock Card */}
+          <div className="bg-gradient-to-br from-zinc-900 to-black text-white rounded-[2rem] p-6 shadow-xl relative overflow-hidden">
+            <div className="flex items-center justify-between mb-3">
+              <span className="px-2.5 py-0.5 bg-amber-400/20 text-amber-300 border border-amber-400/30 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                <Crown size={12} className="text-amber-400" /> KMA Life Member
+              </span>
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">50% Concession</span>
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1">Are you a KMA Life Member?</h3>
+            <p className="text-zinc-400 text-xs leading-relaxed mb-4">
+              Enter your Unique Life Member ID to receive a 50% concession (₹1,000 / year).
+            </p>
+
+            {isOtpVerified ? (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex items-center gap-3">
+                <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-emerald-300">Life Member ID Verified ({verifiedUniqueId})</p>
+                  <p className="text-[10px] text-emerald-400/80">Concession rate of ₹1,000 unlocked</p>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleRequestOtp} className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={membershipId}
+                    onChange={(e) => setMembershipId(e.target.value)}
+                    placeholder="Enter ID (e.g. LM-1042)"
+                    className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition-colors uppercase"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isRequestingOtp}
+                    className="px-3 py-2 bg-amber-400 hover:bg-amber-300 text-black font-bold rounded-xl text-xs transition-colors shrink-0 disabled:opacity-50"
+                  >
+                    {isRequestingOtp ? 'Sending...' : 'Verify'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
+          {/* Bank Details Card */}
+          <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-xl shadow-black/5">
+            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-zinc-100">
+              <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold">
+                <Building2 size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-black text-base leading-tight">BKMA Bank Details</h3>
+                <p className="text-zinc-400 text-xs">Transfer payable amount to this account</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between py-1.5 border-b border-zinc-100">
+                <span className="text-zinc-400">Account Name:</span>
+                <span className="font-bold text-black text-right">{bankInfo.accountName}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-zinc-100">
+                <span className="text-zinc-400">Bank Name:</span>
+                <span className="font-bold text-black text-right">{bankInfo.bankName}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-zinc-100">
+                <span className="text-zinc-400">Account Number:</span>
+                <span className="font-mono font-bold text-black text-right">{bankInfo.accountNumber}</span>
+              </div>
+              <div className="flex justify-between py-1.5 border-b border-zinc-100">
+                <span className="text-zinc-400">IFSC Code:</span>
+                <span className="font-mono font-bold text-black text-right">{bankInfo.ifsc}</span>
+              </div>
+              <div className="flex justify-between py-1.5">
+                <span className="text-zinc-400">Branch:</span>
+                <span className="font-bold text-black text-right">{bankInfo.branch}</span>
+              </div>
+            </div>
+
+            {/* Direct Account + IFSC UPI QR Code Section */}
+            <div className="mt-5 pt-4 border-t border-zinc-100 text-center">
+              <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-zinc-600 tracking-wider mb-2">
+                <QrCode size={14} className="text-black" /> Scan Account + IFSC UPI QR
+              </div>
+              
+              <div className="p-3 bg-white border-2 border-black rounded-2xl inline-block shadow-md my-1">
+                <img
+                  src={bankInfo.qrCodeUrl || accountIfscQrImageSrc}
+                  alt="BKMA Bank Account & IFSC QR Code"
+                  className="w-44 h-44 mx-auto object-contain rounded-lg"
+                />
+              </div>
+
+              <div className="mt-3 p-3 bg-zinc-50 border border-zinc-200 rounded-xl text-left space-y-1 text-[11px]">
+                <div className="flex justify-between font-mono">
+                  <span className="text-zinc-500 font-sans">A/C Number:</span>
+                  <span className="font-bold text-black">{bankInfo.accountNumber}</span>
+                </div>
+                <div className="flex justify-between font-mono">
+                  <span className="text-zinc-500 font-sans">IFSC Code:</span>
+                  <span className="font-bold text-black">{bankInfo.ifsc}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">Bank:</span>
+                  <span className="font-bold text-black">{bankInfo.bankName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">Payee:</span>
+                  <span className="font-bold text-black">{bankInfo.accountName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">Amount:</span>
+                  <span className="font-mono font-black text-emerald-700">₹{payableAmount.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Payment Proof Upload Form (7 cols) */}
+        <div className="lg:col-span-7 bg-white border-2 border-black rounded-[2.5rem] p-8 sm:p-10 shadow-xl shadow-black/5">
+          <div className="flex items-start justify-between mb-6 pb-4 border-b border-zinc-100">
+            <div>
+              <span className="px-3 py-1 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-wider">
+                Step 2: Submit Proof
+              </span>
+              <h2 className="text-2xl font-bold text-black tracking-tight mt-2">Payment Verification Form</h2>
+            </div>
+            <div className="text-right">
+              <span className="text-xs text-zinc-400 block font-medium">Payable Amount</span>
+              <span className="text-3xl font-black text-black">₹{payableAmount.toLocaleString()}</span>
+              {isOtpVerified && (
+                <span className="text-[10px] font-bold text-emerald-700 block uppercase tracking-wider">{membershipTitle}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 text-xs text-amber-900 leading-relaxed">
+            <p className="font-semibold mb-1 flex items-center gap-1.5">
+              <AlertCircle size={14} className="text-amber-600 shrink-0" /> Important Payment Instruction:
+            </p>
+            "Please transfer exactly the displayed amount (<strong>₹{payableAmount.toLocaleString()}</strong>) to the BKMA bank account shown. Your access will be activated only after the payment is verified and approved by an administrator."
+          </div>
+
+          <form onSubmit={handleSubmitProof} className="space-y-5">
+            {/* Membership & Rate Read-Only Summary */}
+            <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-xs">
+              {isOtpVerified ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Membership Status</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={membershipTitle}
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 font-bold text-black text-xs cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Fixed Payable Amount</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={`₹${payableAmount.toLocaleString()} INR`}
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 font-bold text-emerald-700 text-xs cursor-not-allowed font-mono"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Fixed Payable Amount</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={`₹${payableAmount.toLocaleString()} INR`}
+                    className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 font-bold text-emerald-700 text-xs cursor-not-allowed font-mono"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Payment Transfer Date */}
+            <div>
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                Payment Date <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="date"
+                required
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-medium text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+              />
+            </div>
+
+            {/* Transaction / UTR Number (Optional) */}
+            <div>
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                Transaction / UTR / Reference Number <span className="text-zinc-400 font-normal lowercase">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 423910582910 or UPI Reference ID (Optional)"
+                value={transactionRef}
+                onChange={(e) => setTransactionRef(e.target.value)}
+                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-mono font-medium text-black placeholder-zinc-400 focus:outline-none focus:border-black focus:bg-white transition-all uppercase"
+              />
+              <p className="text-[10px] text-zinc-400 mt-1">Optional: Provide bank reference number if shown on your transfer receipt.</p>
+            </div>
+
+            {/* Upload Payment Proof File */}
+            <div>
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                Upload Payment Proof Receipt <span className="text-rose-500">*</span>
+              </label>
+              <div className="border-2 border-dashed border-zinc-300 hover:border-black rounded-2xl p-6 text-center transition-all bg-zinc-50/50 hover:bg-white">
+                <input
+                  type="file"
+                  id="proof-file-input"
+                  required
+                  accept="image/png,image/jpeg,image/jpg,application/pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <label htmlFor="proof-file-input" className="cursor-pointer block">
+                  <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center mx-auto mb-3">
+                    <Upload size={20} />
+                  </div>
+                  {selectedFile ? (
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-emerald-700 flex items-center justify-center gap-1">
+                        <FileCheck size={14} /> {selectedFile.name}
+                      </p>
+                      <p className="text-[10px] text-zinc-400">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-xs font-bold text-black mb-1">Click to browse or drop file here</p>
+                      <p className="text-[10px] text-zinc-400">Supported Formats: JPG, JPEG, PNG, PDF (Max 5 MB)</p>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
+
+            {/* Optional Remarks */}
+            <div>
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                Remarks (Optional)
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Any additional information regarding your bank transfer..."
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-xl text-xs font-medium text-black focus:outline-none focus:border-black focus:bg-white transition-all resize-none"
+              />
+            </div>
+
+            {/* Submit Button */}
             <button
               type="submit"
-              disabled={isRequestingOtp || !membershipId.trim()}
-              className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-black font-black text-xs rounded-xl tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-amber-500/20 active:scale-95 disabled:opacity-50"
+              disabled={isSubmitting}
+              className="w-full py-4 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-base transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
             >
-              {isRequestingOtp ? (
-                <Loader2 size={16} className="animate-spin" />
+              {isSubmitting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  <span>Submitting Payment Proof...</span>
+                </>
               ) : (
                 <>
-                  <Sparkles size={15} />
-                  <span>Verify &amp; Claim 50% Concession (₹1,000)</span>
+                  <Upload size={18} />
+                  <span>Submit Payment Proof for Verification</span>
                 </>
               )}
             </button>
           </form>
-
-          <div className="mt-auto pt-4 border-t border-amber-200/50 flex items-center gap-2 text-[10px] text-zinc-500">
-            <ShieldCheck size={14} className="text-amber-600 shrink-0" />
-            <span>2-Factor Email OTP verification required at checkout</span>
-          </div>
         </div>
       </div>
 
-      {/* Trust Badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-2">
-        {[
-          { icon: Clock, text: "Instant Activation", desc: "Immediate Journal Access" },
-          { icon: Award, text: "Peer-Reviewed Content", desc: "Official BKMA Volume" },
-          { icon: Crown, text: "Life Member Benefits", desc: "50% Concession Pass" }
-        ].map((item, i) => (
-          <div key={i} className="flex flex-col items-center text-center p-5 bg-white rounded-2xl border border-zinc-100 shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center text-zinc-600 mb-2 border border-zinc-100">
-              <item.icon size={20} />
+      {/* PAYMENT SUBMISSIONS & VERIFICATION HISTORY SECTION */}
+      {paymentHistory.length > 0 && (
+        <div className="mt-16 bg-white border border-zinc-200 rounded-[2.5rem] p-8 sm:p-10 shadow-xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-6">
+            <div>
+              <span className="px-3 py-1 bg-zinc-100 text-zinc-700 rounded-full text-[10px] font-black uppercase tracking-wider mb-2 inline-block">
+                Submission Records
+              </span>
+              <h2 className="text-2xl font-bold text-black tracking-tight">
+                Payment Submissions &amp; Verification History
+              </h2>
+              <p className="text-zinc-500 text-xs mt-1">
+                Track status of your submitted bank transfers, preview proof receipts, and access official BKMA receipts once verified.
+              </p>
             </div>
-            <span className="text-xs font-bold text-zinc-800">{item.text}</span>
-            <span className="text-[10px] text-zinc-400 mt-0.5">{item.desc}</span>
+            <div className="text-right shrink-0">
+              <span className="text-xs font-mono font-bold text-zinc-400">Total Submissions: {paymentHistory.length}</span>
+            </div>
           </div>
-        ))}
-      </div>
 
-      {/* ==================================================== */}
-      {/* OTP CONFIRMATION MODAL                               */}
-      {/* ==================================================== */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-zinc-50 border-b border-zinc-200">
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Submission Date</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Membership Plan</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Amount</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Transaction Ref / UTR</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Verification Status</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100">
+                {paymentHistory.map((item) => (
+                  <tr key={item.id} className="group hover:bg-zinc-50 transition-colors">
+                    {/* Submission Date */}
+                    <td className="px-6 py-4">
+                      <p className="text-xs font-bold text-black">{item.date || item.paymentDate}</p>
+                      <span className="text-[10px] text-zinc-400 block font-mono mt-0.5">Receipt No: {formatReceiptNo(item.id, item.date || item.paymentDate)}</span>
+                    </td>
+
+                    {/* Membership Plan */}
+                    <td className="px-6 py-4">
+                      <span className={cn(
+                        "inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border",
+                        item.plan === 'lifetime' ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-zinc-100 text-zinc-700 border-zinc-200"
+                      )}>
+                        {item.plan === 'lifetime' ? 'Verified Life Member (₹1,000)' : 'Standard Pass (₹2,000)'}
+                      </span>
+                    </td>
+
+                    {/* Amount */}
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-mono font-bold text-emerald-700">₹{(item.amountRaw || item.amount).toLocaleString()}</span>
+                    </td>
+
+                    {/* Transaction Ref / UTR */}
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-mono font-bold text-black bg-zinc-100 px-2 py-1 rounded w-fit inline-block">
+                        {item.transactionRef || 'N/A'}
+                      </span>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-6 py-4">
+                      <div>
+                        <span className={cn(
+                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                          item.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                          item.status === 'PENDING_VERIFICATION' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                          'bg-rose-50 text-rose-600 border-rose-100'
+                        )}>
+                          {item.status === 'APPROVED' ? <CheckCircle2 size={10} /> :
+                           item.status === 'PENDING_VERIFICATION' ? <Clock size={10} /> :
+                           <XCircle size={10} />}
+                          {item.status === 'APPROVED' ? 'APPROVED' :
+                           item.status === 'PENDING_VERIFICATION' ? 'PENDING VERIFICATION' : 'REJECTED'}
+                        </span>
+                        {item.status === 'REJECTED' && item.rejectionReason && (
+                          <p className="text-[10px] text-rose-500 font-medium mt-1 max-w-[200px] truncate" title={item.rejectionReason}>
+                            Reason: {item.rejectionReason}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {item.proofStorageKey && (
+                          <button
+                            onClick={() => handleViewProof(item)}
+                            className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-black text-xs font-bold rounded-lg transition-colors flex items-center gap-1"
+                            title="View uploaded proof receipt"
+                          >
+                            <Eye size={13} /> View Proof
+                          </button>
+                        )}
+
+                        {item.status === 'APPROVED' && (
+                          <button
+                            onClick={() => handleViewReceipt(item)}
+                            className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                            title="View official BKMA payment receipt"
+                          >
+                            <Receipt size={13} /> Official Receipt
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* PROOF PREVIEW MODAL */}
+      {isProofPreviewModalOpen && proofPreviewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl overflow-hidden shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-zinc-200">
+            <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50">
+              <div>
+                <h3 className="text-sm font-bold text-black uppercase tracking-wider">Payment Proof Preview</h3>
+                <p className="text-xs text-zinc-500 font-medium">{previewingFileName}</p>
+              </div>
+              <button
+                onClick={() => setIsProofPreviewModalOpen(false)}
+                className="p-2 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-xl transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 bg-zinc-100 flex items-center justify-center min-h-[350px]">
+              {previewingFileName.toLowerCase().endsWith('.pdf') ? (
+                <div className="w-full text-center space-y-4 py-8">
+                  <FileText size={56} className="mx-auto text-zinc-400" />
+                  <p className="text-xs font-bold text-black">{previewingFileName}</p>
+                  <a
+                    href={proofPreviewUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-black text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all"
+                  >
+                    <ExternalLink size={16} /> Open PDF Receipt in New Tab
+                  </a>
+                </div>
+              ) : (
+                <img
+                  src={proofPreviewUrl}
+                  alt="Payment Proof Receipt"
+                  className="max-h-[60vh] max-w-full object-contain rounded-2xl border border-zinc-200 shadow-md"
+                />
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-zinc-100 bg-zinc-50 flex justify-end">
+              <button
+                onClick={() => setIsProofPreviewModalOpen(false)}
+                className="px-5 py-2 bg-black text-white rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OFFICIAL RECEIPT MODAL */}
+      {isReceiptModalOpen && selectedReceiptPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm receipt-modal-backdrop animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl overflow-hidden shadow-2xl max-w-4xl w-full max-h-[95vh] flex flex-col border border-zinc-200 receipt-modal-card">
+            <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50 no-print">
+              <div>
+                <h3 className="text-sm font-black text-black uppercase tracking-wider">Official Payment Receipt Preview</h3>
+                <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">
+                  Transaction UTR / Ref: {selectedReceiptPayment.transactionRef || 'N/A'}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsReceiptModalOpen(false)}
+                className="p-2 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-xl transition-all"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 bg-zinc-100/50 flex justify-center">
+              <ReceiptTemplate
+                receiptNumber={formatReceiptNo(selectedReceiptPayment.id)}
+                date={formatDateString(selectedReceiptPayment.paymentDate || selectedReceiptPayment.date)}
+                memberName={currentUser?.name || localStorage.getItem('userName') || 'Member'}
+                amount={(selectedReceiptPayment.amountRaw || selectedReceiptPayment.amount).toString().replace('₹', '')}
+                amountInWords={numberToWords(parseInt((selectedReceiptPayment.amountRaw || selectedReceiptPayment.amount).toString().replace(/[^\d]/g, '')) || 1000)}
+                membershipType={selectedReceiptPayment.plan === 'lifetime' ? 'Life Membership Pass' : 'Annual Pass Subscription'}
+                journalYear={(selectedReceiptPayment.date || new Date().toISOString()).substring(0, 4)}
+                paymentMethod="Manual Bank Transfer (UPI / NEFT / IMPS)"
+                transactionId={selectedReceiptPayment.transactionRef || 'N/A'}
+                status="PAID"
+              />
+            </div>
+
+            <div className="px-6 py-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-end gap-3 receipt-modal-actions no-print">
+              <button
+                onClick={() => window.print()}
+                className="px-5 py-2.5 bg-black hover:bg-zinc-800 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2"
+              >
+                <Printer size={16} /> Print Official Receipt
+              </button>
+              <button
+                onClick={() => setIsReceiptModalOpen(false)}
+                className="px-5 py-2.5 bg-zinc-200 hover:bg-zinc-300 text-black rounded-xl text-xs font-bold transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OTP Verification Modal for Life Member Concession */}
       {isOtpModalOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl border border-zinc-200 shadow-2xl max-w-md w-full p-6 sm:p-8 animate-in zoom-in-95 duration-200 relative">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white border-2 border-black rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl relative">
             <button
               onClick={() => setIsOtpModalOpen(false)}
-              className="absolute right-4 top-4 p-2 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-full transition-colors cursor-pointer"
+              className="absolute top-6 right-6 p-2 rounded-full hover:bg-zinc-100 transition-colors"
             >
               <X size={18} />
             </button>
 
-            <div className="text-center mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
-                <KeyRound size={24} />
-              </div>
-              <h3 className="text-xl font-bold text-black">Confirm Life Member OTP</h3>
-              <p className="text-xs text-zinc-500 mt-1">
-                A 6-digit confirmation code was sent to: <br />
-                <strong className="text-black font-semibold">{maskedEmail}</strong>
-              </p>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-[10px] font-bold mt-2">
-                <Crown size={12} /> ID: {verifiedUniqueId} (50% Concession)
-              </div>
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mb-4">
+              <KeyRound size={24} />
             </div>
 
-            <form onSubmit={handleLifeMemberSubscribeWithOtp} className="space-y-4">
+            <h3 className="text-2xl font-bold text-black tracking-tight mb-2">
+              Enter 6-Digit Code
+            </h3>
+            <p className="text-zinc-500 text-xs leading-relaxed mb-6">
+              A 6-digit verification OTP code has been sent to your registered email (<strong className="text-black font-semibold">{maskedEmail}</strong>) for Life Member ID <strong className="text-black">{verifiedUniqueId}</strong>.
+            </p>
+
+            <form onSubmit={handleVerifyOtpCode} className="space-y-4">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block text-center mb-2">
-                  Enter 6-Digit Code
-                </label>
                 <input
                   type="text"
-                  required
                   maxLength={6}
-                  autoFocus
-                  placeholder="• • • • • •"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                  className="w-full text-center tracking-[0.4em] text-2xl font-mono font-bold py-3 bg-zinc-50 border border-zinc-200 rounded-2xl focus:ring-2 focus:ring-black outline-none"
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="6-Digit OTP"
+                  className="w-full text-center tracking-[0.5em] text-2xl font-mono font-bold px-4 py-3 bg-zinc-50 border-2 border-zinc-300 rounded-2xl focus:outline-none focus:border-black transition-all"
+                  autoFocus
                 />
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-zinc-500 pt-1">
-                <span>Didn't receive code?</span>
-                <button
-                  type="button"
-                  disabled={resendCooldown > 0 || isRequestingOtp}
-                  onClick={() => handleRequestOtp()}
-                  className="font-bold text-black hover:underline cursor-pointer disabled:text-zinc-400 disabled:no-underline"
-                >
-                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
-                </button>
               </div>
 
               <button
                 type="submit"
-                disabled={isLoading || otp.length !== 6}
-                className="w-full py-4 bg-black hover:bg-zinc-800 text-white rounded-xl font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/10 cursor-pointer disabled:opacity-50 active:scale-95 mt-4"
+                className="w-full py-3.5 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-sm transition-all"
               >
-                {isLoading ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <>
-                    <CheckCircle2 size={16} />
-                    <span>Confirm OTP &amp; Pay ₹1,000</span>
-                  </>
-                )}
+                Verify & Apply 50% Concession Rate
               </button>
             </form>
           </div>

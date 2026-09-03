@@ -12,7 +12,7 @@ interface PhotoActionModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentImage: string | null;
-  onUpdate: (newImage: string | null) => void;
+  onUpdate: (newImage: string | File | null) => Promise<void> | void;
 }
 
 const PhotoActionModal: React.FC<PhotoActionModalProps> = ({ isOpen, onClose, currentImage, onUpdate }) => {
@@ -25,7 +25,7 @@ const PhotoActionModal: React.FC<PhotoActionModalProps> = ({ isOpen, onClose, cu
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
     const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
     if (!allowedTypes.includes(file.type)) {
@@ -38,12 +38,11 @@ const PhotoActionModal: React.FC<PhotoActionModalProps> = ({ isOpen, onClose, cu
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      onUpdate(reader.result as string);
-      onClose();
-    };
-    reader.readAsDataURL(file);
+    onUpdate(file);
+    onClose();
+    if (e.target) {
+      e.target.value = '';
+    }
   };
 
   const handleRemove = () => {

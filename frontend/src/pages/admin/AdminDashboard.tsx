@@ -20,7 +20,8 @@ import {
   Megaphone,
   BookOpen,
   Sparkles,
-  Crown
+  Crown,
+  CreditCard
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { NavLink } from 'react-router-dom';
@@ -282,7 +283,20 @@ const AdminDashboard = () => {
           {/* Quick Actions Grid */}
           <div>
             <h2 className="text-[10px] font-black tracking-[0.2em] text-zinc-400 uppercase mb-4 px-1">Control Hub</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <NavLink to="/admin/payments" className="group p-5 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all shadow-sm">
+                    <CreditCard size={18} />
+                  </div>
+                  <ChevronRight size={18} className="text-zinc-200 group-hover:text-black transition-all" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-black uppercase tracking-wider mb-0.5">Payments</h4>
+                  <p className="text-[10px] text-zinc-400 font-medium">Verify Bank Transfers</p>
+                </div>
+              </NavLink>
+
               <NavLink to="/admin/articles" className="group p-5 bg-white/70 backdrop-blur-md border border-white/20 rounded-3xl shadow-lg hover:border-black transition-all flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-11 h-11 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-400 group-hover:bg-black group-hover:text-white transition-all shadow-sm">

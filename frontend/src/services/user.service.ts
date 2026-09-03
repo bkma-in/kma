@@ -27,11 +27,7 @@ export const clearProfileCache = () => {
 };
 
 export const updateProfile = async (formData: FormData) => {
-  const response = await api.put('/users/profile', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  const response = await api.put('/users/profile', formData);
   if (response.data && response.data.success) {
     cachedProfileData = response.data.profile;
   }

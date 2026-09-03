@@ -51,28 +51,41 @@ export const useProfile = () => {
     return () => window.removeEventListener('profile-update', handleSync);
   }, [loadProfile]);
 
-  const updateProfile = async (newData: UserProfile, imageFile?: File | null) => {
+  const updateProfile = async (newData: UserProfile, imageInput?: File | Blob | string | null) => {
     try {
       const formData = new FormData();
-      formData.append('name', newData.name);
+      formData.append('name', newData.name || '');
       formData.append('phone', newData.phone || '');
       formData.append('designation', newData.designation || '');
       formData.append('bio', newData.bio || '');
       
-      if (imageFile) {
-        formData.append('profileImage', imageFile);
-      } else if (imageFile === null) {
+      // Determine the image to upload or remove
+      const imageToProcess = imageInput !== undefined ? imageInput : newData.profileImage;
+
+      if (imageToProcess instanceof File) {
+        formData.append('profileImage', imageToProcess);
+      } else if (imageToProcess instanceof Blob) {
+        formData.append('profileImage', imageToProcess, 'profile.jpg');
+      } else if (typeof imageToProcess === 'string' && imageToProcess.startsWith('data:')) {
+        try {
+          const res = await fetch(imageToProcess);
+          const blob = await res.blob();
+          formData.append('profileImage', blob, 'profile.jpg');
+        } catch {
+          formData.append('profileImage', imageToProcess);
+        }
+      } else if (imageToProcess === null || imageToProcess === 'null') {
         // Explicitly remove image
         formData.append('profileImage', 'null');
       }
 
       const response = await apiUpdateProfile(formData);
       
-      if (response.success) {
+      if (response.success && response.profile) {
         setProfile(response.profile);
         localStorage.setItem('userName', response.profile.name);
         window.dispatchEvent(new CustomEvent('profile-update'));
-        return { success: true };
+        return { success: true, profile: response.profile };
       }
       return { success: false, error: response.error || 'Failed to update profile' };
     } catch (error: any) {

@@ -965,18 +965,7 @@ const AdminLifeMembers: React.FC = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="sendWelcomeEmail"
-                  checked={addForm.sendWelcomeEmail}
-                  onChange={(e) => setAddForm({ ...addForm, sendWelcomeEmail: e.target.checked })}
-                  className="w-4 h-4 rounded text-black focus:ring-black border-zinc-300"
-                />
-                <label htmlFor="sendWelcomeEmail" className="text-xs text-zinc-700 font-medium cursor-pointer">
-                  Send welcome email notification to member
-                </label>
-              </div>
+
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-100">
                 <button

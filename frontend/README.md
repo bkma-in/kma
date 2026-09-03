@@ -73,7 +73,7 @@ src/
 
 ## 📌 Future Enhancements
 
-- Payment gateway integration (Razorpay/Stripe)
+- Manual Bank Transfer & Admin Verification Payment System
 - Backend API integration
 - Role-based authentication system
 - Article analytics and recommendations

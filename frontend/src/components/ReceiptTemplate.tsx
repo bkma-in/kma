@@ -15,6 +15,83 @@ export interface ReceiptTemplateProps {
   status?: 'PAID' | string;
 }
 
+export const numberToWords = (num: number): string => {
+  if (isNaN(num) || num <= 0) return '';
+  const a = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+  ];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  const convertLessThanThousand = (n: number): string => {
+    if (n === 0) return '';
+    if (n < 20) return a[n];
+    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : '');
+    return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanThousand(n % 100) : '');
+  };
+
+  if (num === 1000) return 'One Thousand Rupees Only';
+  if (num === 2000) return 'Two Thousand Rupees Only';
+
+  let result = '';
+  if (num >= 100000) {
+    const lakh = Math.floor(num / 100000);
+    result += convertLessThanThousand(lakh) + ' Lakh ';
+    num %= 100000;
+  }
+  if (num >= 1000) {
+    const thousand = Math.floor(num / 1000);
+    result += convertLessThanThousand(thousand) + ' Thousand ';
+    num %= 1000;
+  }
+  if (num > 0) {
+    result += convertLessThanThousand(num);
+  }
+
+  const finalStr = result.trim();
+  return finalStr ? `${finalStr} Rupees Only` : '';
+};
+
+export const formatReceiptNo = (rawNo?: string, dateStr?: string | Date) => {
+  if (!rawNo) return '';
+  const clean = rawNo.replace(/^sub_/i, '').trim();
+
+  // If already formatted as BKMAxx-xxx (e.g. BKMA26-001), return directly
+  if (/^BKMA\d{2}-\d{3,}$/i.test(clean)) {
+    return clean.toUpperCase();
+  }
+
+  // Extract 2-digit year (e.g. 2026 -> 26, 2027 -> 27)
+  let year = new Date().getFullYear();
+  if (dateStr) {
+    const parsedDate = new Date(dateStr);
+    if (!isNaN(parsedDate.getTime())) {
+      year = parsedDate.getFullYear();
+    }
+  }
+  const yy = year.toString().slice(-2);
+
+  // Deterministically map ID to range 1-999 (001, 002, 003...)
+  const digitsMatch = clean.match(/\d+/g);
+  let seqNum = 1;
+  if (digitsMatch) {
+    const extractedNum = parseInt(digitsMatch.join(''), 10);
+    if (!isNaN(extractedNum)) {
+      seqNum = (extractedNum % 999) + 1;
+    }
+  } else {
+    let hash = 0;
+    for (let i = 0; i < clean.length; i++) {
+      hash = (hash << 5) - hash + clean.charCodeAt(i);
+      hash |= 0;
+    }
+    seqNum = (Math.abs(hash) % 999) + 1;
+  }
+
+  const paddedSeq = seqNum.toString().padStart(3, '0');
+  return `BKMA${yy}-${paddedSeq}`;
+};
+
 export const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
   receiptNumber,
   date,
@@ -33,6 +110,25 @@ export const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
     const numeric = typeof amt === 'string' ? parseFloat(amt.replace(/[^\d.]/g, '')) : amt;
     if (isNaN(numeric)) return amt.toString();
     return `${numeric.toLocaleString('en-IN')}/-`;
+  };
+
+  // Helper to resolve amount in words with automatic numeric fallback
+  const getAmountInWords = () => {
+    if (amountInWords && amountInWords.trim() && !/^rupees only$/i.test(amountInWords.trim())) {
+      const trimmed = amountInWords.trim();
+      if (/rupees only$/i.test(trimmed)) return trimmed;
+      if (/rupees$/i.test(trimmed)) return `${trimmed} Only`;
+      return `${trimmed} Rupees Only`;
+    }
+
+    const numericAmount = typeof amount === 'number'
+      ? amount
+      : parseInt((amount || '').toString().replace(/[^\d]/g, ''), 10);
+
+    if (!isNaN(numericAmount) && numericAmount > 0) {
+      return numberToWords(numericAmount);
+    }
+    return 'Rupees Only';
   };
 
   // Helper to check if a field is populated
@@ -69,7 +165,7 @@ export const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
           <div className="receipt-meta-no">
             <span className="receipt-meta-label">No.</span>
             <span className="receipt-meta-val-no">
-              {isPopulated(receiptNumber) ? receiptNumber : <span className="empty-dots empty-dots-short"></span>}
+              {isPopulated(receiptNumber) ? formatReceiptNo(receiptNumber, date) : <span className="empty-dots empty-dots-short"></span>}
             </span>
           </div>
           <div className="receipt-label-pill">
@@ -95,8 +191,8 @@ export const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
 
           {/* Line 2: The sum of Rupees */}
           <div className="receipt-body-multiline-row">
-            <span className="receipt-body-label-inline">the sum of Rupees (UPI / Card / Net Banking / Wallet)</span>
-            <span className="receipt-body-value-inline">{amountInWords || ''}</span>
+            <span className="receipt-body-label-inline">the sum of Rupees</span>
+            <span className="receipt-body-value-inline">{getAmountInWords()}</span>
             <div className="receipt-print-line receipt-print-line-1"></div>
             <div className="receipt-print-line receipt-print-line-2"></div>
           </div>
@@ -131,13 +227,7 @@ export const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
               </div>
             </div>
 
-            {/* Payment Method & Transaction ID lines */}
-            <div className="receipt-meta-field">
-              <span className="receipt-meta-field-label">Payment Method:</span>
-              <div className="receipt-meta-field-wrapper">
-                <span className="receipt-meta-field-value">{paymentMethod || ''}</span>
-              </div>
-            </div>
+            {/* Transaction ID line */}
 
             <div className="receipt-meta-field">
               <span className="receipt-meta-field-label">Transaction ID:</span>

@@ -83,15 +83,13 @@ const PricingPage: React.FC = () => {
           <section className="mb-12">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-6 leading-tight">Payment Information</h2>
             <p className="text-zinc-700 text-lg sm:text-xl leading-relaxed mb-6">
-              Online subscriptions can be completed through the BKMA website using the integrated payment system.
+              Subscriptions can be completed using manual bank transfer or direct UPI payment followed by administrator verification.
             </p>
             <p className="text-xs font-black uppercase tracking-wider text-zinc-400 mb-3.5">Supported Payment Methods</p>
             <ul className="list-disc pl-6 space-y-2 text-zinc-600 text-base sm:text-lg">
-              <li>Razorpay</li>
-              <li>UPI</li>
-              <li>Credit Cards</li>
-              <li>Debit Cards</li>
-              <li>Net Banking</li>
+              <li>Manual Bank Transfer (NEFT / IMPS / RTGS)</li>
+              <li>Net Banking & Mobile Banking App Transfer</li>
+              <li>Administrator Verification</li>
             </ul>
           </section>
 
