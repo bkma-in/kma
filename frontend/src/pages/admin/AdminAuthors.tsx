@@ -28,6 +28,7 @@ import { cn } from '../../utils/cn';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { formatDate } from '../../utils/dateHelpers';
+import { CustomSelect } from '../../components/common/CustomSelect';
 import AddReviewerModal from '../../components/admin/AddReviewerModal';
 import { useNotification } from '../../utils/NotificationContext';
 import { getReviewers, updateReviewerStatus, resendReviewerCredentials } from '../../services/user.service';
@@ -306,20 +307,20 @@ const AdminAuthors = () => {
                 className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium w-full sm:w-64 focus:ring-2 focus:ring-black outline-none transition-all shadow-sm"
               />
             </div>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
-              <select 
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm"
-              >
-                <option value="All">All Status</option>
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Deactivated">Deactivated</option>
-              </select>
-            </div>
+            <CustomSelect
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val as any)}
+              icon={<Filter size={15} />}
+              align="right"
+              buttonClassName="py-2.5 text-xs w-full sm:w-auto min-w-[150px]"
+              options={[
+                { value: 'All', label: 'All Status' },
+                { value: 'Pending', label: 'Pending' },
+                { value: 'Approved', label: 'Approved' },
+                { value: 'Rejected', label: 'Rejected' },
+                { value: 'Deactivated', label: 'Deactivated' },
+              ]}
+            />
           </div>
         </div>
       </div>

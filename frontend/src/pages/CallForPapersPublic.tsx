@@ -6,8 +6,9 @@ import { CFPHero } from '../components/cfp/CFPHero';
 import { CFPList } from '../components/cfp/CFPList';
 import type { CallForPaper } from '../types/cfp';
 import { getCFPs } from '../services/cfp.service';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Calendar, BookOpen } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { CustomSelect } from '../components/common/CustomSelect';
 
 export const CallForPapersPublic: React.FC = () => {
   const navigate = useNavigate();
@@ -179,31 +180,31 @@ export const CallForPapersPublic: React.FC = () => {
           </div>
 
           {/* Select Dropdowns */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0">
             {allYears.length > 0 && (
-              <select
+              <CustomSelect
                 value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
-                className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-700 outline-none focus:ring-1 focus:ring-black cursor-pointer"
-              >
-                <option value="">All Years</option>
-                {allYears.map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedYear(val)}
+                icon={<Calendar size={13} />}
+                buttonClassName="py-2 text-xs bg-zinc-50 hover:bg-white"
+                options={[
+                  { value: '', label: 'All Years' },
+                  ...allYears.map(y => ({ value: y, label: y }))
+                ]}
+              />
             )}
 
             {allVolumes.length > 0 && (
-              <select
+              <CustomSelect
                 value={selectedVolume}
-                onChange={(e) => setSelectedVolume(e.target.value)}
-                className="px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-700 outline-none focus:ring-1 focus:ring-black cursor-pointer"
-              >
-                <option value="">All Volumes</option>
-                {allVolumes.map(v => (
-                  <option key={v} value={v}>Volume {v}</option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedVolume(val)}
+                icon={<BookOpen size={13} />}
+                buttonClassName="py-2 text-xs bg-zinc-50 hover:bg-white"
+                options={[
+                  { value: '', label: 'All Volumes' },
+                  ...allVolumes.map(v => ({ value: v, label: `Volume ${v}` }))
+                ]}
+              />
             )}
           </div>
         </div>

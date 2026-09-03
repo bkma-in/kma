@@ -16,6 +16,7 @@ import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { getReportedIssues, updateIssueStatus as updateIssueStatusAPI } from '../../services/user.service';
 import type { Issue, IssueStatus } from '../../types/issue';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 const DeveloperIssues = () => {
   const { showToast } = useNotification();
@@ -99,21 +100,21 @@ const DeveloperIssues = () => {
               className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black w-64 focus:ring-1 focus:ring-black outline-none transition-all shadow-sm"
             />
           </div>
-          <div className="relative group">
-            <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-black transition-colors" size={16} />
-            <select 
+            <CustomSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="pl-10 pr-8 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black focus:ring-1 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm"
-            >
-              <option value="All">All Status</option>
-              <option value="Open">Open</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Resolved">Resolved</option>
-            </select>
+              onChange={(val) => setStatusFilter(val as any)}
+              icon={<Filter size={15} />}
+              align="right"
+              buttonClassName="py-2.5 text-xs w-full sm:w-auto min-w-[150px]"
+              options={[
+                { value: 'All', label: 'All Status' },
+                { value: 'Open', label: 'Open' },
+                { value: 'In Progress', label: 'In Progress' },
+                { value: 'Resolved', label: 'Resolved' },
+              ]}
+            />
           </div>
         </div>
-      </div>
 
       {/* Table Section */}
       <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">

@@ -34,6 +34,7 @@ import {
   deleteLifeMember
 } from '../../services/user.service';
 import { SkeletonTable } from '../../components/skeletons/SkeletonTable';
+import { CustomSelect } from '../../components/common/CustomSelect';
 
 interface LifeMember {
   id: string;
@@ -703,20 +704,20 @@ const AdminLifeMembers: React.FC = () => {
             />
           </div>
 
-          <div className="relative">
-            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="pl-8 pr-8 py-2 bg-white border border-zinc-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-black outline-none appearance-none cursor-pointer shadow-sm text-zinc-700"
-            >
-              <option value="newest">Sort: Newest Enrolled</option>
-              <option value="oldest">Sort: Oldest Enrolled</option>
-              <option value="id_asc">Sort: Membership ID</option>
-              <option value="email_asc">Sort: Email (A - Z)</option>
-              <option value="subscribed_first">Sort: Subscribed First</option>
-            </select>
-          </div>
+          <CustomSelect<SortOption>
+            value={sortBy}
+            onChange={(val) => setSortBy(val)}
+            icon={<ArrowUpDown size={14} />}
+            align="right"
+            buttonClassName="py-2 text-xs"
+            options={[
+              { value: 'newest', label: 'Sort: Newest Enrolled' },
+              { value: 'oldest', label: 'Sort: Oldest Enrolled' },
+              { value: 'id_asc', label: 'Sort: Membership ID' },
+              { value: 'email_asc', label: 'Sort: Email (A - Z)' },
+              { value: 'subscribed_first', label: 'Sort: Subscribed First' },
+            ]}
+          />
         </div>
       </div>
 
@@ -859,10 +860,17 @@ const AdminLifeMembers: React.FC = () => {
               Add New Member
             </button>
             <button
-              onClick={() => setIsImportModalOpen(true)}
-              className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              onClick={() => {
+                setImportFile(null);
+                setImportParsedRows([]);
+                setImportConflictMode('skip');
+                setImportPreviewFilter('all');
+                setIsImportModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
             >
-              Import Spreadsheet
+              <Upload size={14} className="text-amber-600" />
+              <span>Import CSV / Excel</span>
             </button>
           </div>
         </div>
