@@ -23,7 +23,6 @@ import authRoutes from './routes/authRoutes';
 import articleRoutes from './routes/articleRoutes';
 import issueRoutes from './routes/issueRoutes';
 import subscriptionRoutes from './routes/subscriptionRoutes';
-import webhookRoutes from './routes/webhookRoutes';
 import userRoutes from './routes/userRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import archiveRoutes from './routes/archiveRoutes';
@@ -33,7 +32,7 @@ import cfpRoutes from './routes/cfpRoutes';
 import { authenticateOptional } from './middleware/authMiddleware';
 
 // Import Rate Limiters and IP Trust Validator
-import { globalRateLimiter, webhookRateLimiter, isTrustedProxy } from './middleware/rateLimiter';
+import { globalRateLimiter, isTrustedProxy } from './middleware/rateLimiter';
 
 const app = express();
 
@@ -44,9 +43,6 @@ app.use(compression());
 app.use(cors({
   exposedHeaders: ['Retry-After']
 }));
-
-// Razorpay Webhooks: Dedicated rate limiter + raw body parsing for signature verification
-app.use('/api/webhooks', webhookRateLimiter, express.raw({ type: 'application/json' }), webhookRoutes);
 
 // General Request Payload Size Limits (1MB for JSON and URL-encoded data)
 app.use(express.json({ limit: '1mb' }));

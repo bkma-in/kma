@@ -426,6 +426,18 @@ router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.s
             updateData.profileImage = uploadResult.secure_url;
             updateData.profileImagePublicId = uploadResult.public_id;
         }
+        else if (typeof req.body.profileImage === 'string' && req.body.profileImage.startsWith('data:image/')) {
+            const matches = req.body.profileImage.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+            if (matches && matches.length === 3) {
+                const buffer = Buffer.from(matches[2], 'base64');
+                const uploadResult = await (0, cloudinaryService_1.uploadImage)(buffer, 'profiles');
+                if (userData.profileImagePublicId) {
+                    (0, cloudinaryService_1.deleteImage)(userData.profileImagePublicId).catch(err => console.error('Background cleanup error (old image):', err));
+                }
+                updateData.profileImage = uploadResult.secure_url;
+                updateData.profileImagePublicId = uploadResult.public_id;
+            }
+        }
         else if (req.body.profileImage === null || req.body.profileImage === 'null') {
             // Explicitly removed profile image
             if (userData.profileImagePublicId) {

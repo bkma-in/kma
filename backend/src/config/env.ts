@@ -25,10 +25,13 @@ export const config = {
     supportUrl: process.env.SUPPORT_URL || 'http://localhost:5173/support',
   },
   payments: {
-    razorpay: {
-      keyId: process.env.RAZORPAY_KEY_ID || '',
-      keySecret: process.env.RAZORPAY_KEY_SECRET || '',
-      webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
+    bankAccount: {
+      accountName: process.env.BKMA_PAYMENT_ACCOUNT_NAME || 'M.S.SAMUEL',
+      bankName: process.env.BKMA_BANK_NAME || 'Bank of Baroda',
+      accountNumber: process.env.BKMA_ACCOUNT_NUMBER || '92660100000105',
+      ifsc: process.env.BKMA_IFSC || 'BARB0DBKOTT',
+      branch: process.env.BKMA_BRANCH || 'Good Shepherd Road Branch, Kottayam - 686001',
+      upiId: process.env.BKMA_UPI_ID || ''
     }
   },
   cloudinary: {

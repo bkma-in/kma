@@ -33,7 +33,6 @@
     "multer": "^2.1.1",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
-    "razorpay": "^2.9.6",
     "tesseract.js": "^7.0.0",
     "typescript": "^6.0.3",
     "xlsx": "^0.18.5"

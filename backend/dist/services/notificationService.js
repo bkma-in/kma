@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendLifeMemberWelcomeEmail = exports.sendLifeMemberOtpEmail = exports.sendSubscriptionPaymentSuccessNotification = exports.checkAndSendReviewReminders = exports.sendArticleRejectedNotifications = exports.sendRevisionRequestedNotifications = exports.sendReviewerAssignedNotifications = exports.sendArticleSubmittedNotifications = exports.buildHtmlEmail = void 0;
+exports.sendLifeMemberWelcomeEmail = exports.sendLifeMemberOtpEmail = exports.sendPaymentRejectedNotification = exports.sendPaymentApprovedNotification = exports.sendPaymentProofSubmittedNotification = exports.checkAndSendReviewReminders = exports.sendArticleRejectedNotifications = exports.sendRevisionRequestedNotifications = exports.sendReviewerAssignedNotifications = exports.sendArticleSubmittedNotifications = exports.buildHtmlEmail = void 0;
 const firebase_1 = require("../config/firebase");
 const env_1 = require("../config/env");
 const emailService_1 = require("./emailService");
@@ -719,35 +719,81 @@ const checkAndSendReviewReminders = async () => {
 };
 exports.checkAndSendReviewReminders = checkAndSendReviewReminders;
 /**
- * Sends a transactional payment confirmation email upon successful Razorpay payment verification.
+ * Sends notification email when user submits payment proof.
  */
-const sendSubscriptionPaymentSuccessNotification = async (payload) => {
+const sendPaymentProofSubmittedNotification = async (payload) => {
     try {
         const planTitle = payload.plan === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription';
         const formattedAmount = `₹${payload.amount}`;
-        const formattedDate = payload.date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
         const cardRows = [
             { label: 'Subscription Plan', value: planTitle },
-            { label: 'Amount Paid', value: formattedAmount },
-            { label: 'Payment Date', value: formattedDate },
-            { label: 'Razorpay Payment ID', value: payload.razorpayPaymentId },
-            { label: 'Razorpay Order ID', value: payload.razorpayOrderId },
-            { label: 'Payment Method', value: payload.paymentMethod.toUpperCase() },
-            { label: 'Internal Ref ID', value: payload.internalOrderId }
+            { label: 'Amount Payable', value: formattedAmount },
+            { label: 'Transaction / UTR Ref', value: payload.transactionRef },
+            { label: 'Payment Method', value: 'Manual Bank Transfer (UPI / NEFT)' },
+            { label: 'Verification Status', value: 'PENDING VERIFICATION' }
         ];
-        const bodyText = `Thank you for subscribing to the Bulletin of Kerala Mathematics Association. Your payment has been successfully processed and verified.`;
-        const bannerTitle = 'Payment Confirmation & Subscription Active';
-        const actionUrl = `${env_1.config.brevo.loginUrl}?redirect=/reader/payments`;
-        const emailHtml = (0, exports.buildHtmlEmail)(payload.name, bannerTitle, bodyText, 'Payment Details & Receipt Summary', cardRows, actionUrl, 'View Payment History & Receipt', 'Instant Journal Access Granted', 'Your membership benefits are now active on the BKMA platform. You can view and print your official payment receipt anytime from your member dashboard.', '💳', 'Secure Razorpay Transaction', '📜', 'Official Receipt Included');
-        await (0, emailService_1.sendTransactionalEmail)(payload.email, payload.name, `Payment Receipt & Subscription Active - ${planTitle}`, emailHtml);
-        console.log(`[NOTIF-SERVICE] Sent subscription payment success email to ${payload.email} for order ${payload.razorpayOrderId}`);
+        const bodyText = `Your payment proof and transaction reference (${payload.transactionRef}) have been successfully submitted and are currently awaiting administrator verification.`;
+        const bannerTitle = 'Payment Proof Submitted — Pending Verification';
+        const emailHtml = (0, exports.buildHtmlEmail)(payload.name, bannerTitle, bodyText, 'Submission Details', cardRows, `${env_1.config.brevo.loginUrl}?redirect=/reader/payments`, 'View Payment Status', 'Verification Notice', 'Please note that payment proof submission does not automatically activate your subscription. Access will be granted once an administrator verifies the transfer with our bank account.', '⏳', 'Awaiting Admin Approval', '🏦', 'Manual Bank Transfer');
+        await (0, emailService_1.sendTransactionalEmail)(payload.email, payload.name, `Payment Proof Received — Awaiting Verification (${planTitle})`, emailHtml);
+        console.log(`[NOTIF-SERVICE] Sent payment proof submitted email to ${payload.email}`);
     }
     catch (error) {
-        console.error('[NOTIF-SERVICE] Error sending subscription payment success email:', error);
-        throw error;
+        console.error('[NOTIF-SERVICE] Error sending payment proof submitted email:', error);
     }
 };
-exports.sendSubscriptionPaymentSuccessNotification = sendSubscriptionPaymentSuccessNotification;
+exports.sendPaymentProofSubmittedNotification = sendPaymentProofSubmittedNotification;
+/**
+ * Sends notification email when administrator approves manual payment.
+ */
+const sendPaymentApprovedNotification = async (payload) => {
+    try {
+        const planTitle = payload.plan === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription';
+        const formattedAmount = `₹${payload.amount}`;
+        const formattedDate = (payload.date || new Date()).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+        const cardRows = [
+            { label: 'Subscription Plan', value: planTitle },
+            { label: 'Verified Amount', value: formattedAmount },
+            { label: 'Transaction / UTR Ref', value: payload.transactionRef },
+            { label: 'Approval Date', value: formattedDate },
+            { label: 'Payment Method', value: 'Manual Bank Transfer' },
+            { label: 'Approved By', value: payload.verifiedByName || 'BKMA Administrator' }
+        ];
+        const bodyText = `Great news! Your payment of ${formattedAmount} for the ${planTitle} has been verified and approved by the administrator. Your subscription is now fully active.`;
+        const bannerTitle = 'Payment Approved & Subscription Active';
+        const emailHtml = (0, exports.buildHtmlEmail)(payload.name, bannerTitle, bodyText, 'Approved Transaction Details', cardRows, `${env_1.config.brevo.loginUrl}?redirect=/reader/payments`, 'View Receipt & Subscription', 'Subscription Activated', 'You now have full access to peer-reviewed research articles and digital publications on the BKMA platform. Your official payment receipt is available in your member portal.', '✅', 'Verified & Approved', '📜', 'Official Receipt Available');
+        await (0, emailService_1.sendTransactionalEmail)(payload.email, payload.name, `Payment Verified & Subscription Active - ${planTitle}`, emailHtml);
+        console.log(`[NOTIF-SERVICE] Sent payment approval email to ${payload.email}`);
+    }
+    catch (error) {
+        console.error('[NOTIF-SERVICE] Error sending payment approved email:', error);
+    }
+};
+exports.sendPaymentApprovedNotification = sendPaymentApprovedNotification;
+/**
+ * Sends notification email when administrator rejects manual payment.
+ */
+const sendPaymentRejectedNotification = async (payload) => {
+    try {
+        const planTitle = payload.plan === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription';
+        const formattedAmount = `₹${payload.amount}`;
+        const cardRows = [
+            { label: 'Subscription Plan', value: planTitle },
+            { label: 'Submitted Amount', value: formattedAmount },
+            { label: 'Transaction / UTR Ref', value: payload.transactionRef },
+            { label: 'Rejection Reason', value: payload.rejectionReason || 'Transaction could not be verified in bank records.' }
+        ];
+        const bodyText = `Your payment proof submitted for ${planTitle} could not be verified by the administrator.`;
+        const bannerTitle = 'Payment Could Not Be Verified';
+        const emailHtml = (0, exports.buildHtmlEmail)(payload.name, bannerTitle, bodyText, 'Rejection Notice & Details', cardRows, `${env_1.config.brevo.loginUrl}?redirect=/reader/get-subscription`, 'Re-submit Payment Proof', 'Action Required', 'If you believe this is an error or if you have made a transfer, please double-check your bank UTR reference number and upload a clear payment proof receipt.', '❌', 'Verification Rejected', '⚠️', 'Subscription Inactive');
+        await (0, emailService_1.sendTransactionalEmail)(payload.email, payload.name, `Action Required: Payment Verification Unsuccessful (${planTitle})`, emailHtml);
+        console.log(`[NOTIF-SERVICE] Sent payment rejection email to ${payload.email}`);
+    }
+    catch (error) {
+        console.error('[NOTIF-SERVICE] Error sending payment rejected email:', error);
+    }
+};
+exports.sendPaymentRejectedNotification = sendPaymentRejectedNotification;
 /**
  * Sends a 6-digit confirmation OTP email to verify KMA Life Member 50% subscription concession.
  */

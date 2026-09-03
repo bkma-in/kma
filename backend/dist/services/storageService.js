@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deletePdfFromR2 = exports.getPdfStreamFromR2 = exports.getSignedPdfUrl = exports.uploadPdfToR2 = void 0;
+exports.getSignedPaymentProofUrl = exports.uploadPaymentProofToR2 = exports.deletePdfFromR2 = exports.getPdfStreamFromR2 = exports.getSignedPdfUrl = exports.uploadPdfToR2 = void 0;
 const client_s3_1 = require("@aws-sdk/client-s3");
 const s3_request_presigner_1 = require("@aws-sdk/s3-request-presigner");
 const r2_1 = require("../config/r2");
@@ -134,3 +134,66 @@ const deletePdfFromR2 = async (objectKey) => {
     }
 };
 exports.deletePdfFromR2 = deletePdfFromR2;
+/**
+ * Uploads a payment proof file (JPG, PNG, PDF) to Cloudflare R2.
+ */
+const uploadPaymentProofToR2 = async (fileBuffer, originalName, userId, mimeType) => {
+    if (!env_1.config.r2.accountId || !env_1.config.r2.accessKeyId || !env_1.config.r2.secretAccessKey || !env_1.config.r2.bucketName) {
+        console.error('[STORAGE-SERVICE] Missing Cloudflare R2 configuration.');
+        throw new Error('Cloudflare R2 is not configured properly on the server.');
+    }
+    if (!fileBuffer || fileBuffer.length === 0) {
+        throw new Error('Invalid file: File buffer is empty.');
+    }
+    const extension = originalName.split('.').pop()?.toLowerCase() || 'png';
+    const randomString = crypto_1.default.randomBytes(8).toString('hex');
+    const filename = `payment-proofs/${userId}/${Date.now()}-${randomString}.${extension}`;
+    console.log(`[STORAGE-SERVICE] Payment proof upload started: "${originalName}" as key: "${filename}" (${fileBuffer.length} bytes)`);
+    try {
+        const command = new client_s3_1.PutObjectCommand({
+            Bucket: env_1.config.r2.bucketName,
+            Key: filename,
+            Body: fileBuffer,
+            ContentType: mimeType || 'image/png',
+            Metadata: {
+                originalName: originalName,
+                userId: userId,
+                uploadedAt: new Date().toISOString(),
+            },
+        });
+        await r2_1.s3Client.send(command);
+        console.log(`[STORAGE-SERVICE] Payment proof upload completed: "${filename}"`);
+        return filename;
+    }
+    catch (error) {
+        console.error(`[STORAGE-SERVICE] Payment proof upload failed for "${filename}": ${error.message || error}`);
+        throw new Error(`R2 payment proof upload failure: ${error.message || error}`);
+    }
+};
+exports.uploadPaymentProofToR2 = uploadPaymentProofToR2;
+/**
+ * Generates a presigned URL valid for 1 hour for secure viewing of payment proof files from R2.
+ */
+const getSignedPaymentProofUrl = async (objectKey, originalName) => {
+    if (!env_1.config.r2.accountId || !env_1.config.r2.accessKeyId || !env_1.config.r2.secretAccessKey || !env_1.config.r2.bucketName) {
+        console.error('[STORAGE-SERVICE] Missing Cloudflare R2 configuration.');
+        throw new Error('Cloudflare R2 is not configured properly on the server.');
+    }
+    if (!objectKey) {
+        throw new Error('Object key is required to generate payment proof URL.');
+    }
+    try {
+        const command = new client_s3_1.GetObjectCommand({
+            Bucket: env_1.config.r2.bucketName,
+            Key: objectKey,
+            ...(originalName ? { ResponseContentDisposition: `inline; filename="${originalName.replace(/"/g, '\\"')}"` } : {})
+        });
+        const signedUrl = await (0, s3_request_presigner_1.getSignedUrl)(r2_1.s3Client, command, { expiresIn: 3600 });
+        return signedUrl;
+    }
+    catch (error) {
+        console.error(`[STORAGE-SERVICE] Payment proof presigned URL failed for key "${objectKey}": ${error.message || error}`);
+        throw new Error(`R2 signed URL generation failure: ${error.message || error}`);
+    }
+};
+exports.getSignedPaymentProofUrl = getSignedPaymentProofUrl;

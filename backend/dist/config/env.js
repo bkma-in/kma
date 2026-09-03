@@ -30,10 +30,13 @@ exports.config = {
         supportUrl: process.env.SUPPORT_URL || 'http://localhost:5173/support',
     },
     payments: {
-        razorpay: {
-            keyId: process.env.RAZORPAY_KEY_ID || '',
-            keySecret: process.env.RAZORPAY_KEY_SECRET || '',
-            webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
+        bankAccount: {
+            accountName: process.env.BKMA_PAYMENT_ACCOUNT_NAME || 'Kerala Mathematical Association',
+            bankName: process.env.BKMA_BANK_NAME || 'State Bank of India',
+            accountNumber: process.env.BKMA_ACCOUNT_NUMBER || '411122334455',
+            ifsc: process.env.BKMA_IFSC || 'SBIN0001234',
+            branch: process.env.BKMA_BRANCH || 'Executive Office, Kochi / Trivandrum',
+            upiId: process.env.BKMA_UPI_ID || 'bkma@sbi'
         }
     },
     cloudinary: {

@@ -412,6 +412,21 @@ router.put('/profile', requireAuth, upload.single('profileImage'), async (req: A
 
       updateData.profileImage = uploadResult.secure_url;
       updateData.profileImagePublicId = uploadResult.public_id;
+    } else if (typeof req.body.profileImage === 'string' && req.body.profileImage.startsWith('data:image/')) {
+      const matches = req.body.profileImage.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const buffer = Buffer.from(matches[2], 'base64');
+        const uploadResult = await uploadImage(buffer, 'profiles');
+        
+        if (userData.profileImagePublicId) {
+          deleteImage(userData.profileImagePublicId).catch(err => 
+            console.error('Background cleanup error (old image):', err)
+          );
+        }
+
+        updateData.profileImage = uploadResult.secure_url;
+        updateData.profileImagePublicId = uploadResult.public_id;
+      }
     } else if (req.body.profileImage === null || req.body.profileImage === 'null') {
       // Explicitly removed profile image
       if (userData.profileImagePublicId) {
@@ -1133,13 +1148,6 @@ router.post('/life-members', requireAuth, requireRole(['admin']), async (req: Au
 
     // 3. Log audit event
     await logAuditEvent('Life Member Enrolled', normUniqueId, adminId);
-
-    // 4. Send Welcome Email if requested
-    if (sendWelcomeEmail === true) {
-      sendLifeMemberWelcomeEmail(email.trim(), cleanName, normUniqueId).catch(err => {
-        console.error('Failed to send Life Member welcome email:', err);
-      });
-    }
 
     res.json({
       success: true,
