@@ -351,9 +351,8 @@ const GetSubscription = () => {
       </div>
 
       {/* Trust Badges */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 px-2">
         {[
-          { icon: ShieldCheck, text: "Secure Razorpay Gateway", desc: "Encrypted Transactions" },
           { icon: Clock, text: "Instant Activation", desc: "Immediate Journal Access" },
           { icon: Award, text: "Peer-Reviewed Content", desc: "Official BKMA Volume" },
           { icon: Crown, text: "Life Member Benefits", desc: "50% Concession Pass" }
