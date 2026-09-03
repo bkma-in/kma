@@ -691,12 +691,12 @@ const GetSubscription = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
-                {paymentHistory.map((item) => (
+                {paymentHistory.map((item, idx) => (
                   <tr key={item.id} className="group hover:bg-zinc-50 transition-colors">
                     {/* Submission Date */}
                     <td className="px-6 py-4">
                       <p className="text-xs font-bold text-black">{item.date || item.paymentDate}</p>
-                      <span className="text-[10px] text-zinc-400 block font-mono mt-0.5">Receipt No: {formatReceiptNo(item.id, item.date || item.paymentDate)}</span>
+                      <span className="text-[10px] text-zinc-400 block font-mono mt-0.5">Receipt No: {formatReceiptNo(item.receiptNo || item.id, item.date || item.paymentDate, idx)}</span>
                     </td>
 
                     {/* Membership Plan */}

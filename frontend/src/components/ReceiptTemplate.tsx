@@ -52,9 +52,9 @@ export const numberToWords = (num: number): string => {
   return finalStr ? `${finalStr} Rupees Only` : '';
 };
 
-export const formatReceiptNo = (rawNo?: string, dateStr?: string | Date) => {
-  if (!rawNo) return '';
-  const clean = rawNo.replace(/^sub_/i, '').trim();
+export const formatReceiptNo = (rawNo?: string, dateStr?: string | Date, index?: number) => {
+  if (!rawNo && index === undefined) return 'BKMA26-001';
+  const clean = (rawNo || '').replace(/^sub_/i, '').trim();
 
   // If already formatted as BKMAxx-xxx (e.g. BKMA26-001), return directly
   if (/^BKMA\d{2}-\d{3,}$/i.test(clean)) {
@@ -71,21 +71,20 @@ export const formatReceiptNo = (rawNo?: string, dateStr?: string | Date) => {
   }
   const yy = year.toString().slice(-2);
 
-  // Deterministically map ID to range 1-999 (001, 002, 003...)
+  // If sequential index is supplied (0 -> 001, 1 -> 002, 2 -> 003...)
+  if (typeof index === 'number' && index >= 0) {
+    const seq = (index + 1).toString().padStart(3, '0');
+    return `BKMA${yy}-${seq}`;
+  }
+
+  // If clean string has numbers, extract seq or default cleanly to 001
   const digitsMatch = clean.match(/\d+/g);
   let seqNum = 1;
   if (digitsMatch) {
     const extractedNum = parseInt(digitsMatch.join(''), 10);
-    if (!isNaN(extractedNum)) {
-      seqNum = (extractedNum % 999) + 1;
+    if (!isNaN(extractedNum) && extractedNum > 0) {
+      seqNum = (extractedNum % 99) + 1;
     }
-  } else {
-    let hash = 0;
-    for (let i = 0; i < clean.length; i++) {
-      hash = (hash << 5) - hash + clean.charCodeAt(i);
-      hash |= 0;
-    }
-    seqNum = (Math.abs(hash) % 999) + 1;
   }
 
   const paddedSeq = seqNum.toString().padStart(3, '0');

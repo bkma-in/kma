@@ -20,6 +20,7 @@ export interface LifeMemberOtpResponse {
 
 export interface PaymentAttemptItem {
   id: string;
+  receiptNo?: string;
   attemptId: string;
   paymentId: string;
   plan: 'annual' | 'lifetime';
