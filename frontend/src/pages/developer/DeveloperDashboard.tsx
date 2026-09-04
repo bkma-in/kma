@@ -11,6 +11,7 @@ import {
 import { cn } from '../../utils/cn';
 import { getReportedIssues } from '../../services/user.service';
 import type { Issue } from '../../types/issue';
+import { DeveloperDashboardSkeleton } from '../../components/skeletons/PageSkeletons';
 
 const DeveloperDashboard = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -63,6 +64,10 @@ const DeveloperDashboard = () => {
       bgColor: 'bg-emerald-500/5' 
     },
   ];
+
+  if (loading) {
+    return <DeveloperDashboardSkeleton />;
+  }
 
   return (
     <div className="space-y-12 animate-in fade-in duration-700">
