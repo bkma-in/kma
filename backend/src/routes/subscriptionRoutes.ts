@@ -94,7 +94,7 @@ router.get('/payment-history', requireAuth, async (req: AuthRequest, res: Respon
         attemptId: doc.id,
         paymentId: doc.id,
         plan: data.membershipType || data.plan || 'annual',
-        article: data.membershipType === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription',
+        article: data.membershipType === 'lifetime' ? 'BKMA Annual Pass (Life Member 50% Concession)' : 'BKMA Annual Pass Subscription',
         amount: data.expectedAmount ? `₹${data.expectedAmount}` : (data.amount ? `₹${data.amount}` : '₹2000'),
         amountRaw: data.expectedAmount || data.amount || 2000,
         currency: 'INR',
@@ -147,7 +147,7 @@ router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res: Respo
         date: data.startedAt?.toDate ? data.startedAt.toDate().toISOString().split('T')[0] : (data.createdAt?.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
         status: data.status === 'active' ? 'APPROVED' : 'PENDING_VERIFICATION',
         rawStatus: data.status,
-        article: data.type === 'lifetime' || data.plan === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription',
+        article: data.type === 'lifetime' || data.plan === 'lifetime' ? 'BKMA Annual Pass (Life Member 50% Concession)' : 'BKMA Annual Pass Subscription',
         paymentMethod: 'Manual Bank Transfer',
         transactionRef: data.transactionReference || 'N/A'
       };
