@@ -32,6 +32,7 @@ import { ReceiptTemplate, formatReceiptNo } from '../../components/ReceiptTempla
 import {
   getBankDetails,
   requestLifeMemberOtp,
+  verifyLifeMemberOtp,
   submitPaymentProof,
   getPaymentHistory,
   getPaymentProofUrl
@@ -50,9 +51,12 @@ const GetSubscription = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [membershipId, setMembershipId] = useState((currentUser as any)?.membershipNumber || '');
+  const [idError, setIdError] = useState<string | null>(null);
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [otp, setOtp] = useState('');
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpModalError, setOtpModalError] = useState<string | null>(null);
   const [maskedEmail, setMaskedEmail] = useState('');
   const [isOtpVerified, setIsOtpVerified] = useState(Boolean((currentUser as any)?.isLifeMember));
   const [verifiedUniqueId, setVerifiedUniqueId] = useState((currentUser as any)?.membershipNumber || '');
@@ -182,8 +186,11 @@ const GetSubscription = () => {
   // Request Life Member OTP
   const handleRequestOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    setIdError(null);
     if (!membershipId.trim()) {
-      showToast('Please enter your Unique Life Member ID (e.g. LM-1042)', 'error');
+      const msg = 'Please enter your Unique Life Member ID (e.g. LM-1042)';
+      setIdError(msg);
+      showToast(msg, 'error');
       return;
     }
 
@@ -194,29 +201,53 @@ const GetSubscription = () => {
         setMaskedEmail(res.maskedEmail || currentUser?.email || 'your registered email');
         setVerifiedUniqueId(res.uniqueId || membershipId.trim().toUpperCase());
         setIsOtpModalOpen(true);
+        setOtpModalError(null);
+        setOtp('');
         setResendCooldown(60);
         showToast(res.message || 'OTP verification code sent to your email!', 'success');
       } else {
-        showToast(res.error || 'Verification request failed', 'error');
+        const errMsg = res.error || 'Verification request failed';
+        setIdError(errMsg);
+        showToast(errMsg, 'error');
       }
     } catch (error: any) {
       console.error('Request OTP error:', error);
-      showToast(error?.response?.data?.error || error.message || 'Could not verify Life Member ID.', 'error');
+      const errMsg = error?.response?.data?.error || error.message || 'Could not verify Life Member ID.';
+      setIdError(errMsg);
+      showToast(errMsg, 'error');
     } finally {
       setIsRequestingOtp(false);
     }
   };
 
-  // Verify OTP locally for frontend price display unlocked
-  const handleVerifyOtpCode = (e: React.FormEvent) => {
+  // Verify OTP via server API
+  const handleVerifyOtpCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otp.trim() || otp.trim().length !== 6) {
-      showToast('Please enter the 6-digit OTP code sent to your email.', 'error');
+      setOtpModalError('Please enter the complete 6-digit OTP code sent to your email.');
       return;
     }
-    setIsOtpVerified(true);
-    setIsOtpModalOpen(false);
-    showToast('Life Member ID verified! 50% Concession rate applied (₹1,000).', 'success');
+
+    setIsVerifyingOtp(true);
+    setOtpModalError(null);
+    try {
+      const res = await verifyLifeMemberOtp(verifiedUniqueId || membershipId.trim(), otp.trim());
+      if (res.success) {
+        setIsOtpVerified(true);
+        setIsOtpModalOpen(false);
+        setOtpModalError(null);
+        setIdError(null);
+        showToast(res.message || 'Life Member ID verified! 50% Concession rate applied (₹1,000).', 'success');
+      } else {
+        setOtpModalError(res.error || 'Invalid OTP code.');
+      }
+    } catch (error: any) {
+      console.error('Verify OTP error:', error);
+      const errMsg = error?.response?.data?.error || error.message || 'Invalid OTP verification code.';
+      setOtpModalError(errMsg);
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   };
 
   // Handle File Selection
@@ -417,24 +448,45 @@ const GetSubscription = () => {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleRequestOtp} className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={membershipId}
-                    onChange={(e) => setMembershipId(e.target.value)}
-                    placeholder="Enter ID (e.g. LM-1042)"
-                    className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition-colors uppercase"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isRequestingOtp}
-                    className="px-3 py-2 bg-amber-400 hover:bg-amber-300 text-black font-bold rounded-xl text-xs transition-colors shrink-0 disabled:opacity-50"
-                  >
-                    {isRequestingOtp ? 'Sending...' : 'Verify'}
-                  </button>
-                </div>
-              </form>
+              <div className="space-y-3">
+                <form onSubmit={handleRequestOtp} className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={membershipId}
+                      onChange={(e) => {
+                        setMembershipId(e.target.value);
+                        if (idError) setIdError(null);
+                      }}
+                      placeholder="Enter ID (e.g. LM-1042)"
+                      className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition-colors uppercase"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isRequestingOtp}
+                      className="px-3 py-2 bg-amber-400 hover:bg-amber-300 text-black font-bold rounded-xl text-xs transition-colors shrink-0 disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {isRequestingOtp ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>Sending...</span>
+                        </>
+                      ) : (
+                        <span>Verify</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
+
+                {idError && (
+                  <div className="bg-rose-950/80 border border-rose-500/60 rounded-xl p-3.5 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300 shadow-lg shadow-rose-950/30">
+                    <XCircle size={18} className="text-rose-400 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-rose-200 leading-snug">{idError}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -953,12 +1005,24 @@ const GetSubscription = () => {
             </p>
 
             <form onSubmit={handleVerifyOtpCode} className="space-y-4">
+              {otpModalError && (
+                <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-3.5 flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <XCircle size={18} className="text-rose-600 shrink-0 mt-0.5" />
+                  <p className="text-xs font-semibold text-rose-900 leading-snug flex-1">
+                    {otpModalError}
+                  </p>
+                </div>
+              )}
+
               <div>
                 <input
                   type="text"
                   maxLength={6}
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => {
+                    setOtp(e.target.value.replace(/\D/g, ''));
+                    if (otpModalError) setOtpModalError(null);
+                  }}
                   placeholder="6-Digit OTP"
                   className="w-full text-center tracking-[0.5em] text-2xl font-mono font-bold px-4 py-3 bg-zinc-50 border-2 border-zinc-300 rounded-2xl focus:outline-none focus:border-black transition-all"
                   autoFocus
@@ -967,9 +1031,17 @@ const GetSubscription = () => {
 
               <button
                 type="submit"
-                className="w-full py-3.5 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-sm transition-all"
+                disabled={isVerifyingOtp}
+                className="w-full py-3.5 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                Verify & Apply 50% Concession Rate
+                {isVerifyingOtp ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Verifying Code...</span>
+                  </>
+                ) : (
+                  <span>Verify &amp; Apply 50% Concession Rate</span>
+                )}
               </button>
             </form>
           </div>

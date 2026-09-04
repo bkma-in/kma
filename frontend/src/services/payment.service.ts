@@ -95,6 +95,14 @@ export const requestLifeMemberOtp = async (uniqueId: string): Promise<LifeMember
 };
 
 /**
+ * Verify 6-digit OTP code for KMA Life Member 50% Concession
+ */
+export const verifyLifeMemberOtp = async (uniqueId: string, otp: string): Promise<{ success: boolean; message?: string; error?: string; uniqueId?: string }> => {
+  const res = await api.post('/subscriptions/verify-life-member-otp', { uniqueId, otp });
+  return res.data;
+};
+
+/**
  * Submit Payment Proof receipt file (JPG, PNG, PDF max 5MB)
  */
 export const submitPaymentProof = async (formData: FormData) => {
