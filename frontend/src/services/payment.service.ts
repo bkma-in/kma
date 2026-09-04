@@ -72,17 +72,17 @@ export interface AdminPendingSubmission {
 export const getBankDetails = async (): Promise<BankDetails> => {
   try {
     const res = await api.get('/subscriptions/bank-details');
-    return res.data.bankDetails;
+    if (!res.data?.success || !res.data?.bankDetails) {
+      throw new Error(res.data?.error || 'Payment service is temporarily out of order.');
+    }
+    const details = res.data.bankDetails;
+    if (!details.accountNumber || !details.accountName || !details.ifsc) {
+      throw new Error('Payment service is temporarily out of order. Configuration missing.');
+    }
+    return details;
   } catch (error: any) {
-    // Fallback default BKMA bank details if offline
-    return {
-      accountName: 'M.S.SAMUEL',
-      bankName: 'Bank of Baroda',
-      accountNumber: '92660100000105',
-      ifsc: 'BARB0DBKOTT',
-      branch: 'Good Shepherd Road Branch, Kottayam - 686001',
-      upiId: ''
-    };
+    const errorMsg = error?.response?.data?.error || error?.message || 'Payment service is temporarily out of order.';
+    throw new Error(errorMsg);
   }
 };
 
