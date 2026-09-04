@@ -16,7 +16,7 @@ import {
 import { cn } from '../../utils/cn';
 import api from '../../services/api';
 import { getPdfUrl } from '../../services/article.service';
-import { ArticlesSkeleton } from '../../components/skeletons/PageSkeletons';
+import { AuthorRevisionRequiredSkeleton } from '../../components/skeletons/PageSkeletons';
 import { db, auth } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useNotification } from '../../utils/NotificationContext';
@@ -289,7 +289,7 @@ const AuthorRevisionRequired = () => {
   };
 
   if (loading) {
-    return <ArticlesSkeleton />;
+    return <AuthorRevisionRequiredSkeleton />;
   }
 
   return (
