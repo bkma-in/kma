@@ -29,18 +29,36 @@ router.get('/bank-details', async (_req, res: Response) => {
       }
     }
 
+    const mergedDetails = {
+      ...config.payments.bankAccount,
+      ...(configData?.bankDetails || {}),
+      qrCodeUrl
+    };
+
+    const isConfigured = Boolean(
+      mergedDetails.accountNumber?.trim() &&
+      mergedDetails.accountName?.trim() &&
+      mergedDetails.ifsc?.trim()
+    );
+
+    if (!isConfigured) {
+      return res.status(503).json({
+        success: false,
+        serviceAvailable: false,
+        error: 'Payment service is temporarily out of order. Bank transfer environment configuration is missing.'
+      });
+    }
+
     return res.json({
       success: true,
-      bankDetails: {
-        ...config.payments.bankAccount,
-        ...(configData?.bankDetails || {}),
-        qrCodeUrl
-      }
+      serviceAvailable: true,
+      bankDetails: mergedDetails
     });
   } catch (err: any) {
-    return res.json({
-      success: true,
-      bankDetails: config.payments.bankAccount
+    return res.status(500).json({
+      success: false,
+      serviceAvailable: false,
+      error: 'Failed to retrieve payment service configuration.'
     });
   }
 });
