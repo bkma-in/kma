@@ -25,7 +25,7 @@ import { useNotification } from '../../utils/NotificationContext';
 import { getArticles, assignReviewers as assignReviewersService, updateArticleStatus, getPdfUrl } from '../../services/article.service';
 import { getReviewers } from '../../services/user.service';
 import { formatDate } from '../../utils/dateHelpers';
-import { SkeletonTable } from '../../components/skeletons/SkeletonTable';
+import { SkeletonWorkflowCard } from '../../components/skeletons/SkeletonWorkflowCard';
 import { CustomSelect } from '../../components/common/CustomSelect';
 
 // Types
@@ -469,7 +469,7 @@ const AdminArticles = () => {
             <div className="h-10 skeleton-box rounded-xl w-36" />
           </div>
         </div>
-        <SkeletonTable rowsCount={4} colsCount={5} />
+        <SkeletonWorkflowCard count={3} />
       </div>
     );
   }
