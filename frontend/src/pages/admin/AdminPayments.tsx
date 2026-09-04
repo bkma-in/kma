@@ -16,7 +16,10 @@ import {
   ShieldAlert,
   ExternalLink,
   QrCode,
-  Upload
+  Upload,
+  IndianRupee,
+  Crown,
+  Users
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
@@ -160,6 +163,18 @@ const AdminPayments = () => {
     );
   });
 
+  // Statistical Metrics Calculations
+  const approvedSubmissions = submissions.filter(s => s.status === 'APPROVED');
+  const totalVerifiedRevenue = approvedSubmissions.reduce((sum, s) => sum + (s.expectedAmount || 0), 0);
+
+  const lifeMemberSubmissions = approvedSubmissions.filter(s => s.membershipType === 'lifetime');
+  const lifeMemberRevenue = lifeMemberSubmissions.reduce((sum, s) => sum + (s.expectedAmount || 0), 0);
+
+  const regularSubmissions = approvedSubmissions.filter(s => s.membershipType !== 'lifetime');
+  const regularRevenue = regularSubmissions.reduce((sum, s) => sum + (s.expectedAmount || 0), 0);
+
+  const pendingCount = submissions.filter(s => s.status === 'PENDING_VERIFICATION').length;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-['Outfit'] pb-16">
       {/* Header Banner */}
@@ -185,6 +200,65 @@ const AdminPayments = () => {
               className="pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-xs font-medium text-black w-64 focus:ring-1 focus:ring-black outline-none transition-all shadow-sm"
             />
           </div>
+        </div>
+      </div>
+
+      {/* Overview Metric Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Verified Revenue */}
+        <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Total Revenue Collected</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <IndianRupee size={18} />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-emerald-700 font-mono tracking-tight">₹{totalVerifiedRevenue.toLocaleString()}</p>
+          <p className="text-[11px] text-zinc-500 font-medium mt-1">
+            {approvedSubmissions.length} Total Verified Submissions
+          </p>
+        </div>
+
+        {/* Life Members (50% Off) */}
+        <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black uppercase tracking-wider text-amber-700">Life Member Passes</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Crown size={18} />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-amber-900 font-mono tracking-tight">₹{lifeMemberRevenue.toLocaleString()}</p>
+          <p className="text-[11px] text-amber-800/80 font-medium mt-1">
+            {lifeMemberSubmissions.length} Verified Life Members (₹1,000 / yr)
+          </p>
+        </div>
+
+        {/* Regular Members / Standard Annual Passes */}
+        <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Standard Annual Passes</span>
+            <div className="w-9 h-9 rounded-xl bg-zinc-100 text-zinc-700 flex items-center justify-center">
+              <Users size={18} />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-black font-mono tracking-tight">₹{regularRevenue.toLocaleString()}</p>
+          <p className="text-[11px] text-zinc-500 font-medium mt-1">
+            {regularSubmissions.length} Regular Readers (₹2,000 / yr)
+          </p>
+        </div>
+
+        {/* Pending Verification Queue */}
+        <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black uppercase tracking-wider text-orange-600">Pending Approvals</span>
+            <div className="w-9 h-9 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+              <Clock size={18} />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-black tracking-tight">{pendingCount}</p>
+          <p className="text-[11px] text-zinc-500 font-medium mt-1">
+            {pendingCount > 0 ? `${pendingCount} awaiting admin review` : 'All payments up to date'}
+          </p>
         </div>
       </div>
 
