@@ -20,6 +20,7 @@ import { ReceiptTemplate, formatReceiptNo } from '../../components/ReceiptTempla
 import { getPaymentHistory } from '../../services/payment.service';
 import type { PaymentAttemptItem } from '../../services/payment.service';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { ReaderPaymentsSkeleton } from '../../components/skeletons/PageSkeletons';
 
 type PaymentFilterStatus = 'APPROVED' | 'PENDING_VERIFICATION' | 'REJECTED' | 'All';
 
@@ -96,6 +97,10 @@ const ReaderPayments = () => {
     const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (loading && payments.length === 0) {
+    return <ReaderPaymentsSkeleton />;
+  }
 
   return (
     <>
