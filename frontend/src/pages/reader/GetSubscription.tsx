@@ -390,10 +390,10 @@ const GetSubscription = () => {
       )}
 
       {/* Main Grid Section */}
-      <div className="grid lg:grid-cols-12 gap-8 items-start mb-16">
+      <div className="grid lg:grid-cols-12 gap-8 lg:items-stretch items-start mb-16">
         
         {/* Left Column: Bank Details & QR (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-5 flex flex-col space-y-6">
           
           {/* Life Member Concession Unlock Card */}
           <div className="bg-gradient-to-br from-zinc-900 to-black text-white rounded-[2rem] p-6 shadow-xl relative overflow-hidden">
@@ -441,12 +441,12 @@ const GetSubscription = () => {
           {/* Bank Details Card */}
           {/* Bank Details Card */}
           {isLoadingBankInfo ? (
-            <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-xl text-center py-12">
+            <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-xl text-center py-12 lg:flex-1 flex flex-col justify-center items-center">
               <Loader2 size={24} className="animate-spin text-black mx-auto mb-2" />
               <p className="text-xs text-zinc-500 font-medium">Loading bank transfer information...</p>
             </div>
           ) : bankServiceError || !bankInfo ? (
-            <div className="bg-amber-50 border-2 border-amber-300 rounded-[2rem] p-6 text-center shadow-lg">
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-[2rem] p-6 text-center shadow-lg lg:flex-1 flex flex-col justify-center items-center">
               <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
                 <AlertTriangle size={24} />
               </div>
@@ -459,14 +459,19 @@ const GetSubscription = () => {
               </span>
             </div>
           ) : (
-            <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-xl shadow-black/5">
-              <div className="flex items-center gap-3 mb-4 pb-3 border-b border-zinc-100">
-                <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold">
-                  <Building2 size={20} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-black text-base leading-tight">BKMA Bank Details</h3>
-                  <p className="text-zinc-400 text-xs">Transfer payable amount to this account</p>
+            <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-xl shadow-black/5 lg:flex-1 flex flex-col justify-between">
+              <div className="mb-4 pb-3 border-b border-zinc-100">
+                <span className="inline-block px-3 py-1 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-wider mb-3">
+                  STEP 1: MAKE PAYMENT
+                </span>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold">
+                    <Building2 size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-black text-base leading-tight">BKMA Bank Details</h3>
+                    <p className="text-zinc-400 text-xs">Transfer payable amount to this account</p>
+                  </div>
                 </div>
               </div>
 
@@ -494,7 +499,7 @@ const GetSubscription = () => {
               </div>
 
               {/* Direct Account + IFSC UPI QR Code Section */}
-              <div className="mt-5 pt-4 border-t border-zinc-100 text-center">
+              <div className="mt-5 lg:mt-auto pt-4 border-t border-zinc-100 text-center">
                 <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-zinc-600 tracking-wider mb-2">
                   <QrCode size={14} className="text-black" /> Scan Account + IFSC UPI QR
                 </div>
@@ -535,7 +540,7 @@ const GetSubscription = () => {
         </div>
 
         {/* Right Column: Payment Proof Upload Form (7 cols) */}
-        <div className="lg:col-span-7 bg-white border-2 border-black rounded-[2.5rem] p-8 sm:p-10 shadow-xl shadow-black/5">
+        <div className="lg:col-span-7 bg-white border-2 border-black rounded-[2.5rem] p-8 sm:p-10 shadow-xl shadow-black/5 flex flex-col justify-between">
           <div className="flex items-start justify-between mb-6 pb-4 border-b border-zinc-100">
             <div>
               <span className="px-3 py-1 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-wider">
@@ -559,7 +564,7 @@ const GetSubscription = () => {
             "Please transfer exactly the displayed amount (<strong>₹{payableAmount.toLocaleString()}</strong>) to the BKMA bank account shown. Your access will be activated only after the payment is verified and approved by an administrator."
           </div>
 
-          <form onSubmit={handleSubmitProof} className="space-y-5">
+          <form onSubmit={handleSubmitProof} className="space-y-5 flex-1 flex flex-col justify-between">
             {/* Membership & Rate Read-Only Summary */}
             <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-xs">
               {isOtpVerified ? (
@@ -676,22 +681,24 @@ const GetSubscription = () => {
 
             {/* Submit Button */}
             {bankServiceError || !bankInfo ? (
-              <div className="w-full p-4 bg-amber-50 border border-amber-200 rounded-2xl text-center text-xs font-bold text-amber-900 mt-4">
+              <div className="w-full p-4 bg-amber-50 border border-amber-200 rounded-2xl text-center text-xs font-bold text-amber-900 mt-4 lg:mt-auto">
                 Payment submission is disabled while payment service is out of order.
               </div>
             ) : (
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-4 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-base transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 mt-4 cursor-pointer"
+                className="w-full py-4 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-base transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 mt-4 lg:mt-auto cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 size={18} className="animate-spin" /> Verifying & Uploading Proof...
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Verifying &amp; Uploading Proof...</span>
                   </>
                 ) : (
                   <>
-                    <Upload size={18} /> Submit Payment Proof for Verification
+                    <Upload size={18} />
+                    <span>Submit Payment Proof for Verification</span>
                   </>
                 )}
               </button>
