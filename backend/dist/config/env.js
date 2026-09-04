@@ -31,12 +31,12 @@ exports.config = {
     },
     payments: {
         bankAccount: {
-            accountName: process.env.BKMA_PAYMENT_ACCOUNT_NAME || 'Kerala Mathematical Association',
-            bankName: process.env.BKMA_BANK_NAME || 'State Bank of India',
-            accountNumber: process.env.BKMA_ACCOUNT_NUMBER || '411122334455',
-            ifsc: process.env.BKMA_IFSC || 'SBIN0001234',
-            branch: process.env.BKMA_BRANCH || 'Executive Office, Kochi / Trivandrum',
-            upiId: process.env.BKMA_UPI_ID || 'bkma@sbi'
+            accountName: process.env.BKMA_PAYMENT_ACCOUNT_NAME || 'M.S.SAMUEL',
+            bankName: process.env.BKMA_BANK_NAME || 'Bank of Baroda',
+            accountNumber: process.env.BKMA_ACCOUNT_NUMBER || '92660100000105',
+            ifsc: process.env.BKMA_IFSC || 'BARB0DBKOTT',
+            branch: process.env.BKMA_BRANCH || 'Good Shepherd Road Branch, Kottayam - 686001',
+            upiId: process.env.BKMA_UPI_ID || ''
         }
     },
     cloudinary: {

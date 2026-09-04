@@ -11,11 +11,34 @@ const notificationService_1 = require("../services/notificationService");
 const env_1 = require("../config/env");
 const router = (0, express_1.Router)();
 // GET /subscriptions/bank-details - Public / Authenticated Bank Details endpoint
-router.get('/bank-details', (_req, res) => {
-    return res.json({
-        success: true,
-        bankDetails: env_1.config.payments.bankAccount
-    });
+router.get('/bank-details', async (_req, res) => {
+    try {
+        const configDoc = await firebase_1.db.collection('system_config').doc('payment_settings').get();
+        const configData = configDoc.exists ? configDoc.data() : null;
+        let qrCodeUrl = configData?.qrCodeUrl || null;
+        if (configData?.qrCodeStorageKey) {
+            try {
+                qrCodeUrl = await (0, storageService_1.getSignedPaymentProofUrl)(configData.qrCodeStorageKey, 'bank-qr.png');
+            }
+            catch (e) {
+                console.warn('Could not generate presigned URL for bank QR code:', e);
+            }
+        }
+        return res.json({
+            success: true,
+            bankDetails: {
+                ...env_1.config.payments.bankAccount,
+                ...(configData?.bankDetails || {}),
+                qrCodeUrl
+            }
+        });
+    }
+    catch (err) {
+        return res.json({
+            success: true,
+            bankDetails: env_1.config.payments.bankAccount
+        });
+    }
 });
 // GET /subscriptions/payment-history - List user's payment attempt history
 router.get('/payment-history', authMiddleware_1.requireAuth, async (req, res) => {
@@ -161,20 +184,16 @@ router.post('/request-life-member-otp', authMiddleware_1.requireAuth, rateLimite
                 error: `Unique Member ID "${normUniqueId}" was not found in the official KMA Life Members registry. Please check your ID or contact administration.`
             });
         }
-        // Validate email matching
+        // Determine recipient email (Life Member registered email or logged-in user email)
         const memberEmailLower = (memberData.emailLower || memberData.email || '').toLowerCase().trim();
-        if (memberEmailLower !== userEmailLower) {
-            return res.status(403).json({
-                error: `Member ID "${normUniqueId}" is registered to a different email address (${maskEmail(memberEmailLower)}). Please sign in with the registered email account or contact support.`
-            });
-        }
+        const targetEmail = memberEmailLower || email;
         // Generate 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
         const otpDocId = `${req.user.uid}_${normUniqueId}`;
         await firebase_1.db.collection('life_member_otps').doc(otpDocId).set({
             userId: req.user.uid,
-            email: email,
+            email: targetEmail,
             uniqueId: normUniqueId,
             otp,
             expiresAt,
@@ -182,11 +201,11 @@ router.post('/request-life-member-otp', authMiddleware_1.requireAuth, rateLimite
             createdAt: new Date()
         });
         const memberName = memberData.name || req.user.name || 'Life Member';
-        await (0, notificationService_1.sendLifeMemberOtpEmail)(email, memberName, normUniqueId, otp);
+        await (0, notificationService_1.sendLifeMemberOtpEmail)(targetEmail, memberName, normUniqueId, otp);
         res.json({
             success: true,
-            message: `A 6-digit confirmation code has been sent to your registered email (${maskEmail(email)}).`,
-            maskedEmail: maskEmail(email),
+            message: `A 6-digit confirmation code has been sent to the registered email (${maskEmail(targetEmail)}).`,
+            maskedEmail: maskEmail(targetEmail),
             uniqueId: normUniqueId
         });
     }
@@ -204,13 +223,12 @@ router.post('/submit-proof', authMiddleware_1.requireAuth, rateLimiter_1.payment
         if (!req.file) {
             return res.status(400).json({ error: 'Please select and upload a payment proof receipt file (JPG, PNG, or PDF up to 5MB).' });
         }
-        if (!transactionRef || typeof transactionRef !== 'string' || !transactionRef.trim()) {
-            return res.status(400).json({ error: 'Please enter the Transaction / UTR / Reference Number.' });
-        }
         if (!paymentDate || typeof paymentDate !== 'string' || !paymentDate.trim()) {
             return res.status(400).json({ error: 'Please enter the date payment was transferred.' });
         }
-        const cleanTxRef = transactionRef.trim().toUpperCase();
+        const cleanTxRef = (typeof transactionRef === 'string' && transactionRef.trim())
+            ? transactionRef.trim().toUpperCase()
+            : 'N/A';
         // Check if user already has an active subscription
         const existingActiveSub = await firebase_1.db.collection('subscriptions')
             .where('userId', '==', uid)
@@ -267,8 +285,23 @@ router.post('/submit-proof', authMiddleware_1.requireAuth, rateLimiter_1.payment
         // Create paymentAttempt document with PENDING_VERIFICATION status
         const attemptRef = firebase_1.db.collection('paymentAttempts').doc();
         const now = new Date();
+        const currentYear = now.getFullYear();
+        const yy = currentYear.toString().slice(-2);
+        const yearStart = new Date(currentYear, 0, 1);
+        let seq = '001';
+        try {
+            const yearCountSnap = await firebase_1.db.collection('paymentAttempts')
+                .where('createdAt', '>=', yearStart)
+                .get();
+            seq = (yearCountSnap.size + 1).toString().padStart(3, '0');
+        }
+        catch (e) {
+            console.warn('Failed to query yearCount for receiptNo, defaulting seq');
+        }
+        const generatedReceiptNo = `BKMA${yy}-${seq}`;
         const paymentRecord = {
             attemptId: attemptRef.id,
+            receiptNo: generatedReceiptNo,
             userId: uid,
             userEmail: email || '',
             userName: name || userData?.name || 'Member',
@@ -480,6 +513,34 @@ router.post('/admin/reject/:paymentId', authMiddleware_1.requireAuth, (0, authMi
     catch (error) {
         console.error('Admin reject payment error:', error);
         res.status(500).json({ error: error.message || 'Failed to reject payment' });
+    }
+});
+// POST /subscriptions/admin/upload-qr - Upload official Bank QR Code image
+router.post('/admin/upload-qr', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), uploadMiddleware_1.proofUpload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Please select a QR code image file to upload (JPG or PNG up to 5MB).' });
+        }
+        const { uid } = req.user;
+        const objectKey = await (0, storageService_1.uploadPaymentProofToR2)(req.file.buffer, req.file.originalname, 'admin-system-qr', req.file.mimetype);
+        const signedUrl = await (0, storageService_1.getSignedPaymentProofUrl)(objectKey, req.file.originalname);
+        const now = new Date();
+        await firebase_1.db.collection('system_config').doc('payment_settings').set({
+            qrCodeStorageKey: objectKey,
+            qrCodeUrl: signedUrl,
+            updatedAt: now,
+            updatedBy: uid
+        }, { merge: true });
+        res.json({
+            success: true,
+            message: 'Official Bank QR Code image uploaded successfully.',
+            qrCodeUrl: signedUrl,
+            objectKey
+        });
+    }
+    catch (error) {
+        console.error('Admin upload QR error:', error);
+        res.status(500).json({ error: error.message || 'Failed to upload QR Code image' });
     }
 });
 exports.default = router;

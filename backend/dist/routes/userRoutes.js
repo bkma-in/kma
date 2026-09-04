@@ -40,7 +40,6 @@ const authMiddleware_1 = require("../middleware/authMiddleware");
 const uploadMiddleware_1 = require("../middleware/uploadMiddleware");
 const cloudinaryService_1 = require("../services/cloudinaryService");
 const emailService_1 = require("../services/emailService");
-const notificationService_1 = require("../services/notificationService");
 const auditService_1 = require("../services/auditService");
 const env_1 = require("../config/env");
 // Helper to send reviewer onboarding credentials via email
@@ -1071,12 +1070,6 @@ router.post('/life-members', authMiddleware_1.requireAuth, (0, authMiddleware_1.
         }
         // 3. Log audit event
         await (0, auditService_1.logAuditEvent)('Life Member Enrolled', normUniqueId, adminId);
-        // 4. Send Welcome Email if requested
-        if (sendWelcomeEmail === true) {
-            (0, notificationService_1.sendLifeMemberWelcomeEmail)(email.trim(), cleanName, normUniqueId).catch(err => {
-                console.error('Failed to send Life Member welcome email:', err);
-            });
-        }
         res.json({
             success: true,
             message: `Life Member ${cleanName} (${normUniqueId}) added successfully.`,

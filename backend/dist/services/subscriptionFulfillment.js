@@ -52,11 +52,8 @@ const fulfillManualSubscriptionPayment = async (paymentAttemptId, adminUserId, a
                 return { alreadyFulfilled: true };
             }
             const now = new Date();
-            let expiresAt = null;
-            if (plan === 'annual') {
-                expiresAt = new Date(now);
-                expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-            }
+            const expiresAt = new Date(now);
+            expiresAt.setFullYear(expiresAt.getFullYear() + 1);
             // Update paymentAttempt document
             transaction.update(attemptRef, {
                 status: 'APPROVED',
