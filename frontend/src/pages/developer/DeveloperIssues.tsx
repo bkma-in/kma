@@ -17,6 +17,7 @@ import { useNotification } from '../../utils/NotificationContext';
 import { getReportedIssues, updateIssueStatus as updateIssueStatusAPI } from '../../services/user.service';
 import type { Issue, IssueStatus } from '../../types/issue';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { DeveloperIssuesSkeleton } from '../../components/skeletons/PageSkeletons';
 
 const DeveloperIssues = () => {
   const { showToast } = useNotification();
@@ -75,6 +76,9 @@ const DeveloperIssues = () => {
     return matchesSearch && matchesStatus;
   });
 
+  if (loading) {
+    return <DeveloperIssuesSkeleton />;
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
