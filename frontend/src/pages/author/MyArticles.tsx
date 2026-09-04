@@ -33,6 +33,7 @@ import { getPdfUrl } from '../../services/article.service';
 import { useNotification } from '../../utils/NotificationContext';
 import { auth, db } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { SkeletonWorkflowCard } from '../../components/skeletons/SkeletonWorkflowCard';
 
 // Types
 type Status = 'Submitted' | 'Revised Submitted' | 'Under Review' | 'Revision Required' | 'Approved' | 'Rejected' | 'Published' | 'Revised';
@@ -673,10 +674,7 @@ const MyArticles = () => {
       {/* Articles List */}
       {/* Articles List */}
       {isLoading ? (
-        <div className="p-20 text-center flex flex-col items-center gap-4 bg-white rounded-3xl border border-zinc-200 shadow-sm">
-          <div className="w-10 h-10 border-4 border-zinc-100 border-t-black rounded-full animate-spin" />
-          <p className="text-zinc-500 font-medium text-sm">Synchronizing with BKMA Archive...</p>
-        </div>
+        <SkeletonWorkflowCard count={3} />
       ) : filteredArticles.length > 0 ? (
         <div className="space-y-5 w-full">
           {filteredArticles.map((article) => {
