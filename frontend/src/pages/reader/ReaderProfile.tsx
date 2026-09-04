@@ -131,8 +131,8 @@ const ReaderProfile = () => {
             
             <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-between">
               <div>
-                <p className="text-emerald-600 font-bold text-lg tracking-tight">Lifetime Access</p>
-                <p className="text-xs text-zinc-500 mt-1">Full access to all scholarly publications and archives.</p>
+                <p className="text-emerald-700 font-bold text-lg tracking-tight">1-Year Annual Pass Subscription</p>
+                <p className="text-xs text-zinc-500 mt-1">Full 1-year access to all scholarly publications and research archives.</p>
               </div>
               <Shield size={32} className="text-emerald-500/20" />
             </div>

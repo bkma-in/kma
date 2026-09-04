@@ -864,7 +864,7 @@ export interface ManualPaymentNotifPayload {
  */
 export const sendPaymentProofSubmittedNotification = async (payload: ManualPaymentNotifPayload) => {
   try {
-    const planTitle = payload.plan === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription';
+    const planTitle = payload.plan === 'lifetime' ? 'BKMA Annual Pass (Life Member 50% Concession)' : 'BKMA Annual Pass Subscription';
     const formattedAmount = `₹${payload.amount}`;
     const cardRows: EmailRow[] = [
       { label: 'Subscription Plan', value: planTitle },
@@ -910,7 +910,7 @@ export const sendPaymentProofSubmittedNotification = async (payload: ManualPayme
  */
 export const sendPaymentApprovedNotification = async (payload: ManualPaymentNotifPayload) => {
   try {
-    const planTitle = payload.plan === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription';
+    const planTitle = payload.plan === 'lifetime' ? 'BKMA Annual Pass (Life Member 50% Concession)' : 'BKMA Annual Pass Subscription';
     const formattedAmount = `₹${payload.amount}`;
     const formattedDate = (payload.date || new Date()).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 
@@ -959,7 +959,7 @@ export const sendPaymentApprovedNotification = async (payload: ManualPaymentNoti
  */
 export const sendPaymentRejectedNotification = async (payload: ManualPaymentNotifPayload) => {
   try {
-    const planTitle = payload.plan === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription';
+    const planTitle = payload.plan === 'lifetime' ? 'BKMA Annual Pass (Life Member 50% Concession)' : 'BKMA Annual Pass Subscription';
     const formattedAmount = `₹${payload.amount}`;
     const cardRows: EmailRow[] = [
       { label: 'Subscription Plan', value: planTitle },

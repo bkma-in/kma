@@ -130,20 +130,20 @@ const AdminReadersList = () => {
 
   // Metric counts
   const totalCount = readers.length;
-  const subscriberCount = readers.filter(r => r.isSubscribed || r.isLifeMember).length;
+  const subscriberCount = readers.filter(r => r.isSubscribed).length;
   const lifeMemberCount = readers.filter(r => r.isLifeMember).length;
-  const nonSubscriberCount = readers.filter(r => !r.isSubscribed && !r.isLifeMember).length;
+  const nonSubscriberCount = readers.filter(r => !r.isSubscribed).length;
 
   // Filter and Sort Readers
   const filteredAndSortedReaders = readers
     .filter(reader => {
       // 1. Tab Filter
       if (filterTab === 'subscribers') {
-        if (!reader.isSubscribed && !reader.isLifeMember) return false;
+        if (!reader.isSubscribed) return false;
       } else if (filterTab === 'lifetime') {
         if (!reader.isLifeMember) return false;
       } else if (filterTab === 'non_subscribers') {
-        if (reader.isSubscribed || reader.isLifeMember) return false;
+        if (reader.isSubscribed) return false;
       }
 
       // 2. Search Filter
@@ -162,10 +162,10 @@ const AdminReadersList = () => {
     })
     .sort((a, b) => {
       if (sortBy === 'subscribers_first') {
-        const aSub = (a.isSubscribed || a.isLifeMember) ? 1 : 0;
-        const bSub = (b.isSubscribed || b.isLifeMember) ? 1 : 0;
+        const aSub = a.isSubscribed ? 1 : 0;
+        const bSub = b.isSubscribed ? 1 : 0;
         if (aSub !== bSub) {
-          return bSub - aSub; // Subscribers first
+          return bSub - aSub; // Active Subscribers first
         }
         // Secondary sort: newest first
         const aDate = new Date(a.regDate || 0).getTime();
@@ -462,15 +462,15 @@ const AdminReadersList = () => {
               </thead>
               <tbody className="divide-y divide-zinc-100">
                 {filteredAndSortedReaders.map((reader) => {
-                  const isSubscriber = reader.isSubscribed || reader.isLifeMember;
-                  const isLifetime = reader.isLifeMember || reader.subscriptionPlan === 'lifetime';
+                  const isSubscriber = reader.isSubscribed;
+                  const isLifeMember = reader.isLifeMember;
 
                   return (
                     <tr 
                       key={reader.id} 
                       className={cn(
                         "group transition-colors",
-                        isLifetime ? "hover:bg-amber-50/20" : isSubscriber ? "hover:bg-emerald-50/20" : "hover:bg-zinc-50/50"
+                        isLifeMember ? "hover:bg-amber-50/20" : isSubscriber ? "hover:bg-emerald-50/20" : "hover:bg-zinc-50/50"
                       )}
                     >
                       {/* User Profile Cell */}
@@ -480,7 +480,7 @@ const AdminReadersList = () => {
                             "w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all shadow-sm overflow-hidden shrink-0",
                             reader.profileImage 
                               ? "bg-zinc-100" 
-                              : isLifetime 
+                              : isLifeMember 
                                 ? "bg-amber-100 text-amber-800" 
                                 : isSubscriber 
                                   ? "bg-emerald-100 text-emerald-800" 
@@ -497,8 +497,8 @@ const AdminReadersList = () => {
                               <span className="text-sm font-bold text-zinc-900 group-hover:text-black transition-colors">
                                 {reader.name || 'Anonymous User'}
                               </span>
-                              {isLifetime && (
-                                <span title="Life Member" className="inline-flex items-center">
+                              {isLifeMember && (
+                                <span title="KMA Life Member" className="inline-flex items-center">
                                   <Crown size={13} className="text-amber-500 shrink-0" />
                                 </span>
                               )}
@@ -512,11 +512,20 @@ const AdminReadersList = () => {
 
                       {/* Subscription Status Cell */}
                       <td className="px-6 py-4">
-                        {isLifetime ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold tracking-wider uppercase">
-                            <Crown size={11} className="text-amber-600" />
-                            Life Member
-                          </span>
+                        {isLifeMember ? (
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold tracking-wider uppercase">
+                              <Crown size={11} className="text-amber-600" />
+                              Life Member
+                            </span>
+                            {isSubscriber ? (
+                              <span className="text-[9px] font-bold text-emerald-600 flex items-center gap-1">
+                                <CheckCircle2 size={10} /> Active Annual Pass
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-medium text-zinc-400">No Active Pass</span>
+                            )}
+                          </div>
                         ) : isSubscriber ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold tracking-wider uppercase">
                             <CheckCircle2 size={11} className="text-emerald-600" />
@@ -532,26 +541,21 @@ const AdminReadersList = () => {
 
                       {/* Plan / Pass Type Cell */}
                       <td className="px-6 py-4">
-                        {isLifetime ? (
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-zinc-800">Lifetime Pass</span>
-                            <span className="text-[10px] text-amber-600 font-semibold">Unlimited Access</span>
-                          </div>
-                        ) : isSubscriber ? (
+                        {isSubscriber ? (
                           <div className="flex flex-col">
                             <span className="text-xs font-bold text-zinc-800">
-                              {reader.subscriptionPlan === 'annual' ? 'Annual Pass' : 'Subscriber Pass'}
+                              Annual Pass {isLifeMember && <span className="text-amber-600 font-semibold">(50% Concession)</span>}
                             </span>
                             {reader.subscriptionExpiresAt ? (
                               <span className="text-[10px] text-zinc-400 font-medium">
                                 Expires {formatDate(reader.subscriptionExpiresAt)}
                               </span>
                             ) : (
-                              <span className="text-[10px] text-emerald-600 font-medium">Active</span>
+                              <span className="text-[10px] text-emerald-600 font-medium">1-Year Pass Active</span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs text-zinc-400 italic">Free Tier</span>
+                          <span className="text-xs text-zinc-400 italic">No Active Pass</span>
                         )}
                       </td>
 
@@ -734,27 +738,27 @@ const AdminReadersList = () => {
                   <div className="space-y-3 text-xs">
                     <div>
                       <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500 block mb-0.5">
-                        Membership Tier
+                        Membership Status
                       </span>
                       <span className="text-white font-bold">
                         {selectedReader.isLifeMember 
-                          ? 'BKMA Life Membership' 
+                          ? 'BKMA Life Member (50% Concession Eligible)' 
                           : selectedReader.isSubscribed 
-                            ? (selectedReader.subscriptionPlan === 'annual' ? 'BKMA Annual Pass' : 'Active Subscription Pass')
+                            ? 'Regular Reader Member'
                             : 'Standard Reader (Unsubscribed)'}
                       </span>
                     </div>
 
                     <div>
                       <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500 block mb-0.5">
-                        Validity & Expiration
+                        Subscription Pass & Expiration
                       </span>
                       <span className="text-white font-medium">
-                        {selectedReader.isLifeMember 
-                          ? 'Permanent / Lifetime Validity' 
-                          : selectedReader.subscriptionExpiresAt 
-                            ? `Valid until ${formatDate(selectedReader.subscriptionExpiresAt)}`
-                            : selectedReader.isSubscribed ? 'Active' : 'No active pass'}
+                        {selectedReader.isSubscribed 
+                          ? selectedReader.subscriptionExpiresAt 
+                            ? `1-Year Annual Pass (Valid until ${formatDate(selectedReader.subscriptionExpiresAt)})`
+                            : '1-Year Annual Pass Active'
+                          : 'No active annual subscription pass'}
                       </span>
                     </div>
 
