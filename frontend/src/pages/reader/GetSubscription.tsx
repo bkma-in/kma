@@ -21,7 +21,8 @@ import {
   Eye,
   Printer,
   ExternalLink,
-  XCircle
+  XCircle,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
@@ -43,13 +44,9 @@ const GetSubscription = () => {
   const { refreshSubscriptionStatus } = useSubscription();
   const { currentUser } = useAuth();
 
-  const [bankInfo, setBankInfo] = useState<BankDetails>({
-    accountName: 'M.S.SAMUEL',
-    bankName: 'Bank of Baroda',
-    accountNumber: '92660100000105',
-    ifsc: 'BARB0DBKOTT',
-    branch: 'Good Shepherd Road Branch, Kottayam - 686001'
-  });
+  const [bankInfo, setBankInfo] = useState<BankDetails | null>(null);
+  const [isLoadingBankInfo, setIsLoadingBankInfo] = useState(true);
+  const [bankServiceError, setBankServiceError] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [membershipId, setMembershipId] = useState((currentUser as any)?.membershipNumber || '');
@@ -79,9 +76,29 @@ const GetSubscription = () => {
   const [isLoadingProofUrl, setIsLoadingProofUrl] = useState(false);
 
   useEffect(() => {
-    getBankDetails().then(data => setBankInfo(data)).catch(() => {});
+    loadBankDetailsData();
     loadRecentAttempt();
   }, []);
+
+  const loadBankDetailsData = async () => {
+    setIsLoadingBankInfo(true);
+    setBankServiceError(null);
+    try {
+      const details = await getBankDetails();
+      if (!details || !details.accountNumber || !details.accountName) {
+        setBankServiceError('Payment service is temporarily out of order. Bank transfer configuration is missing.');
+        setBankInfo(null);
+      } else {
+        setBankInfo(details);
+      }
+    } catch (err: any) {
+      console.warn('Could not fetch bank details:', err);
+      setBankServiceError(err?.message || 'Payment service is temporarily out of order.');
+      setBankInfo(null);
+    } finally {
+      setIsLoadingBankInfo(false);
+    }
+  };
 
   const loadRecentAttempt = async () => {
     try {
@@ -260,9 +277,9 @@ const GetSubscription = () => {
   };
 
   // Generate Official NPCI Direct Account + IFSC UPI QR Payload
-  const npciAccountVpa = `${bankInfo.accountNumber.trim()}@${bankInfo.ifsc.trim().toUpperCase()}.ifsc.npci`;
-  const npciQrPayload = `upi://pay?pa=${encodeURIComponent(npciAccountVpa)}&pn=${encodeURIComponent(bankInfo.accountName)}&am=${payableAmount}&cu=INR`;
-  const accountIfscQrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(npciQrPayload)}`;
+  const npciAccountVpa = bankInfo ? `${(bankInfo.accountNumber || '').trim()}@${(bankInfo.ifsc || '').trim().toUpperCase()}.ifsc.npci` : '';
+  const npciQrPayload = bankInfo ? `upi://pay?pa=${encodeURIComponent(npciAccountVpa)}&pn=${encodeURIComponent(bankInfo.accountName || '')}&am=${payableAmount}&cu=INR` : '';
+  const accountIfscQrImageSrc = bankInfo ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(npciQrPayload)}` : '';
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 font-['Outfit'] pb-16">
@@ -422,83 +439,104 @@ const GetSubscription = () => {
           </div>
 
           {/* Bank Details Card */}
-          <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-xl shadow-black/5 lg:flex-1 flex flex-col justify-between">
-            <div className="mb-4 pb-3 border-b border-zinc-100">
-              <span className="inline-block px-3 py-1 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-wider mb-3">
-                STEP 1: MAKE PAYMENT
+          {/* Bank Details Card */}
+          {isLoadingBankInfo ? (
+            <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-xl text-center py-12 lg:flex-1 flex flex-col justify-center items-center">
+              <Loader2 size={24} className="animate-spin text-black mx-auto mb-2" />
+              <p className="text-xs text-zinc-500 font-medium">Loading bank transfer information...</p>
+            </div>
+          ) : bankServiceError || !bankInfo ? (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-[2rem] p-6 text-center shadow-lg lg:flex-1 flex flex-col justify-center items-center">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
+                <AlertTriangle size={24} />
+              </div>
+              <h3 className="text-sm font-bold text-amber-950 mb-1">Payment Service Temporarily Out of Order</h3>
+              <p className="text-xs text-amber-900/90 leading-relaxed max-w-xs mx-auto mb-4 font-medium">
+                {bankServiceError || 'Online bank transfer details are currently unavailable in the system environment configuration. Please contact support.'}
+              </p>
+              <span className="inline-block px-3 py-1 bg-amber-200/80 text-amber-950 rounded-full text-[10px] font-black uppercase tracking-wider">
+                Service Unavailable
               </span>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold">
-                  <Building2 size={20} />
+            </div>
+          ) : (
+            <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-xl shadow-black/5 lg:flex-1 flex flex-col justify-between">
+              <div className="mb-4 pb-3 border-b border-zinc-100">
+                <span className="inline-block px-3 py-1 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-wider mb-3">
+                  STEP 1: MAKE PAYMENT
+                </span>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold">
+                    <Building2 size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-black text-base leading-tight">BKMA Bank Details</h3>
+                    <p className="text-zinc-400 text-xs">Transfer payable amount to this account</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-black text-base leading-tight">BKMA Bank Details</h3>
-                  <p className="text-zinc-400 text-xs">Transfer payable amount to this account</p>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="flex justify-between py-1.5 border-b border-zinc-100">
+                  <span className="text-zinc-400">Account Name:</span>
+                  <span className="font-bold text-black text-right">{bankInfo.accountName}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-zinc-100">
+                  <span className="text-zinc-400">Bank Name:</span>
+                  <span className="font-bold text-black text-right">{bankInfo.bankName}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-zinc-100">
+                  <span className="text-zinc-400">Account Number:</span>
+                  <span className="font-mono font-bold text-black text-right">{bankInfo.accountNumber}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-zinc-100">
+                  <span className="text-zinc-400">IFSC Code:</span>
+                  <span className="font-mono font-bold text-black text-right">{bankInfo.ifsc}</span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-zinc-400">Branch:</span>
+                  <span className="font-bold text-black text-right">{bankInfo.branch}</span>
+                </div>
+              </div>
+
+              {/* Direct Account + IFSC UPI QR Code Section */}
+              <div className="mt-5 lg:mt-auto pt-4 border-t border-zinc-100 text-center">
+                <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-zinc-600 tracking-wider mb-2">
+                  <QrCode size={14} className="text-black" /> Scan Account + IFSC UPI QR
+                </div>
+                
+                <div className="p-3 bg-white border-2 border-black rounded-2xl inline-block shadow-md my-1">
+                  <img
+                    src={bankInfo.qrCodeUrl || accountIfscQrImageSrc}
+                    alt="BKMA Bank Account & IFSC QR Code"
+                    className="w-44 h-44 mx-auto object-contain rounded-lg"
+                  />
+                </div>
+
+                <div className="mt-3 p-3 bg-zinc-50 border border-zinc-200 rounded-xl text-left space-y-1 text-[11px]">
+                  <div className="flex justify-between font-mono">
+                    <span className="text-zinc-500 font-sans">A/C Number:</span>
+                    <span className="font-bold text-black">{bankInfo.accountNumber}</span>
+                  </div>
+                  <div className="flex justify-between font-mono">
+                    <span className="text-zinc-500 font-sans">IFSC Code:</span>
+                    <span className="font-bold text-black">{bankInfo.ifsc}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Bank:</span>
+                    <span className="font-bold text-black">{bankInfo.bankName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Payee:</span>
+                    <span className="font-bold text-black">{bankInfo.accountName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Amount:</span>
+                    <span className="font-mono font-black text-emerald-700">₹{payableAmount.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                <span className="text-zinc-400">Account Name:</span>
-                <span className="font-bold text-black text-right">{bankInfo.accountName}</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                <span className="text-zinc-400">Bank Name:</span>
-                <span className="font-bold text-black text-right">{bankInfo.bankName}</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                <span className="text-zinc-400">Account Number:</span>
-                <span className="font-mono font-bold text-black text-right">{bankInfo.accountNumber}</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                <span className="text-zinc-400">IFSC Code:</span>
-                <span className="font-mono font-bold text-black text-right">{bankInfo.ifsc}</span>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <span className="text-zinc-400">Branch:</span>
-                <span className="font-bold text-black text-right">{bankInfo.branch}</span>
-              </div>
-            </div>
-
-            {/* Direct Account + IFSC UPI QR Code Section */}
-            <div className="mt-5 lg:mt-auto pt-4 border-t border-zinc-100 text-center">
-              <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-zinc-600 tracking-wider mb-2">
-                <QrCode size={14} className="text-black" /> Scan Account + IFSC UPI QR
-              </div>
-              
-              <div className="p-3 bg-white border-2 border-black rounded-2xl inline-block shadow-md my-1">
-                <img
-                  src={bankInfo.qrCodeUrl || accountIfscQrImageSrc}
-                  alt="BKMA Bank Account & IFSC QR Code"
-                  className="w-44 h-44 mx-auto object-contain rounded-lg"
-                />
-              </div>
-
-              <div className="mt-3 p-3 bg-zinc-50 border border-zinc-200 rounded-xl text-left space-y-1 text-[11px]">
-                <div className="flex justify-between font-mono">
-                  <span className="text-zinc-500 font-sans">A/C Number:</span>
-                  <span className="font-bold text-black">{bankInfo.accountNumber}</span>
-                </div>
-                <div className="flex justify-between font-mono">
-                  <span className="text-zinc-500 font-sans">IFSC Code:</span>
-                  <span className="font-bold text-black">{bankInfo.ifsc}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Bank:</span>
-                  <span className="font-bold text-black">{bankInfo.bankName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Payee:</span>
-                  <span className="font-bold text-black">{bankInfo.accountName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Amount:</span>
-                  <span className="font-mono font-black text-emerald-700">₹{payableAmount.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Right Column: Payment Proof Upload Form (7 cols) */}
@@ -642,23 +680,29 @@ const GetSubscription = () => {
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-4 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-base transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 mt-4 lg:mt-auto"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  <span>Submitting Payment Proof...</span>
-                </>
-              ) : (
-                <>
-                  <Upload size={18} />
-                  <span>Submit Payment Proof for Verification</span>
-                </>
-              )}
-            </button>
+            {bankServiceError || !bankInfo ? (
+              <div className="w-full p-4 bg-amber-50 border border-amber-200 rounded-2xl text-center text-xs font-bold text-amber-900 mt-4 lg:mt-auto">
+                Payment submission is disabled while payment service is out of order.
+              </div>
+            ) : (
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-4 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-base transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 mt-4 lg:mt-auto cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Verifying &amp; Uploading Proof...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={18} />
+                    <span>Submit Payment Proof for Verification</span>
+                  </>
+                )}
+              </button>
+            )}
           </form>
         </div>
       </div>

@@ -13,13 +13,18 @@ import { useProfile } from '../../hooks/useProfile';
 import ProfileModal from '../../components/ProfileModal';
 import PhotoActionModal from '../../components/PhotoActionModal';
 import { useNotification } from '../../utils/NotificationContext';
+import { SkeletonProfile } from '../../components/skeletons/SkeletonProfile';
 
 const ReaderProfile = () => {
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, loading } = useProfile();
   const { showToast } = useNotification();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
+
+  if (loading) {
+    return <SkeletonProfile />;
+  }
 
   return (
     <div className="max-w-4xl mx-auto animate-in fade-in duration-700">

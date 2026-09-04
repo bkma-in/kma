@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, Calendar, ShieldCheck, Mail, Phone, Briefcase, Award, Users, AlertCircle, Loader2, XCircle } from 'lucide-react';
 import api from '../services/api';
 import { cn } from '../utils/cn';
+import SkeletonModalProfile from './skeletons/SkeletonModalProfile';
 
 interface AuthorDetailsModalProps {
   isOpen: boolean;
@@ -132,10 +133,7 @@ const AuthorDetailsModal: React.FC<AuthorDetailsModalProps> = ({
         </button>
 
         {loading ? (
-          <div className="py-20 flex flex-col items-center justify-center gap-4">
-            <Loader2 className="animate-spin text-zinc-400" size={48} />
-            <p className="text-xs font-black uppercase tracking-widest text-zinc-500">Retrieving profile...</p>
-          </div>
+          <SkeletonModalProfile dark={true} />
         ) : profile ? (
           <div className="space-y-8">
             {/* Top Identity Card */}

@@ -31,6 +31,7 @@ import {
 } from '../../services/payment.service';
 import type { AdminPendingSubmission } from '../../services/payment.service';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { AdminPaymentsSkeleton } from '../../components/skeletons/PageSkeletons';
 
 type PaymentFilterStatus = 'PENDING_VERIFICATION' | 'APPROVED' | 'REJECTED' | 'All';
 
@@ -174,6 +175,10 @@ const AdminPayments = () => {
   const regularRevenue = regularSubmissions.reduce((sum, s) => sum + (s.expectedAmount || 0), 0);
 
   const pendingCount = submissions.filter(s => s.status === 'PENDING_VERIFICATION').length;
+
+  if (loading) {
+    return <AdminPaymentsSkeleton />;
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 font-['Outfit'] pb-16">

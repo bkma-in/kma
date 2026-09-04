@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Megaphone } from 'lucide-react';
 import PublicHeader from '../components/PublicHeader';
 import PublicFooter from '../components/PublicFooter';
 import { CFPDetails } from '../components/cfp/CFPDetails';
+import { SkeletonCFPDetails } from '../components/skeletons/SkeletonCFPDetails';
 import type { CallForPaper } from '../types/cfp';
 import { getCFPById } from '../services/cfp.service';
 
@@ -99,10 +100,7 @@ export const CallForPaperDetailsPublic: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="bg-white border border-zinc-200 rounded-3xl p-16 text-center max-w-xl mx-auto space-y-4 my-12">
-            <Loader2 size={32} className="animate-spin text-black mx-auto" />
-            <p className="text-sm font-bold text-zinc-600">Loading Call for Papers details...</p>
-          </div>
+          <SkeletonCFPDetails />
         ) : error || !cfp ? (
           <div className="bg-white border border-zinc-200 rounded-3xl p-12 text-center max-w-md mx-auto my-12 space-y-4">
             <Megaphone size={40} className="mx-auto text-zinc-400" />

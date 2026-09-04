@@ -71,8 +71,8 @@ const DeveloperIssues = lazy(() => import('./pages/developer/DeveloperIssues'));
 const DeveloperNotifications = lazy(() => import('./pages/developer/DeveloperNotifications'));
 
 // Dynamic route boundary skeleton wrapper
-const lazyRoute = (Component: ComponentType<any>) => (
-  <Suspense fallback={<PageSkeletonFallback />}>
+const lazyRoute = (Component: ComponentType<any>, fallback?: React.ReactNode) => (
+  <Suspense fallback={fallback || <PageSkeletonFallback />}>
     <Component />
   </Suspense>
 );

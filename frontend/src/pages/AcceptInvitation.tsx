@@ -14,6 +14,7 @@ import { useNotification } from '../utils/NotificationContext';
 import { auth, db } from '../config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { cn } from '../utils/cn';
+import { SkeletonAcceptInvitation } from '../components/skeletons/SkeletonAcceptInvitation';
 
 const AcceptInvitation = () => {
   const { token } = useParams<{ token: string }>();
@@ -123,11 +124,7 @@ const AcceptInvitation = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-zinc-50">
-        <Loader2 className="animate-spin text-zinc-300" size={48} />
-      </div>
-    );
+    return <SkeletonAcceptInvitation />;
   }
 
   if (error) {
