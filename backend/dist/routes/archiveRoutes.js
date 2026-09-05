@@ -8,6 +8,7 @@ const storageService_1 = require("../services/archive/storageService");
 const firestoreService_1 = require("../services/archive/firestoreService");
 const queueService_1 = require("../services/archive/queueService");
 const rateLimiter_1 = require("../middleware/rateLimiter");
+const articleRoutes_1 = require("./articleRoutes");
 const router = (0, express_1.Router)();
 /**
  * POST /api/archive/upload
@@ -128,6 +129,7 @@ router.post('/jobs/:id/publish', authMiddleware_1.requireAuth, rateLimiter_1.arc
         }
         // Publish to main collection and set job status to completed
         await (0, firestoreService_1.publishArchiveArticles)(jobId, articles, jobData.volumeNo, jobData.issueNumber);
+        (0, articleRoutes_1.invalidatePublishedArticlesCache)();
         res.json({
             success: true,
             message: 'Archive articles approved and published to Ready-to-Publish list successfully.'

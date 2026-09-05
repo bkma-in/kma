@@ -6,6 +6,7 @@ import { uploadOriginalJournal } from '../services/archive/storageService';
 import { createJob, publishArchiveArticles } from '../services/archive/firestoreService';
 import { queueService, SegmentRange } from '../services/archive/queueService';
 import { archiveRateLimiter } from '../middleware/rateLimiter';
+import { invalidatePublishedArticlesCache } from './articleRoutes';
 
 const router = Router();
 
@@ -172,6 +173,7 @@ router.post('/jobs/:id/publish', requireAuth, archiveRateLimiter, requireRole(['
       jobData.volumeNo,
       jobData.issueNumber
     );
+    invalidatePublishedArticlesCache();
 
     res.json({
       success: true,

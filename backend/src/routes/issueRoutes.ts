@@ -31,6 +31,7 @@ router.post('/', requireAuth, requireRole(['admin']), async (req, res) => {
       }
     });
 
+    invalidateIssuesCache();
     res.json({ success: true, issue: newIssue });
   } catch (error) {
     console.error('Create issue error:', error);
@@ -38,11 +39,35 @@ router.post('/', requireAuth, requireRole(['admin']), async (req, res) => {
   }
 });
 
-// List Issues
+// --- In-Memory Cache for Issues (TTL: 60s) ---
+interface CachedIssues {
+  data: any[];
+  timestamp: number;
+}
+let cachedIssues: CachedIssues | null = null;
+const ISSUES_CACHE_TTL_MS = 60 * 1000;
+
+export const invalidateIssuesCache = () => {
+  cachedIssues = null;
+};
+
+// List Issues (Public endpoint with in-memory TTL caching and safe public cache headers)
 router.get('/', async (_req, res) => {
   try {
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+
+    if (cachedIssues && (Date.now() - cachedIssues.timestamp < ISSUES_CACHE_TTL_MS)) {
+      return res.json({ success: true, issues: cachedIssues.data });
+    }
+
     const snapshot = await db.collection('issues').orderBy('publishedAt', 'desc').get();
     const issues = snapshot.docs.map(doc => doc.data());
+
+    cachedIssues = {
+      data: issues,
+      timestamp: Date.now()
+    };
+
     res.json({ success: true, issues });
   } catch (error) {
     console.error('List issues error:', error);

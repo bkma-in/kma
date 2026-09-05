@@ -20,6 +20,7 @@ import {
   downloadRateLimiter,
   archiveRateLimiter
 } from '../middleware/rateLimiter';
+import { invalidateIssuesCache } from './issueRoutes';
 
 const router = Router();
 
@@ -427,6 +428,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
     }
 
     await articleRef.delete();
+    invalidatePublishedArticlesCache();
     res.json({ success: true, message: 'Article deleted successfully' });
 
   } catch (error) {
@@ -435,9 +437,27 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// Get Published Articles (Public endpoint)
-router.get('/published', async (req, res) => {
+// --- In-Memory Cache for Published Articles (TTL: 60s) ---
+interface CachedPublishedArticles {
+  data: any[];
+  timestamp: number;
+}
+let cachedPublishedArticles: CachedPublishedArticles | null = null;
+const PUBLISHED_ARTICLES_TTL_MS = 60 * 1000;
+
+export const invalidatePublishedArticlesCache = () => {
+  cachedPublishedArticles = null;
+};
+
+// Get Published Articles (Public endpoint with in-memory TTL caching and safe public cache headers)
+router.get('/published', async (_req, res) => {
   try {
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+
+    if (cachedPublishedArticles && (Date.now() - cachedPublishedArticles.timestamp < PUBLISHED_ARTICLES_TTL_MS)) {
+      return res.json({ success: true, articles: cachedPublishedArticles.data });
+    }
+
     const snapshot = await db.collection('articles').where('status', '==', 'published').get();
     const articles = snapshot.docs.map(doc => {
       const data = doc.data();
@@ -463,6 +483,12 @@ router.get('/published', async (req, res) => {
         fullContent: data.abstract // fallback content
       };
     });
+
+    cachedPublishedArticles = {
+      data: articles,
+      timestamp: Date.now()
+    };
+
     res.json({ success: true, articles });
   } catch (error) {
     console.error('Get published articles error:', error);
@@ -869,6 +895,7 @@ router.put('/:id', requireAuth, uploadRateLimiter, requireRole(['author']), uplo
     }
 
     await articleRef.update(updateData);
+    invalidatePublishedArticlesCache();
 
     if ((updateData.status === 'submitted' || updateData.status === 'revised_submitted') && 
         (currentStatus !== 'submitted' && currentStatus !== 'revised_submitted')) {
@@ -1067,6 +1094,8 @@ router.post('/import-split', requireAuth, pdfRateLimiter, requireRole(['admin'])
       transaction.set(issueRef, newIssue);
     });
 
+    invalidatePublishedArticlesCache();
+    invalidateIssuesCache();
     res.json({ success: true, publishedCount: createdArticleIds.length, issueId: issueRef.id });
   } catch (error: any) {
     console.error('Import split error:', error);
@@ -1165,6 +1194,8 @@ router.patch('/bulk-publish', requireAuth, archiveRateLimiter, requireRole(['adm
       }
     });
 
+    invalidatePublishedArticlesCache();
+    invalidateIssuesCache();
     res.json({
       success: true,
       publishedCount: articleIds.length,
@@ -1346,6 +1377,7 @@ router.patch('/:id/status', requireAuth, requireRole(['admin', 'reviewer']), upl
       if (adminNote !== undefined) updateData.adminNote = adminNote;
 
       await articleRef.update(updateData);
+      invalidatePublishedArticlesCache();
 
       // Trigger notifications based on status
       if (status === 'revision_requested') {

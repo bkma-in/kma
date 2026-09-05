@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.invalidatePaymentSettingsCache = void 0;
 const express_1 = require("express");
 const firebase_1 = require("../config/firebase");
 const authMiddleware_1 = require("../middleware/authMiddleware");
@@ -10,9 +11,22 @@ const subscriptionFulfillment_1 = require("../services/subscriptionFulfillment")
 const notificationService_1 = require("../services/notificationService");
 const env_1 = require("../config/env");
 const router = (0, express_1.Router)();
+let cachedPaymentSettings = null;
+const PAYMENT_SETTINGS_TTL_MS = 5 * 60 * 1000;
+const invalidatePaymentSettingsCache = () => {
+    cachedPaymentSettings = null;
+};
+exports.invalidatePaymentSettingsCache = invalidatePaymentSettingsCache;
 // GET /subscriptions/bank-details - Public / Authenticated Bank Details endpoint
 router.get('/bank-details', async (_req, res) => {
     try {
+        if (cachedPaymentSettings && (Date.now() - cachedPaymentSettings.timestamp < PAYMENT_SETTINGS_TTL_MS)) {
+            return res.json({
+                success: true,
+                serviceAvailable: true,
+                bankDetails: cachedPaymentSettings.data
+            });
+        }
         const configDoc = await firebase_1.db.collection('system_config').doc('payment_settings').get();
         const configData = configDoc.exists ? configDoc.data() : null;
         let qrCodeUrl = configData?.qrCodeUrl || null;
@@ -39,6 +53,10 @@ router.get('/bank-details', async (_req, res) => {
                 error: 'Payment service is temporarily out of order. Bank transfer environment configuration is missing.'
             });
         }
+        cachedPaymentSettings = {
+            data: mergedDetails,
+            timestamp: Date.now()
+        };
         return res.json({
             success: true,
             serviceAvailable: true,
@@ -693,6 +711,7 @@ router.post('/admin/upload-qr', authMiddleware_1.requireAuth, (0, authMiddleware
             updatedAt: now,
             updatedBy: uid
         }, { merge: true });
+        (0, exports.invalidatePaymentSettingsCache)();
         res.json({
             success: true,
             message: 'Official Bank QR Code image uploaded successfully.',

@@ -14,9 +14,29 @@ import { config } from '../config/env';
 
 const router = Router();
 
+// --- In-Memory Cache for Bank / Payment Details (TTL: 5 minutes) ---
+interface CachedPaymentSettings {
+  data: any;
+  timestamp: number;
+}
+let cachedPaymentSettings: CachedPaymentSettings | null = null;
+const PAYMENT_SETTINGS_TTL_MS = 5 * 60 * 1000;
+
+export const invalidatePaymentSettingsCache = () => {
+  cachedPaymentSettings = null;
+};
+
 // GET /subscriptions/bank-details - Public / Authenticated Bank Details endpoint
 router.get('/bank-details', async (_req, res: Response) => {
   try {
+    if (cachedPaymentSettings && (Date.now() - cachedPaymentSettings.timestamp < PAYMENT_SETTINGS_TTL_MS)) {
+      return res.json({
+        success: true,
+        serviceAvailable: true,
+        bankDetails: cachedPaymentSettings.data
+      });
+    }
+
     const configDoc = await db.collection('system_config').doc('payment_settings').get();
     const configData = configDoc.exists ? configDoc.data() : null;
 
@@ -48,6 +68,11 @@ router.get('/bank-details', async (_req, res: Response) => {
         error: 'Payment service is temporarily out of order. Bank transfer environment configuration is missing.'
       });
     }
+
+    cachedPaymentSettings = {
+      data: mergedDetails,
+      timestamp: Date.now()
+    };
 
     return res.json({
       success: true,
@@ -818,6 +843,7 @@ router.post('/admin/upload-qr', requireAuth, requireRole(['admin']), proofUpload
       updatedAt: now,
       updatedBy: uid
     }, { merge: true });
+    invalidatePaymentSettingsCache();
 
     res.json({
       success: true,

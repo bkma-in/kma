@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.invalidateCfpCache = void 0;
 const express_1 = require("express");
 const firebase_1 = require("../config/firebase");
 const authMiddleware_1 = require("../middleware/authMiddleware");
@@ -81,22 +82,38 @@ const fetchRecipientsByRoles = async (roles) => {
     }
     return recipients;
 };
+let cachedCfpList = null;
+const CFP_CACHE_TTL_MS = 60 * 1000;
+const invalidateCfpCache = () => {
+    cachedCfpList = null;
+};
+exports.invalidateCfpCache = invalidateCfpCache;
 // 1. List CFPs (Public & Admin)
 router.get('/', async (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
         const { status, year, volume, issue, topic, search } = req.query;
-        let query = firebase_1.db.collection('call_for_papers');
-        const snapshot = await query.get();
-        let cfps = snapshot.docs.map(doc => {
-            const data = doc.data();
-            const computedStatus = computeCfpStatus(data);
-            return {
-                ...data,
-                id: doc.id,
-                status: computedStatus,
-                isPublished: computedStatus === 'published' || computedStatus === 'closed'
+        let cfps;
+        if (cachedCfpList && (Date.now() - cachedCfpList.timestamp < CFP_CACHE_TTL_MS)) {
+            cfps = [...cachedCfpList.data];
+        }
+        else {
+            const snapshot = await firebase_1.db.collection('call_for_papers').get();
+            cfps = snapshot.docs.map(doc => {
+                const data = doc.data();
+                const computedStatus = computeCfpStatus(data);
+                return {
+                    ...data,
+                    id: doc.id,
+                    status: computedStatus,
+                    isPublished: computedStatus === 'published' || computedStatus === 'closed'
+                };
+            });
+            cachedCfpList = {
+                data: cfps,
+                timestamp: Date.now()
             };
-        });
+        }
         // Apply Client-requested filtering
         if (status && typeof status === 'string' && status !== 'all') {
             cfps = cfps.filter(c => c.status.toLowerCase() === status.toLowerCase());
@@ -254,6 +271,7 @@ router.post('/', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)
             updatedAt: new Date()
         };
         await cfpRef.set(newCfp);
+        (0, exports.invalidateCfpCache)();
         res.json({ success: true, cfp: newCfp });
     }
     catch (error) {
@@ -318,6 +336,7 @@ router.put('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRol
             updatedAt: new Date()
         };
         await docRef.update(updatedData);
+        (0, exports.invalidateCfpCache)();
         res.json({ success: true, cfp: { ...updatedData, id } });
     }
     catch (error) {
@@ -383,6 +402,7 @@ router.post('/:id/publish', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
                 console.error('[CFP] Immediate email dispatch error upon publish:', err);
             });
         }
+        (0, exports.invalidateCfpCache)();
         res.json({
             success: true,
             message: 'Call for Papers published successfully.',
@@ -406,6 +426,7 @@ router.post('/:id/unpublish', authMiddleware_1.requireAuth, (0, authMiddleware_1
             isPublished: false,
             updatedAt: new Date()
         });
+        (0, exports.invalidateCfpCache)();
         res.json({ success: true, message: 'CFP unpublished and set to draft' });
     }
     catch (error) {
@@ -420,6 +441,7 @@ router.post('/:id/archive', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
             isPublished: false,
             updatedAt: new Date()
         });
+        (0, exports.invalidateCfpCache)();
         res.json({ success: true, message: 'CFP archived successfully' });
     }
     catch (error) {
@@ -444,6 +466,7 @@ router.post('/:id/duplicate', authMiddleware_1.requireAuth, (0, authMiddleware_1
             updatedAt: new Date()
         };
         await newRef.set(duplicated);
+        (0, exports.invalidateCfpCache)();
         res.json({ success: true, cfp: duplicated });
     }
     catch (error) {
@@ -461,6 +484,7 @@ router.delete('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.require
             return res.status(400).json({ error: 'Only draft CFPs can be deleted. Please unpublish or archive published calls.' });
         }
         await docRef.delete();
+        (0, exports.invalidateCfpCache)();
         res.json({ success: true, message: 'Draft CFP deleted successfully' });
     }
     catch (error) {

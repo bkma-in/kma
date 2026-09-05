@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { auth, db } from '../config/firebase';
-import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
+import { requireAuth, AuthRequest, invalidateUserRoleCache } from '../middleware/authMiddleware';
 import { logAuditEvent } from '../services/auditService';
 import { config } from '../config/env';
 import { sendTransactionalEmail } from '../services/emailService';
@@ -136,7 +136,7 @@ router.post('/verify', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Register User Profile (called right after Firebase auth sign-up)
-router.post('/register', requireAuth, async (req: AuthRequest, res) => {
+router.post('/register', authRateLimiter, requireAuth, async (req: AuthRequest, res) => {
   try {
     const { name, role, qualification, experience } = req.body;
 
@@ -187,6 +187,7 @@ router.post('/register', requireAuth, async (req: AuthRequest, res) => {
     try {
       // Set Firebase Auth custom claims for role-based authentication
       await auth.setCustomUserClaims(uid, { role: userRole, name });
+      invalidateUserRoleCache(uid);
     } catch (claimError) {
       // Rollback database profile if custom claims assignment fails
       await userRef.delete().catch(delErr => console.error('Failed to rollback user profile:', delErr));

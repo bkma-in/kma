@@ -46,7 +46,14 @@ export const useProfile = () => {
   useEffect(() => {
     loadProfile();
     
-    const handleSync = () => loadProfile();
+    const handleSync = (e: Event) => {
+      const customEvt = e as CustomEvent<{ sourceProfile?: UserProfile }>;
+      if (customEvt.detail?.sourceProfile) {
+        setProfile(customEvt.detail.sourceProfile);
+      } else {
+        loadProfile();
+      }
+    };
     window.addEventListener('profile-update', handleSync);
     return () => window.removeEventListener('profile-update', handleSync);
   }, [loadProfile]);
@@ -84,7 +91,7 @@ export const useProfile = () => {
       if (response.success && response.profile) {
         setProfile(response.profile);
         localStorage.setItem('userName', response.profile.name);
-        window.dispatchEvent(new CustomEvent('profile-update'));
+        window.dispatchEvent(new CustomEvent('profile-update', { detail: { sourceProfile: response.profile } }));
         return { success: true, profile: response.profile };
       }
       return { success: false, error: response.error || 'Failed to update profile' };
