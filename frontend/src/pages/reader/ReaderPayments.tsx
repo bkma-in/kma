@@ -86,6 +86,7 @@ const ReaderPayments = () => {
     };
 
     if (num === 0) return 'Zero';
+    if (num === 1) return 'One Rupee Only';
     return `${helper(num)} Rupees Only`;
   };
 

@@ -698,9 +698,9 @@ router.get('/readers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requir
         const readers = snapshot.docs.map((doc) => {
             const data = doc.data();
             const subData = activeSubscribes.get(doc.id);
-            const isLifeMember = data.lifeMember === true || data.isLifeMember === true || subData?.type === 'lifetime' || subData?.type === 'life' || subData?.plan === 'lifetime';
-            const isSubscribed = isLifeMember || !!subData || data.isSubscribed === true;
-            const subscriptionPlan = isLifeMember ? 'lifetime' : (subData?.plan || subData?.type || null);
+            const isLifeMember = data.lifeMember === true || data.isLifeMember === true;
+            const isSubscribed = !!subData || data.isSubscribed === true;
+            const subscriptionPlan = subData?.plan || subData?.type || (isSubscribed ? (isLifeMember ? 'annual_concession' : 'annual') : null);
             return {
                 id: doc.id,
                 name: data.name || 'Anonymous Reader',
