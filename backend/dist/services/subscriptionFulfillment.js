@@ -39,7 +39,9 @@ const fulfillManualSubscriptionPayment = async (paymentAttemptId, adminUserId, a
         const userId = attemptData.userId;
         const internalOrderId = attemptData.internalOrderId;
         const plan = attemptData.plan || 'annual';
-        const expectedAmount = attemptData.expectedAmount || attemptData.amount || (plan === 'lifetime' ? 1000 : 2000);
+        const expectedAmount = attemptData.expectedAmount !== undefined && attemptData.expectedAmount !== null
+            ? attemptData.expectedAmount
+            : (attemptData.amount !== undefined && attemptData.amount !== null ? attemptData.amount : (plan === 'lifetime' ? 1000 : 2000));
         const transactionRef = attemptData.transactionReference || attemptData.transactionRef || 'N/A';
         // Step 2: Atomic Firestore Transaction for State Transition
         const transactionResult = await firebase_1.db.runTransaction(async (transaction) => {
@@ -93,13 +95,32 @@ const fulfillManualSubscriptionPayment = async (paymentAttemptId, adminUserId, a
                 transactionReference: transactionRef,
                 updatedAt: now
             }, { merge: true });
-            // Synchronize User profile
+            // Synchronize User profile & Life Member status
             const userRef = firebase_1.db.collection('users').doc(userId);
-            transaction.set(userRef, {
+            const userUpdateData = {
                 isSubscribed: true,
                 subscriptionStatus: 'active',
                 updatedAt: now
-            }, { merge: true });
+            };
+            const verifiedUniqueId = attemptData.verifiedUniqueId || attemptData.membershipNumber;
+            if (verifiedUniqueId || plan === 'lifetime') {
+                userUpdateData.isLifeMember = true;
+                userUpdateData.lifeMember = true;
+                if (verifiedUniqueId) {
+                    userUpdateData.membershipNumber = String(verifiedUniqueId).trim().toUpperCase();
+                }
+            }
+            transaction.set(userRef, userUpdateData, { merge: true });
+            // Mark Life Member registry doc as claimed
+            if (verifiedUniqueId) {
+                const normId = String(verifiedUniqueId).trim().toUpperCase();
+                const lifeMemberRef = firebase_1.db.collection('life_members').doc(normId);
+                transaction.set(lifeMemberRef, {
+                    isClaimed: true,
+                    claimedByUserId: userId,
+                    claimedAt: now
+                }, { merge: true });
+            }
             return { alreadyFulfilled: false, subscriptionId: subRef.id };
         });
         if (transactionResult.alreadyFulfilled) {

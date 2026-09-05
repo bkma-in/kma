@@ -169,6 +169,7 @@ const GetSubscription = () => {
     };
 
     if (num === 0) return 'Zero';
+    if (num === 1) return 'One Rupee Only';
     return `${helper(num)} Rupees Only`;
   };
 
@@ -180,8 +181,9 @@ const GetSubscription = () => {
     }
   }, [resendCooldown]);
 
-  const payableAmount = isOtpVerified ? 1000 : 2000;
-  const membershipTitle = isOtpVerified ? 'Verified KMA Life Member' : 'Regular Member';
+  const isTestUser = (currentUser?.email || '').toLowerCase().trim() === 'reader1@gmail.com';
+  const payableAmount = isTestUser ? 10 : (isOtpVerified ? 1000 : 2000);
+  const membershipTitle = isTestUser ? 'Payment Testing Account' : (isOtpVerified ? 'Verified KMA Life Member' : 'Regular Member');
 
   // Request Life Member OTP
   const handleRequestOtp = async (e?: React.FormEvent) => {
@@ -430,16 +432,30 @@ const GetSubscription = () => {
           <div className="bg-gradient-to-br from-zinc-900 to-black text-white rounded-[2rem] p-6 shadow-xl relative overflow-hidden">
             <div className="flex items-center justify-between mb-3">
               <span className="px-2.5 py-0.5 bg-amber-400/20 text-amber-300 border border-amber-400/30 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                <Crown size={12} className="text-amber-400" /> KMA Life Member
+                <Crown size={12} className="text-amber-400" /> {isTestUser ? 'Test Account Mode' : 'KMA Life Member'}
               </span>
-              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">50% Concession</span>
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+                {isTestUser ? '₹10 Test Rate' : '50% Concession'}
+              </span>
             </div>
-            <h3 className="text-lg font-bold text-white mb-1">Are you a KMA Life Member?</h3>
+            <h3 className="text-lg font-bold text-white mb-1">
+              {isTestUser ? 'Payment Testing Enabled' : 'Are you a KMA Life Member?'}
+            </h3>
             <p className="text-zinc-400 text-xs leading-relaxed mb-4">
-              Enter your Unique Life Member ID to receive a 50% concession (₹1,000 / year).
+              {isTestUser
+                ? 'Test user account (reader1@gmail.com) is configured with testing subscription price of ₹10.'
+                : 'Enter your Unique Life Member ID to receive a 50% concession (₹1,000 / year).'}
             </p>
 
-            {isOtpVerified ? (
+            {isTestUser ? (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 flex items-center gap-3">
+                <Sparkles size={18} className="text-blue-400 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-blue-300">Test Account Active (reader1@gmail.com)</p>
+                  <p className="text-[10px] text-blue-400/80">Subscription fee set to ₹10 for payment testing</p>
+                </div>
+              </div>
+            ) : isOtpVerified ? (
               <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex items-center gap-3">
                 <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
                 <div>
@@ -603,7 +619,7 @@ const GetSubscription = () => {
             <div className="text-right">
               <span className="text-xs text-zinc-400 block font-medium">Payable Amount</span>
               <span className="text-3xl font-black text-black">₹{payableAmount.toLocaleString()}</span>
-              {isOtpVerified && (
+              {(isTestUser || isOtpVerified) && (
                 <span className="text-[10px] font-bold text-emerald-700 block uppercase tracking-wider">{membershipTitle}</span>
               )}
             </div>
@@ -619,7 +635,7 @@ const GetSubscription = () => {
           <form onSubmit={handleSubmitProof} className="space-y-5 flex-1 flex flex-col justify-between">
             {/* Membership & Rate Read-Only Summary */}
             <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-2xl text-xs">
-              {isOtpVerified ? (
+              {isTestUser || isOtpVerified ? (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Membership Status</label>

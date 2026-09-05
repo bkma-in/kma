@@ -30,6 +30,7 @@ export const numberToWords = (num: number): string => {
     return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 !== 0 ? ' ' + convertLessThanThousand(n % 100) : '');
   };
 
+  if (num === 1) return 'One Rupee Only';
   if (num === 1000) return 'One Thousand Rupees Only';
   if (num === 2000) return 'Two Thousand Rupees Only';
 

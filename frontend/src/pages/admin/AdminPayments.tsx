@@ -35,11 +35,14 @@ import { AdminPaymentsSkeleton } from '../../components/skeletons/PageSkeletons'
 
 type PaymentFilterStatus = 'PENDING_VERIFICATION' | 'APPROVED' | 'REJECTED' | 'All';
 
+type HistoryFilterTab = 'all' | 'approved' | 'rejected' | 'life_member' | 'standard';
+
 const AdminPayments = () => {
   const { showToast } = useNotification();
   const [submissions, setSubmissions] = useState<AdminPendingSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilterTab>('all');
   const [statusFilter, setStatusFilter] = useState<PaymentFilterStatus>('All');
 
   // Modals state
@@ -152,8 +155,21 @@ const AdminPayments = () => {
     );
   });
 
+  const historyAllDocs = submissions.filter(s => s.status !== 'PENDING_VERIFICATION');
+  const historyApprovedCount = historyAllDocs.filter(s => s.status === 'APPROVED').length;
+  const historyRejectedCount = historyAllDocs.filter(s => s.status === 'REJECTED').length;
+  const historyLifeMemberCount = historyAllDocs.filter(s => s.membershipType === 'lifetime').length;
+  const historyStandardCount = historyAllDocs.filter(s => s.membershipType !== 'lifetime').length;
+
   const historySubmissions = submissions.filter((sub) => {
     if (sub.status === 'PENDING_VERIFICATION') return false;
+
+    // Filter by tab selection
+    if (historyFilter === 'approved' && sub.status !== 'APPROVED') return false;
+    if (historyFilter === 'rejected' && sub.status !== 'REJECTED') return false;
+    if (historyFilter === 'life_member' && sub.membershipType !== 'lifetime') return false;
+    if (historyFilter === 'standard' && sub.membershipType === 'lifetime') return false;
+
     if (!searchTerm.trim()) return true;
     const searchLower = searchTerm.toLowerCase().trim();
     return (
@@ -399,20 +415,123 @@ const AdminPayments = () => {
       {/* HISTORICAL PAYMENT VERIFICATION AUDIT TRAIL */}
       {submissions.filter(s => s.status !== 'PENDING_VERIFICATION').length > 0 && (
         <div className="bg-white border border-zinc-200 rounded-3xl shadow-sm overflow-hidden mt-12">
-          <div className="p-6 border-b border-zinc-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-50/50">
-            <div>
-              <span className="px-2.5 py-0.5 bg-zinc-200 text-zinc-800 rounded-full text-[10px] font-black uppercase tracking-wider mb-1 inline-block">
-                Historical Audit Log
-              </span>
-              <h2 className="text-xl font-bold text-black tracking-tight">Payment Verification History</h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Audit log of all verified, approved, and rejected manual bank transfer payment submissions.
-              </p>
+          <div className="p-6 border-b border-zinc-100 bg-zinc-50/50 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="px-2.5 py-0.5 bg-zinc-200 text-zinc-800 rounded-full text-[10px] font-black uppercase tracking-wider mb-1 inline-block">
+                  Historical Audit Log
+                </span>
+                <h2 className="text-xl font-bold text-black tracking-tight">Payment Verification History</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Audit log of all verified, approved, and rejected manual bank transfer payment submissions.
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="text-xs font-mono font-bold text-zinc-500">
+                  Showing {historySubmissions.length} of {historyAllDocs.length} Records
+                </span>
+              </div>
             </div>
-            <div className="text-right">
-              <span className="text-xs font-mono font-bold text-zinc-500">
-                Verified Records: {submissions.filter(s => s.status !== 'PENDING_VERIFICATION').length}
-              </span>
+
+            {/* Filter Tabs Bar */}
+            <div className="flex items-center gap-2 overflow-x-auto pt-2 border-t border-zinc-200/60 pb-1">
+              <button
+                type="button"
+                onClick={() => setHistoryFilter('all')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer",
+                  historyFilter === 'all'
+                    ? "bg-black text-white shadow-sm"
+                    : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"
+                )}
+              >
+                <span>All History</span>
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.2 rounded-full font-black",
+                  historyFilter === 'all' ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-600"
+                )}>
+                  {historyAllDocs.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setHistoryFilter('approved')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer",
+                  historyFilter === 'approved'
+                    ? "bg-emerald-700 text-white shadow-sm"
+                    : "bg-white text-zinc-600 hover:bg-emerald-50 hover:text-emerald-700 border border-zinc-200"
+                )}
+              >
+                <CheckCircle2 size={13} className={historyFilter === 'approved' ? "text-emerald-300" : "text-emerald-600"} />
+                <span>Approved</span>
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.2 rounded-full font-black",
+                  historyFilter === 'approved' ? "bg-emerald-500 text-black" : "bg-emerald-100 text-emerald-800"
+                )}>
+                  {historyApprovedCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setHistoryFilter('rejected')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer",
+                  historyFilter === 'rejected'
+                    ? "bg-rose-700 text-white shadow-sm"
+                    : "bg-white text-zinc-600 hover:bg-rose-50 hover:text-rose-700 border border-zinc-200"
+                )}
+              >
+                <XCircle size={13} className={historyFilter === 'rejected' ? "text-rose-300" : "text-rose-600"} />
+                <span>Rejected</span>
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.2 rounded-full font-black",
+                  historyFilter === 'rejected' ? "bg-rose-400 text-black" : "bg-rose-100 text-rose-800"
+                )}>
+                  {historyRejectedCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setHistoryFilter('life_member')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer",
+                  historyFilter === 'life_member'
+                    ? "bg-amber-500 text-black shadow-sm"
+                    : "bg-white text-zinc-600 hover:bg-amber-50 hover:text-amber-800 border border-zinc-200"
+                )}
+              >
+                <Crown size={13} className={historyFilter === 'life_member' ? "text-black" : "text-amber-500"} />
+                <span>Life Member (50% Off)</span>
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.2 rounded-full font-black",
+                  historyFilter === 'life_member' ? "bg-black text-white" : "bg-amber-100 text-amber-900"
+                )}>
+                  {historyLifeMemberCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setHistoryFilter('standard')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer",
+                  historyFilter === 'standard'
+                    ? "bg-zinc-800 text-white shadow-sm"
+                    : "bg-white text-zinc-600 hover:bg-zinc-100 border border-zinc-200"
+                )}
+              >
+                <span>Standard Passes</span>
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.2 rounded-full font-black",
+                  historyFilter === 'standard' ? "bg-white/20 text-white" : "bg-zinc-100 text-zinc-700"
+                )}>
+                  {historyStandardCount}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -505,7 +624,9 @@ const AdminPayments = () => {
                 {historySubmissions.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-xs text-zinc-400 font-bold uppercase tracking-wider">
-                      No payment verification history records found
+                      {historyFilter === 'all'
+                        ? 'No payment verification history records found'
+                        : `No ${historyFilter.replace('_', ' ')} records found in history`}
                     </td>
                   </tr>
                 ) : null}

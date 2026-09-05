@@ -57,7 +57,9 @@ export const fulfillManualSubscriptionPayment = async (
     const userId = attemptData.userId;
     const internalOrderId = attemptData.internalOrderId;
     const plan = attemptData.plan || 'annual';
-    const expectedAmount = attemptData.expectedAmount || attemptData.amount || (plan === 'lifetime' ? 1000 : 2000);
+    const expectedAmount = attemptData.expectedAmount !== undefined && attemptData.expectedAmount !== null
+      ? attemptData.expectedAmount
+      : (attemptData.amount !== undefined && attemptData.amount !== null ? attemptData.amount : (plan === 'lifetime' ? 1000 : 2000));
     const transactionRef = attemptData.transactionReference || attemptData.transactionRef || 'N/A';
 
     // Step 2: Atomic Firestore Transaction for State Transition

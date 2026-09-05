@@ -95,8 +95,8 @@ router.get('/payment-history', requireAuth, async (req: AuthRequest, res: Respon
         paymentId: doc.id,
         plan: data.membershipType || data.plan || 'annual',
         article: data.membershipType === 'lifetime' ? 'BKMA Annual Pass (Life Member 50% Concession)' : 'BKMA Annual Pass Subscription',
-        amount: data.expectedAmount ? `₹${data.expectedAmount}` : (data.amount ? `₹${data.amount}` : '₹2000'),
-        amountRaw: data.expectedAmount || data.amount || 2000,
+        amount: (data.expectedAmount !== undefined && data.expectedAmount !== null) ? `₹${data.expectedAmount}` : ((data.amount !== undefined && data.amount !== null) ? `₹${data.amount}` : '₹2000'),
+        amountRaw: data.expectedAmount !== undefined && data.expectedAmount !== null ? data.expectedAmount : (data.amount !== undefined && data.amount !== null ? data.amount : 2000),
         currency: 'INR',
         date: dateStr,
         paymentDate: data.paymentDate || dateStr,
@@ -143,7 +143,7 @@ router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res: Respo
         id: data.subscriptionId || doc.id,
         type: 'subscription',
         planType: data.type || data.plan || 'annual',
-        amount: data.amount ? `₹${data.amount}` : (data.type === 'lifetime' ? '₹1000' : '₹2000'),
+        amount: (data.amount !== undefined && data.amount !== null) ? `₹${data.amount}` : (data.type === 'lifetime' ? '₹1000' : '₹2000'),
         date: data.startedAt?.toDate ? data.startedAt.toDate().toISOString().split('T')[0] : (data.createdAt?.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
         status: data.status === 'active' ? 'APPROVED' : 'PENDING_VERIFICATION',
         rawStatus: data.status,
@@ -458,11 +458,17 @@ router.post(
       let isLifeMemberConcession = false;
       let verifiedUniqueId: string | null = null;
 
-      // 1. Check user profile for verified Life Member status
+      // Check user profile for verified Life Member status & user email
       const userDoc = await db.collection('users').doc(uid).get();
       const userData = userDoc.exists ? userDoc.data() : null;
 
-      if (userData?.isLifeMember === true || userData?.lifeMember === true) {
+      const userEmailClean = (email || req.user?.email || userData?.email || '').toLowerCase().trim();
+      const isSpecialTestUser = userEmailClean === 'reader1@gmail.com';
+
+      if (isSpecialTestUser) {
+        // Special testing subscription price for test reader
+        expectedAmount = 10;
+      } else if (userData?.isLifeMember === true || userData?.lifeMember === true) {
         expectedAmount = 1000;
         isLifeMemberConcession = true;
         verifiedUniqueId = userData.membershipNumber || null;
@@ -662,7 +668,7 @@ router.get('/admin/pending', requireAuth, requireRole(['admin']), async (_req: A
         userName: data.userName || 'Member',
         userEmail: data.userEmail || '',
         membershipType: data.membershipType || data.plan || 'annual',
-        expectedAmount: data.expectedAmount || data.amount || 2000,
+        expectedAmount: data.expectedAmount !== undefined && data.expectedAmount !== null ? data.expectedAmount : (data.amount !== undefined && data.amount !== null ? data.amount : 2000),
         transactionRef: data.transactionReference || data.transactionRef || 'N/A',
         paymentDate: data.paymentDate || 'N/A',
         submissionDate: submittedAtDate.toISOString().split('T')[0],
