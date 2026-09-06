@@ -136,6 +136,16 @@ export const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
     return val !== undefined && val !== null && val !== '';
   };
 
+  // Helper to resolve clean member name
+  const getResolvedMemberName = () => {
+    if (!memberName || !memberName.trim()) return '';
+    const clean = memberName.trim();
+    if (/^(reader user|member|user)$/i.test(clean)) {
+      return 'Subscriber';
+    }
+    return clean;
+  };
+
   return (
     <div className="receipt-container-wrapper">
       <div className="receipt-card">
@@ -184,7 +194,7 @@ export const ReceiptTemplate: React.FC<ReceiptTemplateProps> = ({
           {/* Line 1: Received with thanks from */}
           <div className="receipt-body-multiline-row">
             <span className="receipt-body-label-inline">Received with thanks from</span>
-            <span className="receipt-body-value-inline">{memberName || ''}</span>
+            <span className="receipt-body-value-inline">{getResolvedMemberName()}</span>
             <div className="receipt-print-line receipt-print-line-1"></div>
             <div className="receipt-print-line receipt-print-line-2"></div>
           </div>

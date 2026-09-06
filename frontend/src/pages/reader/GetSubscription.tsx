@@ -192,9 +192,11 @@ const GetSubscription = () => {
     }
   }, [resendCooldown]);
 
-  const isTestUser = (currentUser?.email || '').toLowerCase().trim() === 'reader1@gmail.com';
-  const payableAmount = isTestUser ? 10 : (isOtpVerified ? 1000 : 2000);
-  const membershipTitle = isTestUser ? 'Payment Testing Account' : (isOtpVerified ? 'Verified KMA Life Member' : 'Regular Member');
+  const testUserEmails = ['reader1@gmail.com', 'reader@gmail.com'];
+  const userEmailLower = (currentUser?.email || '').toLowerCase().trim();
+  const isTestUser = testUserEmails.includes(userEmailLower);
+  const payableAmount = isTestUser ? 1 : (isOtpVerified ? 1000 : 2000);
+  const membershipTitle = isTestUser ? 'Payment Testing Account (₹1)' : (isOtpVerified ? 'Verified KMA Life Member' : 'Regular Member');
 
   // Request Life Member OTP
   const handleRequestOtp = async (e?: React.FormEvent) => {
@@ -307,6 +309,11 @@ const GetSubscription = () => {
 
       if (res.success) {
         showToast('Payment proof submitted successfully! Pending administrator verification.', 'success');
+        setSelectedFile(null);
+        setTransactionRef('');
+        setRemarks('');
+        const fileInput = document.getElementById('proof-file-input') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
         await loadRecentAttempt();
         await refreshSubscriptionStatus();
       } else {
@@ -448,7 +455,7 @@ const GetSubscription = () => {
                 <Crown size={12} className="text-amber-400" /> {isTestUser ? 'Test Account Mode' : 'KMA Life Member'}
               </span>
               <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
-                {isTestUser ? '₹10 Test Rate' : '50% Concession'}
+                {isTestUser ? '₹1 Test Rate' : '50% Concession'}
               </span>
             </div>
             <h3 className="text-lg font-bold text-white mb-1">
@@ -456,7 +463,7 @@ const GetSubscription = () => {
             </h3>
             <p className="text-zinc-400 text-xs leading-relaxed mb-4">
               {isTestUser
-                ? 'Test user account (reader1@gmail.com) is configured with testing subscription price of ₹10.'
+                ? `Test user account (${currentUser?.email || 'test user'}) is configured with testing subscription price of ₹1.`
                 : 'Enter your Unique Life Member ID to receive a 50% concession (₹1,000 / year).'}
             </p>
 
@@ -464,8 +471,8 @@ const GetSubscription = () => {
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 flex items-center gap-3">
                 <Sparkles size={18} className="text-blue-400 shrink-0" />
                 <div>
-                  <p className="text-xs font-bold text-blue-300">Test Account Active (reader1@gmail.com)</p>
-                  <p className="text-[10px] text-blue-400/80">Subscription fee set to ₹10 for payment testing</p>
+                  <p className="text-xs font-bold text-blue-300">Test Account Active ({currentUser?.email || 'reader@gmail.com'})</p>
+                  <p className="text-[10px] text-blue-400/80">Subscription fee set to ₹1 for payment testing</p>
                 </div>
               </div>
             ) : isOtpVerified ? (
@@ -714,17 +721,16 @@ const GetSubscription = () => {
               )}
             </div>
 
-            {/* Payment Transfer Date */}
+            {/* Payment Transfer Date (Read-Only) */}
             <div>
               <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                Payment Date <span className="text-rose-500">*</span>
+                Payment Date
               </label>
               <input
                 type="date"
-                required
+                readOnly
                 value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-medium text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                className="w-full px-4 py-3 bg-zinc-100 border border-zinc-300 rounded-xl text-sm font-medium text-black cursor-not-allowed select-none"
               />
             </div>
 
@@ -858,7 +864,11 @@ const GetSubscription = () => {
                     {/* Submission Date */}
                     <td className="px-6 py-4">
                       <p className="text-xs font-bold text-black">{item.date || item.paymentDate}</p>
-                      <span className="text-[10px] text-zinc-400 block font-mono mt-0.5">Receipt No: {formatReceiptNo(item.receiptNo || item.id, item.date || item.paymentDate, idx)}</span>
+                      {item.status === 'APPROVED' && (
+                        <span className="text-[10px] text-zinc-400 block font-mono mt-0.5">
+                          Receipt No: {formatReceiptNo(item.receiptNo || item.id, item.date || item.paymentDate, idx)}
+                        </span>
+                      )}
                     </td>
 
                     {/* Membership Plan */}
@@ -1014,7 +1024,13 @@ const GetSubscription = () => {
               <ReceiptTemplate
                 receiptNumber={formatReceiptNo(selectedReceiptPayment.id)}
                 date={formatDateString(selectedReceiptPayment.paymentDate || selectedReceiptPayment.date)}
-                memberName={currentUser?.name || localStorage.getItem('userName') || 'Member'}
+                memberName={
+                  (selectedReceiptPayment as any)?.userName ||
+                  (currentUser?.name && currentUser.name.toLowerCase() !== 'reader user' ? currentUser.name : null) ||
+                  ((currentUser as any)?.displayName && (currentUser as any).displayName.toLowerCase() !== 'reader user' ? (currentUser as any).displayName : null) ||
+                  (localStorage.getItem('userName') && localStorage.getItem('userName')?.toLowerCase() !== 'reader user' ? localStorage.getItem('userName') : null) ||
+                  (currentUser?.email ? currentUser.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : 'Subscriber')
+                }
                 amount={(selectedReceiptPayment.amountRaw || selectedReceiptPayment.amount).toString().replace('₹', '')}
                 amountInWords={numberToWords(parseInt((selectedReceiptPayment.amountRaw || selectedReceiptPayment.amount).toString().replace(/[^\d]/g, '')) || 1000)}
                 membershipType={selectedReceiptPayment.plan === 'lifetime' ? 'Life Membership Pass' : 'Annual Pass Subscription'}

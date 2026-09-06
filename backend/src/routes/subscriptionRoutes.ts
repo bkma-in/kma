@@ -136,7 +136,10 @@ router.get('/payment-history', requireAuth, async (req: AuthRequest, res: Respon
         rejectionReason: data.rejectionReason || null,
         verifiedAt: data.verifiedAt?.toDate ? data.verifiedAt.toDate().toISOString() : data.verifiedAt || null,
         verifiedByName: data.verifiedByName || null,
-        receiptAvailable: displayStatus === 'APPROVED'
+        receiptNo: displayStatus === 'APPROVED' ? (data.receiptNo || null) : null,
+        receiptAvailable: displayStatus === 'APPROVED',
+        userName: data.userName || null,
+        userEmail: data.userEmail || null
       };
     }));
 
@@ -488,11 +491,12 @@ router.post(
       const userData = userDoc.exists ? userDoc.data() : null;
 
       const userEmailClean = (email || req.user?.email || userData?.email || '').toLowerCase().trim();
-      const isSpecialTestUser = userEmailClean === 'reader1@gmail.com';
+      const testEmails = ['reader1@gmail.com', 'reader@gmail.com'];
+      const isSpecialTestUser = testEmails.includes(userEmailClean);
 
       if (isSpecialTestUser) {
         // Special testing subscription price for test reader
-        expectedAmount = 10;
+        expectedAmount = 1;
       } else if (userData?.isLifeMember === true || userData?.lifeMember === true) {
         expectedAmount = 1000;
         isLifeMemberConcession = true;

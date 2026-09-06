@@ -15,13 +15,13 @@
 /* A5 Dimensions Landscape: 210mm width x 148mm height */
 .receipt-card {
   width: 210mm;
-  height: 148mm;
+  height: auto;
   min-width: 210mm;
-  min-height: 148mm;
+  min-height: 135mm;
   background-color: #ffffff;
   border: 1px solid #e4e4e7;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  padding: 10mm 12mm;
+  padding: 8mm 12mm 10mm 12mm;
   box-sizing: border-box;
   position: relative;
   display: flex;
@@ -200,9 +200,8 @@
 .receipt-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  flex-grow: 1;
-  margin-bottom: 15px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .receipt-body-multiline-row {
@@ -264,7 +263,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-top: auto;
+  margin-top: 10px;
   border-top: 1px dashed #e4e4e7;
   padding-top: 8px;
   position: relative;
