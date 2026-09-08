@@ -199,26 +199,26 @@ const AuthorDetailsModal: React.FC<AuthorDetailsModalProps> = ({
                     Account Information
                   </h3>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Full Name</p>
-                      <p className="text-xs font-bold text-white">{profile.name}</p>
-                    </div>
+                  <div className="space-y-2">
+                    <h4 className="text-xl sm:text-2xl font-black text-white tracking-tight">{profile.name}</h4>
 
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Email Address</p>
-                      <p className="text-xs font-bold text-white break-all">{profile.email || 'N/A'}</p>
-                    </div>
+                    {profile.designation && (
+                      <p className="text-xs sm:text-sm font-medium text-zinc-400 italic">
+                        {profile.designation}
+                      </p>
+                    )}
 
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Phone Number</p>
-                      <p className="text-xs font-bold text-white">{profile.phone || 'N/A'}</p>
-                    </div>
+                    {profile.email && (
+                      <p className="text-sm font-semibold text-blue-400 lowercase break-all">
+                        {profile.email}
+                      </p>
+                    )}
 
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Designation</p>
-                      <p className="text-xs font-bold text-white">{profile.designation || 'N/A'}</p>
-                    </div>
+                    {profile.phone && (
+                      <p className="text-xs font-semibold text-zinc-300">
+                        {profile.phone}
+                      </p>
+                    )}
                   </div>
                 </div>
 

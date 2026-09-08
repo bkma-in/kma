@@ -355,27 +355,24 @@ const AdminAuthorsList = () => {
                     <h3 className="text-sm font-bold text-white uppercase tracking-widest">Account Information</h3>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Full Name</label>
-                      <p className="text-sm font-bold text-white">{selectedAuthor.name}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Email Address</label>
-                      <p className="text-sm font-bold text-white lowercase">{selectedAuthor.email}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Phone Number</label>
-                      <p className={cn("text-sm font-bold", selectedAuthor.phone ? "text-white" : "text-zinc-600 italic")}>
-                        {selectedAuthor.phone || "Not provided"}
+                  <div className="space-y-2">
+                    <h4 className="text-xl sm:text-2xl font-black text-white tracking-tight">{selectedAuthor.name}</h4>
+
+                    {selectedAuthor.designation && (
+                      <p className="text-xs sm:text-sm font-medium text-zinc-400 italic">
+                        {selectedAuthor.designation}
                       </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Designation</label>
-                      <p className={cn("text-sm font-bold", selectedAuthor.designation ? "text-white" : "text-zinc-600 italic")}>
-                        {selectedAuthor.designation || "Not provided"}
+                    )}
+
+                    <p className="text-sm font-semibold text-blue-400 lowercase break-all">
+                      {selectedAuthor.email}
+                    </p>
+
+                    {selectedAuthor.phone && (
+                      <p className="text-xs font-semibold text-zinc-300">
+                        {selectedAuthor.phone}
                       </p>
-                    </div>
+                    )}
                   </div>
                 </div>
 
