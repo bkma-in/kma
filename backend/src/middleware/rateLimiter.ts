@@ -255,7 +255,7 @@ export const globalRateLimiter = rateLimit({
   max: config.rateLimit.globalMax,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: ipKeyGenerator,
+  keyGenerator: keyGenerator,
   skip: skipAdmin,
   handler: createRateLimiterHandler(
     'Global API',

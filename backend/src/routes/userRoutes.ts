@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import * as XLSX from 'xlsx';
 import { db, auth } from '../config/firebase';
-import { requireAuth, requireRole, AuthRequest } from '../middleware/authMiddleware';
+import { requireAuth, requireRole, AuthRequest, invalidateUserRoleCache } from '../middleware/authMiddleware';
 import { upload, spreadsheetUpload } from '../middleware/uploadMiddleware';
 import { uploadImage, deleteImage } from '../services/cloudinaryService';
 import { sendTransactionalEmail } from '../services/emailService';
@@ -440,6 +440,7 @@ router.put('/profile', requireAuth, upload.single('profileImage'), async (req: A
 
     // 3. Database Update (Single Write)
     await userRef.update(updateData);
+    invalidateUserRoleCache(uid);
 
     // Sync Custom Claims if Name changed
     if (sanitizedName) {
@@ -715,10 +716,10 @@ router.get('/authors', requireAuth, requireRole(['admin']), async (req: AuthRequ
 // Admin: Get all readers
 router.get('/readers', requireAuth, requireRole(['admin']), async (_req: AuthRequest, res: Response) => {
   try {
-    const snapshot = await db.collection('users').where('role', '==', 'reader').get();
-    
-    // Also fetch all active subscriptions to check for subscription plan and status
-    const subsSnapshot = await db.collection('subscriptions').where('status', '==', 'active').get();
+    const [snapshot, subsSnapshot] = await Promise.all([
+      db.collection('users').where('role', '==', 'reader').get(),
+      db.collection('subscriptions').where('status', '==', 'active').get()
+    ]);
     const activeSubscribes = new Map();
     subsSnapshot.docs.forEach((doc: any) => {
       const data = doc.data();
@@ -807,6 +808,7 @@ router.patch('/reviewers/:id/status', requireAuth, requireRole(['admin']), async
     }
 
     await userRef.update(updateData);
+    invalidateUserRoleCache(id);
 
     res.json({ success: true, reviewer: { ...userDoc.data(), ...updateData, id } });
   } catch (error: any) {
@@ -859,6 +861,7 @@ router.post('/reviewers', requireAuth, requireRole(['admin']), async (req: AuthR
       
       // Then apply custom claims
       await auth.setCustomUserClaims(userRecord.uid, { role: 'reviewer', name });
+      invalidateUserRoleCache(userRecord.uid);
     } catch (err) {
       // Rollback: Delete the auth user if database write or claims config fails
       await auth.deleteUser(userRecord.uid).catch((authErr: any) => 

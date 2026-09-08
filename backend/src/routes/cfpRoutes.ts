@@ -97,23 +97,44 @@ const fetchRecipientsByRoles = async (roles: {
   return recipients;
 };
 
+// --- In-Memory Cache for Call for Papers (TTL: 60s) ---
+interface CachedCfpList {
+  data: any[];
+  timestamp: number;
+}
+let cachedCfpList: CachedCfpList | null = null;
+const CFP_CACHE_TTL_MS = 60 * 1000;
+
+export const invalidateCfpCache = () => {
+  cachedCfpList = null;
+};
+
 // 1. List CFPs (Public & Admin)
 router.get('/', async (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
     const { status, year, volume, issue, topic, search } = req.query;
-    let query: FirebaseFirestore.Query = db.collection('call_for_papers');
 
-    const snapshot = await query.get();
-    let cfps = snapshot.docs.map(doc => {
-      const data = doc.data() as any;
-      const computedStatus = computeCfpStatus(data);
-      return {
-        ...data,
-        id: doc.id,
-        status: computedStatus,
-        isPublished: computedStatus === 'published' || computedStatus === 'closed'
+    let cfps: any[];
+    if (cachedCfpList && (Date.now() - cachedCfpList.timestamp < CFP_CACHE_TTL_MS)) {
+      cfps = [...cachedCfpList.data];
+    } else {
+      const snapshot = await db.collection('call_for_papers').get();
+      cfps = snapshot.docs.map(doc => {
+        const data = doc.data() as any;
+        const computedStatus = computeCfpStatus(data);
+        return {
+          ...data,
+          id: doc.id,
+          status: computedStatus,
+          isPublished: computedStatus === 'published' || computedStatus === 'closed'
+        };
+      });
+      cachedCfpList = {
+        data: cfps,
+        timestamp: Date.now()
       };
-    });
+    }
 
     // Apply Client-requested filtering
     if (status && typeof status === 'string' && status !== 'all') {
@@ -295,6 +316,7 @@ router.post('/', requireAuth, requireRole(['admin']), upload.fields([
     };
 
     await cfpRef.set(newCfp);
+    invalidateCfpCache();
     res.json({ success: true, cfp: newCfp });
   } catch (error: any) {
     console.error('Create CFP error:', error);
@@ -365,6 +387,7 @@ router.put('/:id', requireAuth, requireRole(['admin']), upload.fields([
     };
 
     await docRef.update(updatedData);
+    invalidateCfpCache();
     res.json({ success: true, cfp: { ...updatedData, id } });
   } catch (error: any) {
     console.error('Update CFP error:', error);
@@ -440,6 +463,7 @@ router.post('/:id/publish', requireAuth, requireRole(['admin']), async (req: Aut
       });
     }
 
+    invalidateCfpCache();
     res.json({
       success: true,
       message: 'Call for Papers published successfully.',
@@ -463,6 +487,7 @@ router.post('/:id/unpublish', requireAuth, requireRole(['admin']), async (req, r
       isPublished: false,
       updatedAt: new Date()
     });
+    invalidateCfpCache();
     res.json({ success: true, message: 'CFP unpublished and set to draft' });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to unpublish CFP' });
@@ -477,6 +502,7 @@ router.post('/:id/archive', requireAuth, requireRole(['admin']), async (req, res
       isPublished: false,
       updatedAt: new Date()
     });
+    invalidateCfpCache();
     res.json({ success: true, message: 'CFP archived successfully' });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to archive CFP' });
@@ -502,6 +528,7 @@ router.post('/:id/duplicate', requireAuth, requireRole(['admin']), async (req, r
     };
 
     await newRef.set(duplicated);
+    invalidateCfpCache();
     res.json({ success: true, cfp: duplicated });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to duplicate CFP' });
@@ -520,6 +547,7 @@ router.delete('/:id', requireAuth, requireRole(['admin']), async (req, res) => {
     }
 
     await docRef.delete();
+    invalidateCfpCache();
     res.json({ success: true, message: 'Draft CFP deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to delete CFP' });

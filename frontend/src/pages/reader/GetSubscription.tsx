@@ -22,7 +22,9 @@ import {
   Printer,
   ExternalLink,
   XCircle,
-  Loader2
+  Loader2,
+  Copy,
+  Smartphone
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
@@ -78,6 +80,15 @@ const GetSubscription = () => {
   const [isProofPreviewModalOpen, setIsProofPreviewModalOpen] = useState(false);
   const [previewingFileName, setPreviewingFileName] = useState('');
   const [isLoadingProofUrl, setIsLoadingProofUrl] = useState(false);
+
+  // Tab State for Payment Options (QR Code, UPI ID, Bank Account)
+  const [paymentMethodTab, setPaymentMethodTab] = useState<'qr' | 'upi' | 'bank'>('qr');
+
+  const handleCopyText = (text: string, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    showToast(`${label} copied to clipboard!`, 'success');
+  };
 
   useEffect(() => {
     loadBankDetailsData();
@@ -181,9 +192,11 @@ const GetSubscription = () => {
     }
   }, [resendCooldown]);
 
-  const isTestUser = (currentUser?.email || '').toLowerCase().trim() === 'reader1@gmail.com';
-  const payableAmount = isTestUser ? 10 : (isOtpVerified ? 1000 : 2000);
-  const membershipTitle = isTestUser ? 'Payment Testing Account' : (isOtpVerified ? 'Verified KMA Life Member' : 'Regular Member');
+  const testUserEmails = ['reader1@gmail.com', 'reader@gmail.com'];
+  const userEmailLower = (currentUser?.email || '').toLowerCase().trim();
+  const isTestUser = testUserEmails.includes(userEmailLower);
+  const payableAmount = isTestUser ? 1 : (isOtpVerified ? 1000 : 2000);
+  const membershipTitle = isTestUser ? 'Payment Testing Account (₹1)' : (isOtpVerified ? 'Verified KMA Life Member' : 'Regular Member');
 
   // Request Life Member OTP
   const handleRequestOtp = async (e?: React.FormEvent) => {
@@ -296,6 +309,11 @@ const GetSubscription = () => {
 
       if (res.success) {
         showToast('Payment proof submitted successfully! Pending administrator verification.', 'success');
+        setSelectedFile(null);
+        setTransactionRef('');
+        setRemarks('');
+        const fileInput = document.getElementById('proof-file-input') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
         await loadRecentAttempt();
         await refreshSubscriptionStatus();
       } else {
@@ -310,8 +328,10 @@ const GetSubscription = () => {
   };
 
   // Generate Official NPCI Direct Account + IFSC UPI QR Payload
-  const npciAccountVpa = bankInfo ? `${(bankInfo.accountNumber || '').trim()}@${(bankInfo.ifsc || '').trim().toUpperCase()}.ifsc.npci` : '';
-  const npciQrPayload = bankInfo ? `upi://pay?pa=${encodeURIComponent(npciAccountVpa)}&pn=${encodeURIComponent(bankInfo.accountName || '')}&am=${payableAmount}&cu=INR` : '';
+  const rawVpa = bankInfo?.upiId && bankInfo.upiId.trim()
+    ? bankInfo.upiId.trim()
+    : bankInfo ? `${(bankInfo.accountNumber || '').trim()}@${(bankInfo.ifsc || '').trim().toUpperCase()}.ifsc.npci` : '';
+  const npciQrPayload = bankInfo ? `upi://pay?pa=${encodeURIComponent(rawVpa)}&pn=${encodeURIComponent(bankInfo.accountName || '')}&am=${payableAmount}&cu=INR` : '';
   const accountIfscQrImageSrc = bankInfo ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(npciQrPayload)}` : '';
 
   return (
@@ -435,7 +455,7 @@ const GetSubscription = () => {
                 <Crown size={12} className="text-amber-400" /> {isTestUser ? 'Test Account Mode' : 'KMA Life Member'}
               </span>
               <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
-                {isTestUser ? '₹10 Test Rate' : '50% Concession'}
+                {isTestUser ? '₹1 Test Rate' : '50% Concession'}
               </span>
             </div>
             <h3 className="text-lg font-bold text-white mb-1">
@@ -443,7 +463,7 @@ const GetSubscription = () => {
             </h3>
             <p className="text-zinc-400 text-xs leading-relaxed mb-4">
               {isTestUser
-                ? 'Test user account (reader1@gmail.com) is configured with testing subscription price of ₹10.'
+                ? `Test user account (${currentUser?.email || 'test user'}) is configured with testing subscription price of ₹1.`
                 : 'Enter your Unique Life Member ID to receive a 50% concession (₹1,000 / year).'}
             </p>
 
@@ -451,8 +471,8 @@ const GetSubscription = () => {
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 flex items-center gap-3">
                 <Sparkles size={18} className="text-blue-400 shrink-0" />
                 <div>
-                  <p className="text-xs font-bold text-blue-300">Test Account Active (reader1@gmail.com)</p>
-                  <p className="text-[10px] text-blue-400/80">Subscription fee set to ₹10 for payment testing</p>
+                  <p className="text-xs font-bold text-blue-300">Test Account Active ({currentUser?.email || 'reader@gmail.com'})</p>
+                  <p className="text-[10px] text-blue-400/80">Subscription fee set to ₹1 for payment testing</p>
                 </div>
               </div>
             ) : isOtpVerified ? (
@@ -507,14 +527,13 @@ const GetSubscription = () => {
           </div>
 
           {/* Bank Details Card */}
-          {/* Bank Details Card */}
           {isLoadingBankInfo ? (
-            <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-xl text-center py-12 lg:flex-1 flex flex-col justify-center items-center">
+            <div className="bg-white border-2 border-black rounded-[2.5rem] p-6 shadow-xl text-center py-12 flex flex-col justify-center items-center flex-1">
               <Loader2 size={24} className="animate-spin text-black mx-auto mb-2" />
               <p className="text-xs text-zinc-500 font-medium">Loading bank transfer information...</p>
             </div>
           ) : bankServiceError || !bankInfo ? (
-            <div className="bg-amber-50 border-2 border-amber-300 rounded-[2rem] p-6 text-center shadow-lg lg:flex-1 flex flex-col justify-center items-center">
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-[2.5rem] p-6 text-center shadow-lg flex flex-col justify-center items-center flex-1">
               <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
                 <AlertTriangle size={24} />
               </div>
@@ -527,81 +546,114 @@ const GetSubscription = () => {
               </span>
             </div>
           ) : (
-            <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-xl shadow-black/5 lg:flex-1 flex flex-col justify-between">
-              <div className="mb-4 pb-3 border-b border-zinc-100">
-                <span className="inline-block px-3 py-1 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-wider mb-3">
-                  STEP 1: MAKE PAYMENT
-                </span>
+            <div className="bg-white border-2 border-black rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-black/5 flex-1 flex flex-col justify-between space-y-5">
+              {/* Step 1 Header */}
+              <div className="pb-3.5 border-b border-zinc-100">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="px-3 py-1 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-wider">
+                    STEP 1: MAKE PAYMENT
+                  </span>
+                  <span className="text-xs font-bold text-emerald-700 font-mono bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                    ₹{payableAmount.toLocaleString()} INR
+                  </span>
+                </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold">
-                    <Building2 size={20} />
+                  <div className="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center font-bold shrink-0">
+                    <Building2 size={18} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-black text-base leading-tight">BKMA Bank Details</h3>
-                    <p className="text-zinc-400 text-xs">Transfer payable amount to this account</p>
+                    <h3 className="font-bold text-black text-base leading-tight">BKMA Payment Options</h3>
+                    <p className="text-zinc-400 text-xs">Transfer payable amount using any option below</p>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                  <span className="text-zinc-400">Account Name:</span>
-                  <span className="font-bold text-black text-right">{bankInfo.accountName}</span>
+              {/* 1. BANK DETAILS AT TOP */}
+              <div>
+                <div className="text-xs font-black uppercase tracking-wider text-zinc-600 mb-2 flex items-center gap-1.5">
+                  <Building2 size={14} className="text-black shrink-0" /> 1. DIRECT BANK TRANSFER (NEFT / IMPS)
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                  <span className="text-zinc-400">Bank Name:</span>
-                  <span className="font-bold text-black text-right">{bankInfo.bankName}</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                  <span className="text-zinc-400">Account Number:</span>
-                  <span className="font-mono font-bold text-black text-right">{bankInfo.accountNumber}</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                  <span className="text-zinc-400">IFSC Code:</span>
-                  <span className="font-mono font-bold text-black text-right">{bankInfo.ifsc}</span>
-                </div>
-                <div className="flex justify-between py-1.5">
-                  <span className="text-zinc-400">Branch:</span>
-                  <span className="font-bold text-black text-right">{bankInfo.branch}</span>
+                <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-3.5 space-y-0.5 text-xs">
+                  <div className="grid grid-cols-12 items-center py-1.5 border-b border-zinc-200/60">
+                    <span className="col-span-5 text-zinc-500 font-medium">Account Name:</span>
+                    <span className="col-span-7 font-bold text-black text-right">{bankInfo.accountName}</span>
+                  </div>
+                  <div className="grid grid-cols-12 items-center py-1.5 border-b border-zinc-200/60">
+                    <span className="col-span-5 text-zinc-500 font-medium">Bank Name:</span>
+                    <span className="col-span-7 font-bold text-black text-right">{bankInfo.bankName}</span>
+                  </div>
+                  <div className="grid grid-cols-12 items-center py-1.5 border-b border-zinc-200/60">
+                    <span className="col-span-5 text-zinc-500 font-medium">Account Number:</span>
+                    <div className="col-span-7 flex items-center justify-end gap-1.5 font-mono font-bold text-black">
+                      <span>{bankInfo.accountNumber}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(bankInfo.accountNumber, 'Account Number')}
+                        className="p-1 hover:bg-zinc-200 rounded text-zinc-600 transition-colors"
+                        title="Copy Account Number"
+                      >
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-12 items-center py-1.5 border-b border-zinc-200/60">
+                    <span className="col-span-5 text-zinc-500 font-medium">IFSC Code:</span>
+                    <div className="col-span-7 flex items-center justify-end gap-1.5 font-mono font-bold text-black">
+                      <span>{bankInfo.ifsc}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(bankInfo.ifsc, 'IFSC Code')}
+                        className="p-1 hover:bg-zinc-200 rounded text-zinc-600 transition-colors"
+                        title="Copy IFSC Code"
+                      >
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-12 items-start py-1.5">
+                    <span className="col-span-4 text-zinc-500 font-medium pt-0.5">Branch:</span>
+                    <span className="col-span-8 font-bold text-black text-right leading-snug">{bankInfo.branch}</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Direct Account + IFSC UPI QR Code Section */}
-              <div className="mt-5 lg:mt-auto pt-4 border-t border-zinc-100 text-center">
-                <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-zinc-600 tracking-wider mb-2">
-                  <QrCode size={14} className="text-black" /> Scan Account + IFSC UPI QR
+              {/* 2. UPI ID IN MIDDLE (BEFORE QR) */}
+              <div>
+                <div className="text-xs font-black uppercase tracking-wider text-zinc-600 mb-2 flex items-center gap-1.5">
+                  <Smartphone size={14} className="text-black shrink-0" /> 2. OFFICIAL UPI VPA ADDRESS
                 </div>
-                
-                <div className="p-3 bg-white border-2 border-black rounded-2xl inline-block shadow-md my-1">
+                <div className="p-3.5 bg-zinc-50 border-2 border-black rounded-2xl flex items-center justify-between gap-3">
+                  <div className="overflow-hidden">
+                    <span className="text-[10px] font-bold text-zinc-400 block uppercase tracking-wider mb-0.5">BKMA UPI VPA</span>
+                    <span className="font-mono font-bold text-black text-xs sm:text-sm select-all truncate block">
+                      {bankInfo.upiId || rawVpa}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyText(bankInfo.upiId || rawVpa, 'UPI ID')}
+                    className="px-3.5 py-1.5 bg-black text-white hover:bg-zinc-800 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors shadow-sm"
+                  >
+                    <Copy size={12} /> Copy
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. QR CODE AT LAST (BOTTOM) */}
+              <div className="pt-3 border-t border-zinc-100 text-center space-y-2">
+                <div className="text-xs font-black uppercase tracking-wider text-zinc-600 flex items-center justify-center gap-1.5">
+                  <QrCode size={14} className="text-black shrink-0" /> 3. SCAN QR CODE TO PAY
+                </div>
+                <div className="p-2 bg-white border-2 border-black rounded-2xl inline-block shadow-md">
                   <img
                     src={bankInfo.qrCodeUrl || accountIfscQrImageSrc}
-                    alt="BKMA Bank Account & IFSC QR Code"
-                    className="w-44 h-44 mx-auto object-contain rounded-lg"
+                    alt="BKMA Payment QR Code"
+                    className="w-32 h-32 mx-auto object-contain rounded-lg"
                   />
                 </div>
-
-                <div className="mt-3 p-3 bg-zinc-50 border border-zinc-200 rounded-xl text-left space-y-1 text-[11px]">
-                  <div className="flex justify-between font-mono">
-                    <span className="text-zinc-500 font-sans">A/C Number:</span>
-                    <span className="font-bold text-black">{bankInfo.accountNumber}</span>
-                  </div>
-                  <div className="flex justify-between font-mono">
-                    <span className="text-zinc-500 font-sans">IFSC Code:</span>
-                    <span className="font-bold text-black">{bankInfo.ifsc}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Bank:</span>
-                    <span className="font-bold text-black">{bankInfo.bankName}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Payee:</span>
-                    <span className="font-bold text-black">{bankInfo.accountName}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Amount:</span>
-                    <span className="font-mono font-black text-emerald-700">₹{payableAmount.toLocaleString()}</span>
-                  </div>
-                </div>
+                <p className="text-xs text-zinc-400 font-medium">
+                  Scan using GPay, PhonePe, Paytm, BHIM, or any UPI app
+                </p>
               </div>
             </div>
           )}
@@ -669,17 +721,16 @@ const GetSubscription = () => {
               )}
             </div>
 
-            {/* Payment Transfer Date */}
+            {/* Payment Transfer Date (Read-Only) */}
             <div>
               <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                Payment Date <span className="text-rose-500">*</span>
+                Payment Date
               </label>
               <input
                 type="date"
-                required
+                readOnly
                 value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-medium text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                className="w-full px-4 py-3 bg-zinc-100 border border-zinc-300 rounded-xl text-sm font-medium text-black cursor-not-allowed select-none"
               />
             </div>
 
@@ -813,7 +864,11 @@ const GetSubscription = () => {
                     {/* Submission Date */}
                     <td className="px-6 py-4">
                       <p className="text-xs font-bold text-black">{item.date || item.paymentDate}</p>
-                      <span className="text-[10px] text-zinc-400 block font-mono mt-0.5">Receipt No: {formatReceiptNo(item.receiptNo || item.id, item.date || item.paymentDate, idx)}</span>
+                      {item.status === 'APPROVED' && (
+                        <span className="text-[10px] text-zinc-400 block font-mono mt-0.5">
+                          Receipt No: {formatReceiptNo(item.receiptNo || item.id, item.date || item.paymentDate, idx)}
+                        </span>
+                      )}
                     </td>
 
                     {/* Membership Plan */}
@@ -969,7 +1024,13 @@ const GetSubscription = () => {
               <ReceiptTemplate
                 receiptNumber={formatReceiptNo(selectedReceiptPayment.id)}
                 date={formatDateString(selectedReceiptPayment.paymentDate || selectedReceiptPayment.date)}
-                memberName={currentUser?.name || localStorage.getItem('userName') || 'Member'}
+                memberName={
+                  (selectedReceiptPayment as any)?.userName ||
+                  (currentUser?.name && currentUser.name.toLowerCase() !== 'reader user' ? currentUser.name : null) ||
+                  ((currentUser as any)?.displayName && (currentUser as any).displayName.toLowerCase() !== 'reader user' ? (currentUser as any).displayName : null) ||
+                  (localStorage.getItem('userName') && localStorage.getItem('userName')?.toLowerCase() !== 'reader user' ? localStorage.getItem('userName') : null) ||
+                  (currentUser?.email ? currentUser.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : 'Subscriber')
+                }
                 amount={(selectedReceiptPayment.amountRaw || selectedReceiptPayment.amount).toString().replace('₹', '')}
                 amountInWords={numberToWords(parseInt((selectedReceiptPayment.amountRaw || selectedReceiptPayment.amount).toString().replace(/[^\d]/g, '')) || 1000)}
                 membershipType={selectedReceiptPayment.plan === 'lifetime' ? 'Life Membership Pass' : 'Annual Pass Subscription'}

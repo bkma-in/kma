@@ -5,9 +5,37 @@ export const getArticles = async () => {
   return response.data;
 };
 
-export const getPublishedArticles = async () => {
-  const response = await api.get('/articles/published');
-  return response.data;
+let inFlightPublishedPromise: Promise<any> | null = null;
+let cachedPublishedData: { data: any; expiresAt: number } | null = null;
+const PUBLISHED_CACHE_TTL_MS = 30 * 1000; // 30s client-side cache
+
+export const clearPublishedArticlesCache = () => {
+  cachedPublishedData = null;
+  inFlightPublishedPromise = null;
+};
+
+export const getPublishedArticles = async (forceRefresh = false) => {
+  if (!forceRefresh && cachedPublishedData && cachedPublishedData.expiresAt > Date.now()) {
+    return cachedPublishedData.data;
+  }
+
+  if (!forceRefresh && inFlightPublishedPromise) {
+    return inFlightPublishedPromise;
+  }
+
+  inFlightPublishedPromise = api.get('/articles/published')
+    .then((response) => {
+      cachedPublishedData = {
+        data: response.data,
+        expiresAt: Date.now() + PUBLISHED_CACHE_TTL_MS
+      };
+      return response.data;
+    })
+    .finally(() => {
+      inFlightPublishedPromise = null;
+    });
+
+  return inFlightPublishedPromise;
 };
 
 export const deleteArticle = async (id: string) => {

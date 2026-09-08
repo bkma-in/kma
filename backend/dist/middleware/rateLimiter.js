@@ -241,7 +241,7 @@ exports.globalRateLimiter = (0, express_rate_limit_1.default)({
     max: env_1.config.rateLimit.globalMax,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: ipKeyGenerator,
+    keyGenerator: keyGenerator,
     skip: skipAdmin,
     handler: createRateLimiterHandler('Global API', 'Too many requests. Please wait a moment and try again.')
 });
