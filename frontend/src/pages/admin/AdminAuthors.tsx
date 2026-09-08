@@ -507,7 +507,6 @@ const AdminAuthors = () => {
                     </div>
                   </div>
                   <p className="text-zinc-500 text-xs italic mb-2">Verified reviewer of the Kerala Mathematical Association</p>
-                  <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em]">ID: {selectedReviewer.id}</p>
                 </div>
 
                 {/* About Reviewer Section */}

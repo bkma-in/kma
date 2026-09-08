@@ -172,10 +172,6 @@ const AuthorDetailsModal: React.FC<AuthorDetailsModalProps> = ({
                     ? "Legacy contributor from the Bulletin of Kerala Mathematics Association historical archives." 
                     : "Verified scholar and member of the Kerala Mathematical Association."}
                 </p>
-
-                <p className="text-[10px] font-mono tracking-widest text-zinc-600">
-                  ID: {profile.uid.toUpperCase()}
-                </p>
               </div>
             </div>
 
