@@ -490,14 +490,7 @@ router.post(
       const userDoc = await db.collection('users').doc(uid).get();
       const userData = userDoc.exists ? userDoc.data() : null;
 
-      const userEmailClean = (email || req.user?.email || userData?.email || '').toLowerCase().trim();
-      const testEmails = ['reader1@gmail.com', 'reader@gmail.com'];
-      const isSpecialTestUser = testEmails.includes(userEmailClean);
-
-      if (isSpecialTestUser) {
-        // Special testing subscription price for test reader
-        expectedAmount = 1;
-      } else if (userData?.isLifeMember === true || userData?.lifeMember === true) {
+      if (userData?.isLifeMember === true || userData?.lifeMember === true) {
         expectedAmount = 1000;
         isLifeMemberConcession = true;
         verifiedUniqueId = userData.membershipNumber || null;
