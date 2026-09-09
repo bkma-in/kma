@@ -15,6 +15,7 @@ import { useNotification } from '../../utils/NotificationContext';
 import { db, auth } from '../../config/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import api from '../../services/api';
+import { SkeletonNotification } from '../../components/skeletons/SkeletonNotification';
 
 interface Notification {
   id: string;
@@ -173,9 +174,7 @@ const ReaderNotifications = () => {
 
       {/* Notifications List */}
       {loading ? (
-        <div className="flex h-[40vh] items-center justify-center">
-          <Loader2 className="animate-spin text-zinc-500" size={32} />
-        </div>
+        <SkeletonNotification count={5} />
       ) : notifications.length > 0 ? (
         <div className="space-y-4">
           {notifications.map((notif) => (

@@ -15,6 +15,7 @@ import { getArticles, deleteArticle } from '../../services/article.service';
 import api from '../../services/api';
 
 import { useProfile } from '../../hooks/useProfile';
+import { SkeletonWorkflowCard } from '../../components/skeletons/SkeletonWorkflowCard';
 
 interface Draft {
   id: string;
@@ -115,10 +116,7 @@ const Drafts = () => {
       </div>
 
       {isLoading ? (
-        <div className="p-20 text-center flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-zinc-100 border-t-black rounded-full animate-spin" />
-          <p className="text-zinc-500 font-medium text-sm">Syncing workspace...</p>
-        </div>
+        <SkeletonWorkflowCard count={3} />
       ) : drafts.length > 0 ? (
         <div className="space-y-5">
           {drafts.map((draft) => {

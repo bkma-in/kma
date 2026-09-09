@@ -13,13 +13,18 @@ import { useProfile } from '../../hooks/useProfile';
 import ProfileModal from '../../components/ProfileModal';
 import PhotoActionModal from '../../components/PhotoActionModal';
 import { useNotification } from '../../utils/NotificationContext';
+import { SkeletonProfile } from '../../components/skeletons/SkeletonProfile';
 
 const ReaderProfile = () => {
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, loading } = useProfile();
   const { showToast } = useNotification();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
+
+  if (loading) {
+    return <SkeletonProfile />;
+  }
 
   return (
     <div className="max-w-4xl mx-auto animate-in fade-in duration-700">
@@ -126,8 +131,8 @@ const ReaderProfile = () => {
             
             <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-between">
               <div>
-                <p className="text-emerald-600 font-bold text-lg tracking-tight">Lifetime Access</p>
-                <p className="text-xs text-zinc-500 mt-1">Full access to all scholarly publications and archives.</p>
+                <p className="text-emerald-700 font-bold text-lg tracking-tight">1-Year Annual Pass Subscription</p>
+                <p className="text-xs text-zinc-500 mt-1">Full 1-year access to all scholarly publications and research archives.</p>
               </div>
               <Shield size={32} className="text-emerald-500/20" />
             </div>

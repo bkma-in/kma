@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, CreditCard, Landmark, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface PricingModalProps {
   isOpen: boolean;

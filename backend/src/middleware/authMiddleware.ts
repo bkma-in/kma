@@ -15,6 +15,53 @@ export interface AuthRequest extends Request {
   query: any;
 }
 
+interface CachedRole {
+  role: string;
+  name: string;
+  cachedAt: number;
+}
+
+const USER_ROLE_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
+const userRoleCache = new Map<string, CachedRole>();
+
+/**
+ * Invalidate cached user role by UID (call on profile/role update)
+ */
+export const invalidateUserRoleCache = (uid: string): void => {
+  if (uid) {
+    userRoleCache.delete(uid);
+  }
+};
+
+/**
+ * Clear all cached user roles
+ */
+export const clearUserRoleCache = (): void => {
+  userRoleCache.clear();
+};
+
+/**
+ * Resolves user role and name from custom claims, in-memory cache, or Firestore fallback
+ */
+async function resolveUserRole(uid: string): Promise<{ role?: string; name?: string }> {
+  const cached = userRoleCache.get(uid);
+  if (cached && (Date.now() - cached.cachedAt < USER_ROLE_TTL_MS)) {
+    return { role: cached.role, name: cached.name };
+  }
+
+  const userDoc = await db.collection('users').doc(uid).get();
+  if (userDoc.exists) {
+    const userData = userDoc.data();
+    const role = userData?.role;
+    const name = userData?.name;
+    if (role) {
+      userRoleCache.set(uid, { role, name: name || '', cachedAt: Date.now() });
+    }
+    return { role, name };
+  }
+  return {};
+}
+
 /**
  * Optional Authentication Resolver:
  * Pre-verifies Firebase Auth Bearer tokens on top-level routes (/api/) if present.
@@ -34,12 +81,9 @@ export const authenticateOptional = async (req: AuthRequest, _res: Response, nex
     let name = decodedToken.name as string | undefined;
 
     if (!role) {
-      const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        role = userData?.role;
-        name = name || userData?.name;
-      }
+      const resolved = await resolveUserRole(decodedToken.uid);
+      role = resolved.role;
+      name = name || resolved.name;
     }
 
     req.user = {
@@ -82,16 +126,10 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
     let source = 'Custom Claims';
 
     if (!role) {
-      console.log(`[AUTH-DIAGNOSTIC] Role not found in Custom Claims for UID: ${decodedToken.uid}. Fetching from Firestore.`);
-      const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        role = userData?.role;
-        name = name || userData?.name;
-        source = 'Firestore Collection';
-      } else {
-        console.warn(`[AUTH-DIAGNOSTIC] Firestore document does not exist for UID: ${decodedToken.uid}`);
-      }
+      const resolved = await resolveUserRole(decodedToken.uid);
+      role = resolved.role;
+      name = name || resolved.name;
+      source = 'Role Cache / Firestore';
     }
 
     const isRegistering = req.originalUrl.endsWith('/register') || req.path === '/register';

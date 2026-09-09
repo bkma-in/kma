@@ -57,7 +57,9 @@ export const fulfillManualSubscriptionPayment = async (
     const userId = attemptData.userId;
     const internalOrderId = attemptData.internalOrderId;
     const plan = attemptData.plan || 'annual';
-    const expectedAmount = attemptData.expectedAmount || attemptData.amount || (plan === 'lifetime' ? 1000 : 2000);
+    const expectedAmount = attemptData.expectedAmount !== undefined && attemptData.expectedAmount !== null
+      ? attemptData.expectedAmount
+      : (attemptData.amount !== undefined && attemptData.amount !== null ? attemptData.amount : (plan === 'lifetime' ? 1000 : 2000));
     const transactionRef = attemptData.transactionReference || attemptData.transactionRef || 'N/A';
 
     // Step 2: Atomic Firestore Transaction for State Transition
@@ -76,11 +78,23 @@ export const fulfillManualSubscriptionPayment = async (
       const expiresAt = new Date(now);
       expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
+      // Generate official receipt number (e.g. BKMA26-001) exclusively for approved payments
+      let receiptNo = freshAttemptData.receiptNo;
+      if (!receiptNo) {
+        const yy = now.getFullYear().toString().slice(-2);
+        const approvedQuery = await db.collection('paymentAttempts')
+          .where('status', '==', 'APPROVED')
+          .get();
+        const seq = (approvedQuery.size + 1).toString().padStart(3, '0');
+        receiptNo = `BKMA${yy}-${seq}`;
+      }
+
       // Update paymentAttempt document
       transaction.update(attemptRef, {
         status: 'APPROVED',
         paymentStatus: 'paid',
         fulfillmentStatus: 'fulfilled',
+        receiptNo: receiptNo,
         verifiedAt: now,
         verifiedBy: adminUserId,
         verifiedByName: adminName,
@@ -98,6 +112,7 @@ export const fulfillManualSubscriptionPayment = async (
 
       transaction.set(subRef, {
         subscriptionId: subRef.id,
+        receiptNo: receiptNo,
         userId: userId,
         type: plan,
         plan: plan,
@@ -117,13 +132,35 @@ export const fulfillManualSubscriptionPayment = async (
         updatedAt: now
       }, { merge: true });
 
-      // Synchronize User profile
+      // Synchronize User profile & Life Member status
       const userRef = db.collection('users').doc(userId);
-      transaction.set(userRef, {
+      const userUpdateData: any = {
         isSubscribed: true,
         subscriptionStatus: 'active',
         updatedAt: now
-      }, { merge: true });
+      };
+
+      const verifiedUniqueId = attemptData.verifiedUniqueId || attemptData.membershipNumber;
+      if (verifiedUniqueId || plan === 'lifetime') {
+        userUpdateData.isLifeMember = true;
+        userUpdateData.lifeMember = true;
+        if (verifiedUniqueId) {
+          userUpdateData.membershipNumber = String(verifiedUniqueId).trim().toUpperCase();
+        }
+      }
+
+      transaction.set(userRef, userUpdateData, { merge: true });
+
+      // Mark Life Member registry doc as claimed
+      if (verifiedUniqueId) {
+        const normId = String(verifiedUniqueId).trim().toUpperCase();
+        const lifeMemberRef = db.collection('life_members').doc(normId);
+        transaction.set(lifeMemberRef, {
+          isClaimed: true,
+          claimedByUserId: userId,
+          claimedAt: now
+        }, { merge: true });
+      }
 
       return { alreadyFulfilled: false, subscriptionId: subRef.id };
     });

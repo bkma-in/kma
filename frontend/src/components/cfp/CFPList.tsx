@@ -2,6 +2,7 @@ import React from 'react';
 import type { CallForPaper } from '../../types/cfp';
 import { CallForPaperCard } from './CallForPaperCard';
 import { CFPEmptyState } from './CFPEmptyState';
+import { SkeletonCFPCard } from '../skeletons/SkeletonCFPCard';
 
 interface CFPListProps {
   cfps: CallForPaper[];
@@ -17,18 +18,7 @@ export const CFPList: React.FC<CFPListProps> = ({
   onSubmitPaper
 }) => {
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {[1, 2, 3, 4].map((n) => (
-          <div key={n} className="bg-white border border-zinc-200 rounded-2xl p-6 space-y-4 animate-pulse">
-            <div className="h-6 bg-zinc-100 rounded-lg w-1/3" />
-            <div className="h-8 bg-zinc-100 rounded-lg w-3/4" />
-            <div className="h-16 bg-zinc-100 rounded-lg w-full" />
-            <div className="h-10 bg-zinc-100 rounded-lg w-full" />
-          </div>
-        ))}
-      </div>
-    );
+    return <SkeletonCFPCard count={4} />;
   }
 
   if (!cfps || cfps.length === 0) {

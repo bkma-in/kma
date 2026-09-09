@@ -447,6 +447,7 @@ router.put('/profile', authMiddleware_1.requireAuth, uploadMiddleware_1.upload.s
         }
         // 3. Database Update (Single Write)
         await userRef.update(updateData);
+        (0, authMiddleware_1.invalidateUserRoleCache)(uid);
         // Sync Custom Claims if Name changed
         if (sanitizedName) {
             if (!userData.role) {
@@ -687,9 +688,10 @@ router.get('/authors', authMiddleware_1.requireAuth, (0, authMiddleware_1.requir
 // Admin: Get all readers
 router.get('/readers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)(['admin']), async (_req, res) => {
     try {
-        const snapshot = await firebase_1.db.collection('users').where('role', '==', 'reader').get();
-        // Also fetch all active subscriptions to check for subscription plan and status
-        const subsSnapshot = await firebase_1.db.collection('subscriptions').where('status', '==', 'active').get();
+        const [snapshot, subsSnapshot] = await Promise.all([
+            firebase_1.db.collection('users').where('role', '==', 'reader').get(),
+            firebase_1.db.collection('subscriptions').where('status', '==', 'active').get()
+        ]);
         const activeSubscribes = new Map();
         subsSnapshot.docs.forEach((doc) => {
             const data = doc.data();
@@ -698,9 +700,9 @@ router.get('/readers', authMiddleware_1.requireAuth, (0, authMiddleware_1.requir
         const readers = snapshot.docs.map((doc) => {
             const data = doc.data();
             const subData = activeSubscribes.get(doc.id);
-            const isLifeMember = data.lifeMember === true || data.isLifeMember === true || subData?.type === 'lifetime' || subData?.type === 'life' || subData?.plan === 'lifetime';
-            const isSubscribed = isLifeMember || !!subData || data.isSubscribed === true;
-            const subscriptionPlan = isLifeMember ? 'lifetime' : (subData?.plan || subData?.type || null);
+            const isLifeMember = data.lifeMember === true || data.isLifeMember === true;
+            const isSubscribed = !!subData || data.isSubscribed === true;
+            const subscriptionPlan = subData?.plan || subData?.type || (isSubscribed ? (isLifeMember ? 'annual_concession' : 'annual') : null);
             return {
                 id: doc.id,
                 name: data.name || 'Anonymous Reader',
@@ -769,6 +771,7 @@ router.patch('/reviewers/:id/status', authMiddleware_1.requireAuth, (0, authMidd
             }
         }
         await userRef.update(updateData);
+        (0, authMiddleware_1.invalidateUserRoleCache)(id);
         res.json({ success: true, reviewer: { ...userDoc.data(), ...updateData, id } });
     }
     catch (error) {
@@ -814,6 +817,7 @@ router.post('/reviewers', authMiddleware_1.requireAuth, (0, authMiddleware_1.req
             await firebase_1.db.collection('users').doc(userRecord.uid).set(userData);
             // Then apply custom claims
             await firebase_1.auth.setCustomUserClaims(userRecord.uid, { role: 'reviewer', name });
+            (0, authMiddleware_1.invalidateUserRoleCache)(userRecord.uid);
         }
         catch (err) {
             // Rollback: Delete the auth user if database write or claims config fails

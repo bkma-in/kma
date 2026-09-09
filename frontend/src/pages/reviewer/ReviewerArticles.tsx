@@ -13,7 +13,7 @@ import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
 import { useLocation } from 'react-router-dom';
 import { getArticles, getPdfUrl, updateArticleStatus } from '../../services/article.service';
-import { ArticlesSkeleton } from '../../components/skeletons/PageSkeletons';
+import { SkeletonReviewerArticle } from '../../components/skeletons/SkeletonReviewerArticle';
 
 type ReviewStatus = 'Accepted' | 'Rejected' | 'Needs Improvement' | '';
 
@@ -190,7 +190,17 @@ const ReviewerArticles = () => {
   };
 
   if (loading) {
-    return <ArticlesSkeleton />;
+    return (
+      <div className="space-y-8 max-w-7xl mx-auto px-4 animate-fade-in">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <div className="h-8 skeleton-box rounded w-48" />
+            <div className="h-4 skeleton-box rounded w-64" />
+          </div>
+        </div>
+        <SkeletonReviewerArticle count={2} />
+      </div>
+    );
   }
 
   if (articles.length === 0) {

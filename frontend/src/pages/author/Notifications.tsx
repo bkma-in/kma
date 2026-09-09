@@ -21,6 +21,7 @@ import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestor
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../../utils/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
+import { SkeletonNotification } from '../../components/skeletons/SkeletonNotification';
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -227,10 +228,7 @@ const Notifications = () => {
       {/* List */}
       <div className="space-y-4">
         {loading ? (
-          <div className="p-20 text-center flex flex-col items-center gap-4">
-            <div className="w-10 h-10 border-4 border-zinc-100 border-t-black rounded-full animate-spin" />
-            <p className="text-zinc-500 font-medium text-sm">Synchronizing your alerts...</p>
-          </div>
+          <SkeletonNotification count={5} />
         ) : filteredNotifications.length > 0 ? (
           filteredNotifications.map((notif) => {
             const config = getNotificationConfig(notif);

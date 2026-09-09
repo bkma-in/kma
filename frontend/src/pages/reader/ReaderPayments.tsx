@@ -20,6 +20,7 @@ import { ReceiptTemplate, formatReceiptNo } from '../../components/ReceiptTempla
 import { getPaymentHistory } from '../../services/payment.service';
 import type { PaymentAttemptItem } from '../../services/payment.service';
 import { CustomSelect } from '../../components/common/CustomSelect';
+import { ReaderPaymentsSkeleton } from '../../components/skeletons/PageSkeletons';
 
 type PaymentFilterStatus = 'APPROVED' | 'PENDING_VERIFICATION' | 'REJECTED' | 'All';
 
@@ -85,6 +86,7 @@ const ReaderPayments = () => {
     };
 
     if (num === 0) return 'Zero';
+    if (num === 1) return 'One Rupee Only';
     return `${helper(num)} Rupees Only`;
   };
 
@@ -96,6 +98,10 @@ const ReaderPayments = () => {
     const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (loading && payments.length === 0) {
+    return <ReaderPaymentsSkeleton />;
+  }
 
   return (
     <>
@@ -158,7 +164,11 @@ const ReaderPayments = () => {
                         </div>
                         <div>
                           <p className="text-xs font-mono font-bold text-black">{payment.transactionRef}</p>
-                          <p className="text-[10px] text-zinc-400 font-mono">Receipt No: {formatReceiptNo(payment.id)}</p>
+                          {payment.status === 'APPROVED' && (
+                            <p className="text-[10px] text-zinc-400 font-mono">
+                              Receipt No: {formatReceiptNo(payment.receiptNo || payment.id, payment.date || payment.paymentDate)}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -264,7 +274,13 @@ const ReaderPayments = () => {
               <ReceiptTemplate
                 receiptNumber={formatReceiptNo(selectedPayment.id)}
                 date={formatDateString(selectedPayment.paymentDate || selectedPayment.date)}
-                memberName={currentUser?.name || localStorage.getItem('userName') || 'Member'}
+                memberName={
+                  selectedPayment.userName ||
+                  (currentUser?.name && currentUser.name.toLowerCase() !== 'reader user' ? currentUser.name : null) ||
+                  ((currentUser as any)?.displayName && (currentUser as any).displayName.toLowerCase() !== 'reader user' ? (currentUser as any).displayName : null) ||
+                  (localStorage.getItem('userName') && localStorage.getItem('userName')?.toLowerCase() !== 'reader user' ? localStorage.getItem('userName') : null) ||
+                  (currentUser?.email ? currentUser.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : 'Subscriber')
+                }
                 amount={(selectedPayment.amountRaw || selectedPayment.amount).toString().replace('₹', '')}
                 amountInWords={numberToWords(parseInt((selectedPayment.amountRaw || selectedPayment.amount).toString().replace(/[^\d]/g, '')) || 1000)}
                 membershipType={selectedPayment.plan === 'lifetime' ? 'Life Membership Pass' : 'Annual Pass Subscription'}

@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.invalidatePublishedArticlesCache = void 0;
 const express_1 = require("express");
 const crypto_1 = __importDefault(require("crypto"));
 const firebase_1 = require("../config/firebase");
@@ -13,6 +14,7 @@ const legacyImportService_1 = require("../services/legacyImportService");
 const cloudinaryService_1 = require("../services/cloudinaryService");
 const notificationService_1 = require("../services/notificationService");
 const rateLimiter_1 = require("../middleware/rateLimiter");
+const issueRoutes_1 = require("./issueRoutes");
 const router = (0, express_1.Router)();
 const normalizeRecommendation = (recommendation) => {
     if (!recommendation)
@@ -391,6 +393,7 @@ router.delete('/:id', authMiddleware_1.requireAuth, async (req, res) => {
             console.log(`[ROUTE-CLEANUP] Cleaned up ${notificationsSnapshot.size} notifications for article ${id}`);
         }
         await articleRef.delete();
+        (0, exports.invalidatePublishedArticlesCache)();
         res.json({ success: true, message: 'Article deleted successfully' });
     }
     catch (error) {
@@ -398,9 +401,19 @@ router.delete('/:id', authMiddleware_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to delete article' });
     }
 });
-// Get Published Articles (Public endpoint)
-router.get('/published', async (req, res) => {
+let cachedPublishedArticles = null;
+const PUBLISHED_ARTICLES_TTL_MS = 60 * 1000;
+const invalidatePublishedArticlesCache = () => {
+    cachedPublishedArticles = null;
+};
+exports.invalidatePublishedArticlesCache = invalidatePublishedArticlesCache;
+// Get Published Articles (Public endpoint with in-memory TTL caching and safe public cache headers)
+router.get('/published', async (_req, res) => {
     try {
+        res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+        if (cachedPublishedArticles && (Date.now() - cachedPublishedArticles.timestamp < PUBLISHED_ARTICLES_TTL_MS)) {
+            return res.json({ success: true, articles: cachedPublishedArticles.data });
+        }
         const snapshot = await firebase_1.db.collection('articles').where('status', '==', 'published').get();
         const articles = snapshot.docs.map(doc => {
             const data = doc.data();
@@ -426,6 +439,10 @@ router.get('/published', async (req, res) => {
                 fullContent: data.abstract // fallback content
             };
         });
+        cachedPublishedArticles = {
+            data: articles,
+            timestamp: Date.now()
+        };
         res.json({ success: true, articles });
     }
     catch (error) {
@@ -791,6 +808,7 @@ router.put('/:id', authMiddleware_1.requireAuth, rateLimiter_1.uploadRateLimiter
             }
         }
         await articleRef.update(updateData);
+        (0, exports.invalidatePublishedArticlesCache)();
         if ((updateData.status === 'submitted' || updateData.status === 'revised_submitted') &&
             (currentStatus !== 'submitted' && currentStatus !== 'revised_submitted')) {
             (0, notificationService_1.sendArticleSubmittedNotifications)(id).catch(err => {
@@ -967,6 +985,8 @@ router.post('/import-split', authMiddleware_1.requireAuth, rateLimiter_1.pdfRate
             };
             transaction.set(issueRef, newIssue);
         });
+        (0, exports.invalidatePublishedArticlesCache)();
+        (0, issueRoutes_1.invalidateIssuesCache)();
         res.json({ success: true, publishedCount: createdArticleIds.length, issueId: issueRef.id });
     }
     catch (error) {
@@ -1048,6 +1068,8 @@ router.patch('/bulk-publish', authMiddleware_1.requireAuth, rateLimiter_1.archiv
                 transaction.set(issueRef, newIssue);
             }
         });
+        (0, exports.invalidatePublishedArticlesCache)();
+        (0, issueRoutes_1.invalidateIssuesCache)();
         res.json({
             success: true,
             publishedCount: articleIds.length,
@@ -1210,6 +1232,7 @@ router.patch('/:id/status', authMiddleware_1.requireAuth, (0, authMiddleware_1.r
             if (adminNote !== undefined)
                 updateData.adminNote = adminNote;
             await articleRef.update(updateData);
+            (0, exports.invalidatePublishedArticlesCache)();
             // Trigger notifications based on status
             if (status === 'revision_requested') {
                 (0, notificationService_1.sendRevisionRequestedNotifications)(id, adminNote).catch(err => {

@@ -113,7 +113,7 @@ router.post('/verify', authMiddleware_1.requireAuth, async (req, res) => {
     }
 });
 // Register User Profile (called right after Firebase auth sign-up)
-router.post('/register', authMiddleware_1.requireAuth, async (req, res) => {
+router.post('/register', rateLimiter_1.authRateLimiter, authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const { name, role, qualification, experience } = req.body;
         // Validate role
@@ -155,6 +155,7 @@ router.post('/register', authMiddleware_1.requireAuth, async (req, res) => {
         try {
             // Set Firebase Auth custom claims for role-based authentication
             await firebase_1.auth.setCustomUserClaims(uid, { role: userRole, name });
+            (0, authMiddleware_1.invalidateUserRoleCache)(uid);
         }
         catch (claimError) {
             // Rollback database profile if custom claims assignment fails

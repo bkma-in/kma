@@ -21,7 +21,10 @@ import {
   Eye,
   Printer,
   ExternalLink,
-  XCircle
+  XCircle,
+  Loader2,
+  Copy,
+  Smartphone
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useNotification } from '../../utils/NotificationContext';
@@ -31,6 +34,7 @@ import { ReceiptTemplate, formatReceiptNo } from '../../components/ReceiptTempla
 import {
   getBankDetails,
   requestLifeMemberOtp,
+  verifyLifeMemberOtp,
   submitPaymentProof,
   getPaymentHistory,
   getPaymentProofUrl
@@ -43,19 +47,18 @@ const GetSubscription = () => {
   const { refreshSubscriptionStatus } = useSubscription();
   const { currentUser } = useAuth();
 
-  const [bankInfo, setBankInfo] = useState<BankDetails>({
-    accountName: 'M.S.SAMUEL',
-    bankName: 'Bank of Baroda',
-    accountNumber: '92660100000105',
-    ifsc: 'BARB0DBKOTT',
-    branch: 'Good Shepherd Road Branch, Kottayam - 686001'
-  });
+  const [bankInfo, setBankInfo] = useState<BankDetails | null>(null);
+  const [isLoadingBankInfo, setIsLoadingBankInfo] = useState(true);
+  const [bankServiceError, setBankServiceError] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [membershipId, setMembershipId] = useState((currentUser as any)?.membershipNumber || '');
+  const [idError, setIdError] = useState<string | null>(null);
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [otp, setOtp] = useState('');
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpModalError, setOtpModalError] = useState<string | null>(null);
   const [maskedEmail, setMaskedEmail] = useState('');
   const [isOtpVerified, setIsOtpVerified] = useState(Boolean((currentUser as any)?.isLifeMember));
   const [verifiedUniqueId, setVerifiedUniqueId] = useState((currentUser as any)?.membershipNumber || '');
@@ -78,10 +81,39 @@ const GetSubscription = () => {
   const [previewingFileName, setPreviewingFileName] = useState('');
   const [isLoadingProofUrl, setIsLoadingProofUrl] = useState(false);
 
+  // Tab State for Payment Options (QR Code, UPI ID, Bank Account)
+  const [paymentMethodTab, setPaymentMethodTab] = useState<'qr' | 'upi' | 'bank'>('qr');
+
+  const handleCopyText = (text: string, label: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    showToast(`${label} copied to clipboard!`, 'success');
+  };
+
   useEffect(() => {
-    getBankDetails().then(data => setBankInfo(data)).catch(() => {});
+    loadBankDetailsData();
     loadRecentAttempt();
   }, []);
+
+  const loadBankDetailsData = async () => {
+    setIsLoadingBankInfo(true);
+    setBankServiceError(null);
+    try {
+      const details = await getBankDetails();
+      if (!details || !details.accountNumber || !details.accountName) {
+        setBankServiceError('Payment service is temporarily out of order. Bank transfer configuration is missing.');
+        setBankInfo(null);
+      } else {
+        setBankInfo(details);
+      }
+    } catch (err: any) {
+      console.warn('Could not fetch bank details:', err);
+      setBankServiceError(err?.message || 'Payment service is temporarily out of order.');
+      setBankInfo(null);
+    } finally {
+      setIsLoadingBankInfo(false);
+    }
+  };
 
   const loadRecentAttempt = async () => {
     try {
@@ -148,6 +180,7 @@ const GetSubscription = () => {
     };
 
     if (num === 0) return 'Zero';
+    if (num === 1) return 'One Rupee Only';
     return `${helper(num)} Rupees Only`;
   };
 
@@ -165,8 +198,11 @@ const GetSubscription = () => {
   // Request Life Member OTP
   const handleRequestOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    setIdError(null);
     if (!membershipId.trim()) {
-      showToast('Please enter your Unique Life Member ID (e.g. LM-1042)', 'error');
+      const msg = 'Please enter your Unique Life Member ID (e.g. LM-1042)';
+      setIdError(msg);
+      showToast(msg, 'error');
       return;
     }
 
@@ -177,29 +213,53 @@ const GetSubscription = () => {
         setMaskedEmail(res.maskedEmail || currentUser?.email || 'your registered email');
         setVerifiedUniqueId(res.uniqueId || membershipId.trim().toUpperCase());
         setIsOtpModalOpen(true);
+        setOtpModalError(null);
+        setOtp('');
         setResendCooldown(60);
         showToast(res.message || 'OTP verification code sent to your email!', 'success');
       } else {
-        showToast(res.error || 'Verification request failed', 'error');
+        const errMsg = res.error || 'Verification request failed';
+        setIdError(errMsg);
+        showToast(errMsg, 'error');
       }
     } catch (error: any) {
       console.error('Request OTP error:', error);
-      showToast(error?.response?.data?.error || error.message || 'Could not verify Life Member ID.', 'error');
+      const errMsg = error?.response?.data?.error || error.message || 'Could not verify Life Member ID.';
+      setIdError(errMsg);
+      showToast(errMsg, 'error');
     } finally {
       setIsRequestingOtp(false);
     }
   };
 
-  // Verify OTP locally for frontend price display unlocked
-  const handleVerifyOtpCode = (e: React.FormEvent) => {
+  // Verify OTP via server API
+  const handleVerifyOtpCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otp.trim() || otp.trim().length !== 6) {
-      showToast('Please enter the 6-digit OTP code sent to your email.', 'error');
+      setOtpModalError('Please enter the complete 6-digit OTP code sent to your email.');
       return;
     }
-    setIsOtpVerified(true);
-    setIsOtpModalOpen(false);
-    showToast('Life Member ID verified! 50% Concession rate applied (₹1,000).', 'success');
+
+    setIsVerifyingOtp(true);
+    setOtpModalError(null);
+    try {
+      const res = await verifyLifeMemberOtp(verifiedUniqueId || membershipId.trim(), otp.trim());
+      if (res.success) {
+        setIsOtpVerified(true);
+        setIsOtpModalOpen(false);
+        setOtpModalError(null);
+        setIdError(null);
+        showToast(res.message || 'Life Member ID verified! 50% Concession rate applied (₹1,000).', 'success');
+      } else {
+        setOtpModalError(res.error || 'Invalid OTP code.');
+      }
+    } catch (error: any) {
+      console.error('Verify OTP error:', error);
+      const errMsg = error?.response?.data?.error || error.message || 'Invalid OTP verification code.';
+      setOtpModalError(errMsg);
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   };
 
   // Handle File Selection
@@ -246,6 +306,11 @@ const GetSubscription = () => {
 
       if (res.success) {
         showToast('Payment proof submitted successfully! Pending administrator verification.', 'success');
+        setSelectedFile(null);
+        setTransactionRef('');
+        setRemarks('');
+        const fileInput = document.getElementById('proof-file-input') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
         await loadRecentAttempt();
         await refreshSubscriptionStatus();
       } else {
@@ -260,9 +325,11 @@ const GetSubscription = () => {
   };
 
   // Generate Official NPCI Direct Account + IFSC UPI QR Payload
-  const npciAccountVpa = `${bankInfo.accountNumber.trim()}@${bankInfo.ifsc.trim().toUpperCase()}.ifsc.npci`;
-  const npciQrPayload = `upi://pay?pa=${encodeURIComponent(npciAccountVpa)}&pn=${encodeURIComponent(bankInfo.accountName)}&am=${payableAmount}&cu=INR`;
-  const accountIfscQrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(npciQrPayload)}`;
+  const rawVpa = bankInfo?.upiId && bankInfo.upiId.trim()
+    ? bankInfo.upiId.trim()
+    : bankInfo ? `${(bankInfo.accountNumber || '').trim()}@${(bankInfo.ifsc || '').trim().toUpperCase()}.ifsc.npci` : '';
+  const npciQrPayload = bankInfo ? `upi://pay?pa=${encodeURIComponent(rawVpa)}&pn=${encodeURIComponent(bankInfo.accountName || '')}&am=${payableAmount}&cu=INR` : '';
+  const accountIfscQrImageSrc = bankInfo ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(npciQrPayload)}` : '';
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 font-['Outfit'] pb-16">
@@ -384,9 +451,13 @@ const GetSubscription = () => {
               <span className="px-2.5 py-0.5 bg-amber-400/20 text-amber-300 border border-amber-400/30 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
                 <Crown size={12} className="text-amber-400" /> KMA Life Member
               </span>
-              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">50% Concession</span>
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+                50% Concession
+              </span>
             </div>
-            <h3 className="text-lg font-bold text-white mb-1">Are you a KMA Life Member?</h3>
+            <h3 className="text-lg font-bold text-white mb-1">
+              Are you a KMA Life Member?
+            </h3>
             <p className="text-zinc-400 text-xs leading-relaxed mb-4">
               Enter your Unique Life Member ID to receive a 50% concession (₹1,000 / year).
             </p>
@@ -400,105 +471,179 @@ const GetSubscription = () => {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleRequestOtp} className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={membershipId}
-                    onChange={(e) => setMembershipId(e.target.value)}
-                    placeholder="Enter ID (e.g. LM-1042)"
-                    className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition-colors uppercase"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isRequestingOtp}
-                    className="px-3 py-2 bg-amber-400 hover:bg-amber-300 text-black font-bold rounded-xl text-xs transition-colors shrink-0 disabled:opacity-50"
-                  >
-                    {isRequestingOtp ? 'Sending...' : 'Verify'}
-                  </button>
-                </div>
-              </form>
+              <div className="space-y-3">
+                <form onSubmit={handleRequestOtp} className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={membershipId}
+                      onChange={(e) => {
+                        setMembershipId(e.target.value);
+                        if (idError) setIdError(null);
+                      }}
+                      placeholder="Enter ID (e.g. LM-1042)"
+                      className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400 transition-colors uppercase"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isRequestingOtp}
+                      className="px-3 py-2 bg-amber-400 hover:bg-amber-300 text-black font-bold rounded-xl text-xs transition-colors shrink-0 disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {isRequestingOtp ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>Sending...</span>
+                        </>
+                      ) : (
+                        <span>Verify</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
+
+                {idError && (
+                  <div className="bg-rose-950/80 border border-rose-500/60 rounded-xl p-3.5 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300 shadow-lg shadow-rose-950/30">
+                    <XCircle size={18} className="text-rose-400 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-rose-200 leading-snug">{idError}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
           {/* Bank Details Card */}
-          <div className="bg-white border-2 border-black rounded-[2rem] p-6 shadow-xl shadow-black/5 lg:flex-1 flex flex-col justify-between">
-            <div className="mb-4 pb-3 border-b border-zinc-100">
-              <span className="inline-block px-3 py-1 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-wider mb-3">
-                STEP 1: MAKE PAYMENT
+          {isLoadingBankInfo ? (
+            <div className="bg-white border-2 border-black rounded-[2.5rem] p-6 shadow-xl text-center py-12 flex flex-col justify-center items-center flex-1">
+              <Loader2 size={24} className="animate-spin text-black mx-auto mb-2" />
+              <p className="text-xs text-zinc-500 font-medium">Loading bank transfer information...</p>
+            </div>
+          ) : bankServiceError || !bankInfo ? (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-[2.5rem] p-6 text-center shadow-lg flex flex-col justify-center items-center flex-1">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
+                <AlertTriangle size={24} />
+              </div>
+              <h3 className="text-sm font-bold text-amber-950 mb-1">Payment Service Temporarily Out of Order</h3>
+              <p className="text-xs text-amber-900/90 leading-relaxed max-w-xs mx-auto mb-4 font-medium">
+                {bankServiceError || 'Online bank transfer details are currently unavailable in the system environment configuration. Please contact support.'}
+              </p>
+              <span className="inline-block px-3 py-1 bg-amber-200/80 text-amber-950 rounded-full text-[10px] font-black uppercase tracking-wider">
+                Service Unavailable
               </span>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-bold">
-                  <Building2 size={20} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-black text-base leading-tight">BKMA Bank Details</h3>
-                  <p className="text-zinc-400 text-xs">Transfer payable amount to this account</p>
-                </div>
-              </div>
             </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                <span className="text-zinc-400">Account Name:</span>
-                <span className="font-bold text-black text-right">{bankInfo.accountName}</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                <span className="text-zinc-400">Bank Name:</span>
-                <span className="font-bold text-black text-right">{bankInfo.bankName}</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                <span className="text-zinc-400">Account Number:</span>
-                <span className="font-mono font-bold text-black text-right">{bankInfo.accountNumber}</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-zinc-100">
-                <span className="text-zinc-400">IFSC Code:</span>
-                <span className="font-mono font-bold text-black text-right">{bankInfo.ifsc}</span>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <span className="text-zinc-400">Branch:</span>
-                <span className="font-bold text-black text-right">{bankInfo.branch}</span>
-              </div>
-            </div>
-
-            {/* Direct Account + IFSC UPI QR Code Section */}
-            <div className="mt-5 lg:mt-auto pt-4 border-t border-zinc-100 text-center">
-              <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase text-zinc-600 tracking-wider mb-2">
-                <QrCode size={14} className="text-black" /> Scan Account + IFSC UPI QR
-              </div>
-              
-              <div className="p-3 bg-white border-2 border-black rounded-2xl inline-block shadow-md my-1">
-                <img
-                  src={bankInfo.qrCodeUrl || accountIfscQrImageSrc}
-                  alt="BKMA Bank Account & IFSC QR Code"
-                  className="w-44 h-44 mx-auto object-contain rounded-lg"
-                />
+          ) : (
+            <div className="bg-white border-2 border-black rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-black/5 flex-1 flex flex-col justify-between space-y-5">
+              {/* Step 1 Header */}
+              <div className="pb-3.5 border-b border-zinc-100">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="px-3 py-1 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-wider">
+                    STEP 1: MAKE PAYMENT
+                  </span>
+                  <span className="text-xs font-bold text-emerald-700 font-mono bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                    ₹{payableAmount.toLocaleString()} INR
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-black text-white flex items-center justify-center font-bold shrink-0">
+                    <Building2 size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-black text-base leading-tight">BKMA Payment Options</h3>
+                    <p className="text-zinc-400 text-xs">Transfer payable amount using any option below</p>
+                  </div>
+                </div>
               </div>
 
-              <div className="mt-3 p-3 bg-zinc-50 border border-zinc-200 rounded-xl text-left space-y-1 text-[11px]">
-                <div className="flex justify-between font-mono">
-                  <span className="text-zinc-500 font-sans">A/C Number:</span>
-                  <span className="font-bold text-black">{bankInfo.accountNumber}</span>
+              {/* 1. BANK DETAILS AT TOP */}
+              <div>
+                <div className="text-xs font-black uppercase tracking-wider text-zinc-600 mb-2 flex items-center gap-1.5">
+                  <Building2 size={14} className="text-black shrink-0" /> 1. DIRECT BANK TRANSFER (NEFT / IMPS)
                 </div>
-                <div className="flex justify-between font-mono">
-                  <span className="text-zinc-500 font-sans">IFSC Code:</span>
-                  <span className="font-bold text-black">{bankInfo.ifsc}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Bank:</span>
-                  <span className="font-bold text-black">{bankInfo.bankName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Payee:</span>
-                  <span className="font-bold text-black">{bankInfo.accountName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Amount:</span>
-                  <span className="font-mono font-black text-emerald-700">₹{payableAmount.toLocaleString()}</span>
+                <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-3.5 space-y-0.5 text-xs">
+                  <div className="grid grid-cols-12 items-center py-1.5 border-b border-zinc-200/60">
+                    <span className="col-span-5 text-zinc-500 font-medium">Account Name:</span>
+                    <span className="col-span-7 font-bold text-black text-right">{bankInfo.accountName}</span>
+                  </div>
+                  <div className="grid grid-cols-12 items-center py-1.5 border-b border-zinc-200/60">
+                    <span className="col-span-5 text-zinc-500 font-medium">Bank Name:</span>
+                    <span className="col-span-7 font-bold text-black text-right">{bankInfo.bankName}</span>
+                  </div>
+                  <div className="grid grid-cols-12 items-center py-1.5 border-b border-zinc-200/60">
+                    <span className="col-span-5 text-zinc-500 font-medium">Account Number:</span>
+                    <div className="col-span-7 flex items-center justify-end gap-1.5 font-mono font-bold text-black">
+                      <span>{bankInfo.accountNumber}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(bankInfo.accountNumber, 'Account Number')}
+                        className="p-1 hover:bg-zinc-200 rounded text-zinc-600 transition-colors"
+                        title="Copy Account Number"
+                      >
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-12 items-center py-1.5 border-b border-zinc-200/60">
+                    <span className="col-span-5 text-zinc-500 font-medium">IFSC Code:</span>
+                    <div className="col-span-7 flex items-center justify-end gap-1.5 font-mono font-bold text-black">
+                      <span>{bankInfo.ifsc}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(bankInfo.ifsc, 'IFSC Code')}
+                        className="p-1 hover:bg-zinc-200 rounded text-zinc-600 transition-colors"
+                        title="Copy IFSC Code"
+                      >
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-12 items-start py-1.5">
+                    <span className="col-span-4 text-zinc-500 font-medium pt-0.5">Branch:</span>
+                    <span className="col-span-8 font-bold text-black text-right leading-snug">{bankInfo.branch}</span>
+                  </div>
                 </div>
               </div>
+
+              {/* 2. UPI ID IN MIDDLE (BEFORE QR) */}
+              <div>
+                <div className="text-xs font-black uppercase tracking-wider text-zinc-600 mb-2 flex items-center gap-1.5">
+                  <Smartphone size={14} className="text-black shrink-0" /> 2. OFFICIAL UPI VPA ADDRESS
+                </div>
+                <div className="p-3.5 bg-zinc-50 border-2 border-black rounded-2xl flex items-center justify-between gap-3">
+                  <div className="overflow-hidden">
+                    <span className="text-[10px] font-bold text-zinc-400 block uppercase tracking-wider mb-0.5">BKMA UPI VPA</span>
+                    <span className="font-mono font-bold text-black text-xs sm:text-sm select-all truncate block">
+                      {bankInfo.upiId || rawVpa}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyText(bankInfo.upiId || rawVpa, 'UPI ID')}
+                    className="px-3.5 py-1.5 bg-black text-white hover:bg-zinc-800 rounded-xl text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors shadow-sm"
+                  >
+                    <Copy size={12} /> Copy
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. QR CODE AT LAST (BOTTOM) */}
+              <div className="pt-3 border-t border-zinc-100 text-center space-y-2">
+                <div className="text-xs font-black uppercase tracking-wider text-zinc-600 flex items-center justify-center gap-1.5">
+                  <QrCode size={14} className="text-black shrink-0" /> 3. SCAN QR CODE TO PAY
+                </div>
+                <div className="p-2 bg-white border-2 border-black rounded-2xl inline-block shadow-md">
+                  <img
+                    src={bankInfo.qrCodeUrl || accountIfscQrImageSrc}
+                    alt="BKMA Payment QR Code"
+                    className="w-32 h-32 mx-auto object-contain rounded-lg"
+                  />
+                </div>
+                <p className="text-xs text-zinc-400 font-medium">
+                  Scan using GPay, PhonePe, Paytm, BHIM, or any UPI app
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right Column: Payment Proof Upload Form (7 cols) */}
@@ -563,17 +708,16 @@ const GetSubscription = () => {
               )}
             </div>
 
-            {/* Payment Transfer Date */}
+            {/* Payment Transfer Date (Read-Only) */}
             <div>
               <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                Payment Date <span className="text-rose-500">*</span>
+                Payment Date
               </label>
               <input
                 type="date"
-                required
+                readOnly
                 value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-xl text-sm font-medium text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                className="w-full px-4 py-3 bg-zinc-100 border border-zinc-300 rounded-xl text-sm font-medium text-black cursor-not-allowed select-none"
               />
             </div>
 
@@ -642,23 +786,29 @@ const GetSubscription = () => {
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-4 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-base transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 mt-4 lg:mt-auto"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  <span>Submitting Payment Proof...</span>
-                </>
-              ) : (
-                <>
-                  <Upload size={18} />
-                  <span>Submit Payment Proof for Verification</span>
-                </>
-              )}
-            </button>
+            {bankServiceError || !bankInfo ? (
+              <div className="w-full p-4 bg-amber-50 border border-amber-200 rounded-2xl text-center text-xs font-bold text-amber-900 mt-4 lg:mt-auto">
+                Payment submission is disabled while payment service is out of order.
+              </div>
+            ) : (
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-4 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-base transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 mt-4 lg:mt-auto cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Verifying &amp; Uploading Proof...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={18} />
+                    <span>Submit Payment Proof for Verification</span>
+                  </>
+                )}
+              </button>
+            )}
           </form>
         </div>
       </div>
@@ -701,7 +851,11 @@ const GetSubscription = () => {
                     {/* Submission Date */}
                     <td className="px-6 py-4">
                       <p className="text-xs font-bold text-black">{item.date || item.paymentDate}</p>
-                      <span className="text-[10px] text-zinc-400 block font-mono mt-0.5">Receipt No: {formatReceiptNo(item.receiptNo || item.id, item.date || item.paymentDate, idx)}</span>
+                      {item.status === 'APPROVED' && (
+                        <span className="text-[10px] text-zinc-400 block font-mono mt-0.5">
+                          Receipt No: {formatReceiptNo(item.receiptNo || item.id, item.date || item.paymentDate, idx)}
+                        </span>
+                      )}
                     </td>
 
                     {/* Membership Plan */}
@@ -857,7 +1011,13 @@ const GetSubscription = () => {
               <ReceiptTemplate
                 receiptNumber={formatReceiptNo(selectedReceiptPayment.id)}
                 date={formatDateString(selectedReceiptPayment.paymentDate || selectedReceiptPayment.date)}
-                memberName={currentUser?.name || localStorage.getItem('userName') || 'Member'}
+                memberName={
+                  (selectedReceiptPayment as any)?.userName ||
+                  (currentUser?.name && currentUser.name.toLowerCase() !== 'reader user' ? currentUser.name : null) ||
+                  ((currentUser as any)?.displayName && (currentUser as any).displayName.toLowerCase() !== 'reader user' ? (currentUser as any).displayName : null) ||
+                  (localStorage.getItem('userName') && localStorage.getItem('userName')?.toLowerCase() !== 'reader user' ? localStorage.getItem('userName') : null) ||
+                  (currentUser?.email ? currentUser.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : 'Subscriber')
+                }
                 amount={(selectedReceiptPayment.amountRaw || selectedReceiptPayment.amount).toString().replace('₹', '')}
                 amountInWords={numberToWords(parseInt((selectedReceiptPayment.amountRaw || selectedReceiptPayment.amount).toString().replace(/[^\d]/g, '')) || 1000)}
                 membershipType={selectedReceiptPayment.plan === 'lifetime' ? 'Life Membership Pass' : 'Annual Pass Subscription'}
@@ -909,12 +1069,24 @@ const GetSubscription = () => {
             </p>
 
             <form onSubmit={handleVerifyOtpCode} className="space-y-4">
+              {otpModalError && (
+                <div className="bg-rose-50 border-2 border-rose-300 rounded-2xl p-3.5 flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <XCircle size={18} className="text-rose-600 shrink-0 mt-0.5" />
+                  <p className="text-xs font-semibold text-rose-900 leading-snug flex-1">
+                    {otpModalError}
+                  </p>
+                </div>
+              )}
+
               <div>
                 <input
                   type="text"
                   maxLength={6}
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => {
+                    setOtp(e.target.value.replace(/\D/g, ''));
+                    if (otpModalError) setOtpModalError(null);
+                  }}
                   placeholder="6-Digit OTP"
                   className="w-full text-center tracking-[0.5em] text-2xl font-mono font-bold px-4 py-3 bg-zinc-50 border-2 border-zinc-300 rounded-2xl focus:outline-none focus:border-black transition-all"
                   autoFocus
@@ -923,9 +1095,17 @@ const GetSubscription = () => {
 
               <button
                 type="submit"
-                className="w-full py-3.5 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-sm transition-all"
+                disabled={isVerifyingOtp}
+                className="w-full py-3.5 bg-black hover:bg-zinc-800 text-white rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                Verify & Apply 50% Concession Rate
+                {isVerifyingOtp ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Verifying Code...</span>
+                  </>
+                ) : (
+                  <span>Verify &amp; Apply 50% Concession Rate</span>
+                )}
               </button>
             </form>
           </div>

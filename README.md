@@ -1,4 +1,4 @@
-# KMA Archive Experience
+# KMA article publishing portal 
 
 KMA Archive Experience is a modern academic publishing platform designed to manage the complete research lifecycle — from manuscript submission to peer review and final publication.
 
@@ -6,7 +6,7 @@ The system features a role-based architecture with dedicated dashboards for Auth
 
 ---
 
-## ✨ Key Features
+##  Key Features
 
 - 📄 **Author Portal**
   - Submit and manage research papers

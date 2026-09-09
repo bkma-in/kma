@@ -3,8 +3,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.runMigrations = void 0;
 const firebase_1 = require("../config/firebase");
 const runMigrations = async () => {
-    console.log('Starting Firestore database migrations...');
+    console.log('Checking Firestore database migrations status...');
     try {
+        const migrationRef = firebase_1.db.collection('system_config').doc('migrations');
+        const migrationDoc = await migrationRef.get();
+        const completedMigrations = migrationDoc.exists ? migrationDoc.data() || {} : {};
+        if (completedMigrations.users_lowercase_v1 === true) {
+            console.log('[MIGRATION] users_lowercase_v1 already applied. Skipping users collection scan.');
+            return;
+        }
+        console.log('[MIGRATION] Running users_lowercase_v1 migration...');
         const snapshot = await firebase_1.db.collection('users').get();
         let batch = firebase_1.db.batch();
         let count = 0;
@@ -35,11 +43,16 @@ const runMigrations = async () => {
         if (opsInBatch > 0) {
             await batch.commit();
         }
+        // Mark migration as completed in system_config/migrations
+        await migrationRef.set({
+            users_lowercase_v1: true,
+            appliedAt: new Date()
+        }, { merge: true });
         if (count > 0) {
             console.log(`Successfully migrated ${count} users with lowercased search fields.`);
         }
         else {
-            console.log('All users are already migrated.');
+            console.log('All users are already migrated. Migration marked complete.');
         }
     }
     catch (error) {

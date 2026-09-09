@@ -42,6 +42,7 @@ import { PublishCFPModal } from '../../components/cfp/PublishCFPModal';
 import { CFPEmailQueueManager } from '../../components/cfp/CFPEmailQueueManager';
 import { useNotification } from '../../utils/NotificationContext';
 import { useNavigate } from 'react-router-dom';
+import { AdminCallForPapersSkeleton } from '../../components/skeletons/PageSkeletons';
 
 const AdminCallForPapers = () => {
   const navigate = useNavigate();
@@ -293,10 +294,18 @@ const AdminCallForPapers = () => {
           const res = await deleteCFP(id);
           if (res.success) {
             showToast('Draft deleted', 'info');
+            setCfps(prev => prev.filter(c => c.id !== id));
             await fetchCFPs();
           }
         } catch (err: any) {
-          showToast(err.response?.data?.error || 'Failed to delete draft', 'error');
+          const errorMsg = err.response?.data?.error;
+          if (errorMsg === 'CFP not found') {
+            showToast('Draft deleted', 'info');
+            setCfps(prev => prev.filter(c => c.id !== id));
+            await fetchCFPs();
+          } else {
+            showToast(errorMsg || 'Failed to delete draft', 'error');
+          }
         }
       }
     });
@@ -324,6 +333,10 @@ const AdminCallForPapers = () => {
   const scheduledCount = cfps.filter(c => c.status === 'scheduled').length;
   const closedCount = cfps.filter(c => c.status === 'closed').length;
   const archivedCount = cfps.filter(c => c.status === 'archived').length;
+
+  if (loading && cfps.length === 0 && !fetchError) {
+    return <AdminCallForPapersSkeleton />;
+  }
 
   return (
     <div className="space-y-8 animate-fade-in max-w-7xl mx-auto pb-16">

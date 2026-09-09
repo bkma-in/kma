@@ -507,7 +507,6 @@ const AdminAuthors = () => {
                     </div>
                   </div>
                   <p className="text-zinc-500 text-xs italic mb-2">Verified reviewer of the Kerala Mathematical Association</p>
-                  <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em]">ID: {selectedReviewer.id}</p>
                 </div>
 
                 {/* About Reviewer Section */}
@@ -535,37 +534,27 @@ const AdminAuthors = () => {
                     <h3 className="text-sm font-bold text-white uppercase tracking-widest">Account Information</h3>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Full Name</label>
-                      <p className="text-sm font-bold text-white">{selectedReviewer.name}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Email Address</label>
-                      <p className="text-sm font-bold text-white lowercase">{selectedReviewer.email}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Phone Number</label>
-                      <p className={cn("text-sm font-bold", detailedReviewer?.phone ? "text-white" : "text-zinc-600 italic")}>
-                        {detailedReviewer?.phone || "Not Provided"}
+                  <div className="space-y-2">
+                    <h4 className="text-xl sm:text-2xl font-black text-white tracking-tight">{selectedReviewer.name}</h4>
+
+                    {(detailedReviewer?.designation || selectedReviewer.qualification || detailedReviewer?.institution) && (
+                      <p className="text-xs sm:text-sm font-medium text-zinc-400 italic">
+                        {[detailedReviewer?.designation || selectedReviewer.qualification, detailedReviewer?.institution].filter(Boolean).join(', ')}
                       </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Qualification</label>
-                      <p className="text-sm font-bold text-white">{selectedReviewer.qualification || "Not Provided"}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Designation</label>
-                      <p className={cn("text-sm font-bold", detailedReviewer?.designation ? "text-white" : "text-zinc-600 italic")}>
-                        {detailedReviewer?.designation || "Not Provided"}
+                    )}
+
+                    <p className="text-sm font-semibold text-blue-400 lowercase break-all">
+                      {selectedReviewer.email}
+                    </p>
+
+                    {detailedReviewer?.phone && (
+                      <p className="text-xs font-semibold text-zinc-300">
+                        {detailedReviewer.phone}
                       </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Institution</label>
-                      <p className={cn("text-sm font-bold", detailedReviewer?.institution ? "text-white" : "text-zinc-600 italic")}>
-                        {detailedReviewer?.institution || "Not Provided"}
-                      </p>
-                    </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-4 mt-6">
                     <div className="space-y-1">
                       <label className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Research Domain</label>
                       <p className={cn("text-sm font-bold", (detailedReviewer?.researchDomain || selectedReviewer.experience) ? "text-white" : "text-zinc-600 italic")}>

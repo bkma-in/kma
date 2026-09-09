@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Mail, BookOpen, GraduationCap, Award, Compass, Loader2 } from 'lucide-react';
 import api from '../services/api';
+import SkeletonModalProfile from './skeletons/SkeletonModalProfile';
 
 interface AuthorProfile {
   name: string;
@@ -148,10 +149,7 @@ const AuthorProfileModal: React.FC<AuthorProfileModalProps> = ({ isOpen, onClose
         {/* Content */}
         <div className="p-6 overflow-y-auto flex-1">
           {loading ? (
-            <div className="flex h-full min-h-[40vh] flex-col items-center justify-center gap-4">
-              <Loader2 className="animate-spin text-zinc-300" size={36} />
-              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Fetching Profile details...</p>
-            </div>
+            <SkeletonModalProfile dark={false} />
           ) : profile ? (
             <div className="space-y-6">
               {/* Card Hero */}

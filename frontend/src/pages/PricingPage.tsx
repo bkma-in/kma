@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, Check } from 'lucide-react';
 import PublicHeader from '../components/PublicHeader';
 import PublicFooter from '../components/PublicFooter';
+import { useAuth } from '../context/AuthContext';
 
 const PricingPage: React.FC = () => {
   return (
@@ -39,8 +40,12 @@ const PricingPage: React.FC = () => {
               BKMA offers an annual subscription plan for individuals and institutions seeking access to its official publications.
             </p>
             <div className="border border-zinc-200 rounded-xl p-8 max-w-2xl">
-              <p className="text-4xl font-black text-black mb-2">₹2,000 <span className="text-lg font-normal text-zinc-400">/ Per Year</span></p>
-              <p className="text-base text-zinc-500 mb-6">All-inclusive pricing covering printing, handling, and shipping charges.</p>
+              <p className="text-4xl font-black text-black mb-2">
+                ₹2,000 <span className="text-lg font-normal text-zinc-400">/ Per Year</span>
+              </p>
+              <p className="text-base text-zinc-500 mb-6">
+                All-inclusive pricing covering printing, handling, and shipping charges.
+              </p>
               <ul className="space-y-4">
                 {[
                   'Two Journal Issues per volume',

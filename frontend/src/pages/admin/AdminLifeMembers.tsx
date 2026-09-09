@@ -33,7 +33,7 @@ import {
   updateLifeMember,
   deleteLifeMember
 } from '../../services/user.service';
-import { SkeletonTable } from '../../components/skeletons/SkeletonTable';
+import { AdminLifeMembersSkeleton } from '../../components/skeletons/PageSkeletons';
 import { CustomSelect } from '../../components/common/CustomSelect';
 
 interface LifeMember {
@@ -540,18 +540,7 @@ const AdminLifeMembers: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6 max-w-7xl mx-auto px-4 animate-fade-in font-['Outfit']">
-        <div className="flex justify-between items-end gap-6 mb-6">
-          <div className="space-y-2">
-            <div className="h-8 skeleton-box rounded w-48" />
-            <div className="h-4 skeleton-box rounded w-64" />
-          </div>
-          <div className="h-10 skeleton-box rounded-xl w-64" />
-        </div>
-        <SkeletonTable rowsCount={6} colsCount={5} />
-      </div>
-    );
+    return <AdminLifeMembersSkeleton />;
   }
 
   return (

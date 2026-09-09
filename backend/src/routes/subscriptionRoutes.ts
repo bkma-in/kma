@@ -14,9 +14,29 @@ import { config } from '../config/env';
 
 const router = Router();
 
+// --- In-Memory Cache for Bank / Payment Details (TTL: 5 minutes) ---
+interface CachedPaymentSettings {
+  data: any;
+  timestamp: number;
+}
+let cachedPaymentSettings: CachedPaymentSettings | null = null;
+const PAYMENT_SETTINGS_TTL_MS = 5 * 60 * 1000;
+
+export const invalidatePaymentSettingsCache = () => {
+  cachedPaymentSettings = null;
+};
+
 // GET /subscriptions/bank-details - Public / Authenticated Bank Details endpoint
 router.get('/bank-details', async (_req, res: Response) => {
   try {
+    if (cachedPaymentSettings && (Date.now() - cachedPaymentSettings.timestamp < PAYMENT_SETTINGS_TTL_MS)) {
+      return res.json({
+        success: true,
+        serviceAvailable: true,
+        bankDetails: cachedPaymentSettings.data
+      });
+    }
+
     const configDoc = await db.collection('system_config').doc('payment_settings').get();
     const configData = configDoc.exists ? configDoc.data() : null;
 
@@ -29,18 +49,41 @@ router.get('/bank-details', async (_req, res: Response) => {
       }
     }
 
+    const mergedDetails = {
+      ...config.payments.bankAccount,
+      ...(configData?.bankDetails || {}),
+      qrCodeUrl
+    };
+
+    const isConfigured = Boolean(
+      mergedDetails.accountNumber?.trim() &&
+      mergedDetails.accountName?.trim() &&
+      mergedDetails.ifsc?.trim()
+    );
+
+    if (!isConfigured) {
+      return res.status(503).json({
+        success: false,
+        serviceAvailable: false,
+        error: 'Payment service is temporarily out of order. Bank transfer environment configuration is missing.'
+      });
+    }
+
+    cachedPaymentSettings = {
+      data: mergedDetails,
+      timestamp: Date.now()
+    };
+
     return res.json({
       success: true,
-      bankDetails: {
-        ...config.payments.bankAccount,
-        ...(configData?.bankDetails || {}),
-        qrCodeUrl
-      }
+      serviceAvailable: true,
+      bankDetails: mergedDetails
     });
   } catch (err: any) {
-    return res.json({
-      success: true,
-      bankDetails: config.payments.bankAccount
+    return res.status(500).json({
+      success: false,
+      serviceAvailable: false,
+      error: 'Failed to retrieve payment service configuration.'
     });
   }
 });
@@ -76,9 +119,9 @@ router.get('/payment-history', requireAuth, async (req: AuthRequest, res: Respon
         attemptId: doc.id,
         paymentId: doc.id,
         plan: data.membershipType || data.plan || 'annual',
-        article: data.membershipType === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription',
-        amount: data.expectedAmount ? `₹${data.expectedAmount}` : (data.amount ? `₹${data.amount}` : '₹2000'),
-        amountRaw: data.expectedAmount || data.amount || 2000,
+        article: data.membershipType === 'lifetime' ? 'BKMA Annual Pass (Life Member 50% Concession)' : 'BKMA Annual Pass Subscription',
+        amount: (data.expectedAmount !== undefined && data.expectedAmount !== null) ? `₹${data.expectedAmount}` : ((data.amount !== undefined && data.amount !== null) ? `₹${data.amount}` : '₹2000'),
+        amountRaw: data.expectedAmount !== undefined && data.expectedAmount !== null ? data.expectedAmount : (data.amount !== undefined && data.amount !== null ? data.amount : 2000),
         currency: 'INR',
         date: dateStr,
         paymentDate: data.paymentDate || dateStr,
@@ -93,7 +136,10 @@ router.get('/payment-history', requireAuth, async (req: AuthRequest, res: Respon
         rejectionReason: data.rejectionReason || null,
         verifiedAt: data.verifiedAt?.toDate ? data.verifiedAt.toDate().toISOString() : data.verifiedAt || null,
         verifiedByName: data.verifiedByName || null,
-        receiptAvailable: displayStatus === 'APPROVED'
+        receiptNo: displayStatus === 'APPROVED' ? (data.receiptNo || null) : null,
+        receiptAvailable: displayStatus === 'APPROVED',
+        userName: data.userName || null,
+        userEmail: data.userEmail || null
       };
     }));
 
@@ -125,11 +171,11 @@ router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res: Respo
         id: data.subscriptionId || doc.id,
         type: 'subscription',
         planType: data.type || data.plan || 'annual',
-        amount: data.amount ? `₹${data.amount}` : (data.type === 'lifetime' ? '₹1000' : '₹2000'),
+        amount: (data.amount !== undefined && data.amount !== null) ? `₹${data.amount}` : (data.type === 'lifetime' ? '₹1000' : '₹2000'),
         date: data.startedAt?.toDate ? data.startedAt.toDate().toISOString().split('T')[0] : (data.createdAt?.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
         status: data.status === 'active' ? 'APPROVED' : 'PENDING_VERIFICATION',
         rawStatus: data.status,
-        article: data.type === 'lifetime' || data.plan === 'lifetime' ? 'BKMA Life Membership Subscription' : 'BKMA Annual Pass Subscription',
+        article: data.type === 'lifetime' || data.plan === 'lifetime' ? 'BKMA Annual Pass (Life Member 50% Concession)' : 'BKMA Annual Pass Subscription',
         paymentMethod: 'Manual Bank Transfer',
         transactionRef: data.transactionReference || 'N/A'
       };
@@ -171,6 +217,56 @@ router.post('/request-life-member-otp', requireAuth, paymentRateLimiter, async (
     }
 
     const normUniqueId = uniqueId.trim().toUpperCase();
+    const currentUid = req.user!.uid;
+
+    // Check if this Life Member ID has ALREADY been claimed/used by ANOTHER user account
+    const existingUserQuery = await db.collection('users')
+      .where('membershipNumber', '==', normUniqueId)
+      .get();
+
+    const usedByAnotherUser = existingUserQuery.docs.some(doc => {
+      const d = doc.data();
+      return doc.id !== currentUid && (d.isLifeMember === true || d.lifeMember === true || d.isSubscribed === true);
+    });
+
+    if (usedByAnotherUser) {
+      return res.status(400).json({
+        error: `This Life Member ID (${normUniqueId}) has already been used to claim a 50% concession subscription.`
+      });
+    }
+
+    const existingOtpQuery = await db.collection('life_member_otps')
+      .where('uniqueId', '==', normUniqueId)
+      .where('verified', '==', true)
+      .get();
+
+    const verifiedByAnotherUser = existingOtpQuery.docs.some(doc => doc.data().userId !== currentUid);
+    if (verifiedByAnotherUser) {
+      return res.status(400).json({
+        error: `This Life Member ID (${normUniqueId}) has already been used to claim a 50% concession subscription.`
+      });
+    }
+
+    const allAttemptsSnapshot = await db.collection('paymentAttempts').get();
+    const claimedByAnotherAttempt = allAttemptsSnapshot.docs.some(doc => {
+      const d = doc.data();
+      const attemptedUniqueId = (d.verifiedUniqueId || d.membershipNumber || d.uniqueId || d.lifeMemberId || '').toString().trim().toUpperCase();
+      const isLifetime = d.membershipType === 'lifetime' || d.plan === 'lifetime' || d.expectedAmount === 1000 || d.amount === 1000;
+      const isActiveOrPending = ['APPROVED', 'PENDING_VERIFICATION', 'paid', 'fulfilled'].includes(d.status);
+      return (
+        d.userId !== currentUid &&
+        isLifetime &&
+        isActiveOrPending &&
+        attemptedUniqueId === normUniqueId
+      );
+    });
+
+    if (claimedByAnotherAttempt) {
+      return res.status(400).json({
+        error: `This Life Member ID (${normUniqueId}) has already been used to claim a 50% concession subscription.`
+      });
+    }
+
     const userEmailLower = (email || '').toLowerCase().trim();
 
     // Look up Life Member record by Unique ID
@@ -198,6 +294,12 @@ router.post('/request-life-member-otp', requireAuth, paymentRateLimiter, async (
     if (!memberData) {
       return res.status(404).json({
         error: `Unique Member ID "${normUniqueId}" was not found in the official KMA Life Members registry. Please check your ID or contact administration.`
+      });
+    }
+
+    if (memberData.isClaimed === true && memberData.claimedByUserId && memberData.claimedByUserId !== currentUid) {
+      return res.status(400).json({
+        error: `This Life Member ID (${normUniqueId}) has already been used to claim a 50% concession subscription.`
       });
     }
 
@@ -232,6 +334,100 @@ router.post('/request-life-member-otp', requireAuth, paymentRateLimiter, async (
   } catch (error: any) {
     console.error('Request Life Member OTP error:', error);
     res.status(500).json({ error: error.message || 'Failed to send verification OTP' });
+  }
+});
+
+// POST /subscriptions/verify-life-member-otp - Verify 6-digit OTP code for Life Member Concession
+router.post('/verify-life-member-otp', requireAuth, paymentRateLimiter, async (req: AuthRequest, res: Response) => {
+  try {
+    const { uniqueId, otp } = req.body;
+
+    if (!uniqueId || typeof uniqueId !== 'string' || !uniqueId.trim()) {
+      return res.status(400).json({ error: 'Unique Life Member ID is required.' });
+    }
+
+    if (!otp || typeof otp !== 'string' || !otp.trim() || otp.trim().length !== 6) {
+      return res.status(400).json({ error: 'Please enter a valid 6-digit OTP verification code.' });
+    }
+
+    const normUniqueId = uniqueId.trim().toUpperCase();
+    const currentUid = req.user!.uid;
+
+    // Check duplicate claims
+    const existingUserQuery = await db.collection('users')
+      .where('membershipNumber', '==', normUniqueId)
+      .get();
+
+    const usedByAnotherUser = existingUserQuery.docs.some(doc => {
+      const d = doc.data();
+      return doc.id !== currentUid && (d.isLifeMember === true || d.lifeMember === true || d.isSubscribed === true);
+    });
+
+    if (usedByAnotherUser) {
+      return res.status(400).json({
+        error: `This Life Member ID (${normUniqueId}) has already been used to claim a 50% concession subscription.`
+      });
+    }
+
+    const allAttemptsSnapshot = await db.collection('paymentAttempts').get();
+    const claimedByAnotherAttempt = allAttemptsSnapshot.docs.some(doc => {
+      const d = doc.data();
+      const attemptedUniqueId = (d.verifiedUniqueId || d.membershipNumber || d.uniqueId || d.lifeMemberId || '').toString().trim().toUpperCase();
+      const isLifetime = d.membershipType === 'lifetime' || d.plan === 'lifetime' || d.expectedAmount === 1000 || d.amount === 1000;
+      const isActiveOrPending = ['APPROVED', 'PENDING_VERIFICATION', 'paid', 'fulfilled'].includes(d.status);
+      return (
+        d.userId !== currentUid &&
+        isLifetime &&
+        isActiveOrPending &&
+        attemptedUniqueId === normUniqueId
+      );
+    });
+
+    if (claimedByAnotherAttempt) {
+      return res.status(400).json({
+        error: `This Life Member ID (${normUniqueId}) has already been used to claim a 50% concession subscription.`
+      });
+    }
+
+    // Lookup OTP record in Firestore
+    const otpDocId = `${currentUid}_${normUniqueId}`;
+    const otpDoc = await db.collection('life_member_otps').doc(otpDocId).get();
+
+    if (!otpDoc.exists) {
+      return res.status(400).json({
+        error: 'No OTP verification request found for this Life Member ID. Please click "Verify" to request a code.'
+      });
+    }
+
+    const otpData = otpDoc.data()!;
+    const expiryTime = otpData.expiresAt?.toDate ? otpData.expiresAt.toDate().getTime() : new Date(otpData.expiresAt).getTime();
+
+    if (Date.now() > expiryTime) {
+      return res.status(400).json({
+        error: 'The verification code has expired. Please close this box and click "Verify" to get a new code.'
+      });
+    }
+
+    if (String(otpData.otp).trim() !== String(otp).trim()) {
+      return res.status(400).json({
+        error: 'Invalid 6-digit OTP code entered. Please check your email and try again.'
+      });
+    }
+
+    // Mark OTP as verified
+    await otpDoc.ref.update({
+      verified: true,
+      verifiedAt: new Date()
+    });
+
+    return res.json({
+      success: true,
+      message: 'Life Member ID verified successfully! 50% Concession rate applied (₹1,000).',
+      uniqueId: normUniqueId
+    });
+  } catch (error: any) {
+    console.error('Verify Life Member OTP error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to verify OTP code' });
   }
 });
 
@@ -290,7 +486,7 @@ router.post(
       let isLifeMemberConcession = false;
       let verifiedUniqueId: string | null = null;
 
-      // 1. Check user profile for verified Life Member status
+      // Check user profile for verified Life Member status & user email
       const userDoc = await db.collection('users').doc(uid).get();
       const userData = userDoc.exists ? userDoc.data() : null;
 
@@ -301,6 +497,23 @@ router.post(
       } else if (uniqueId && otp) {
         // 2. Check existing OTP verification record
         const normUniqueId = String(uniqueId).trim().toUpperCase();
+
+        // Verify if another user has already claimed this Life Member ID
+        const existingUserCheck = await db.collection('users')
+          .where('membershipNumber', '==', normUniqueId)
+          .get();
+
+        const isClaimedByOther = existingUserCheck.docs.some(doc => {
+          const d = doc.data();
+          return doc.id !== uid && (d.isLifeMember === true || d.lifeMember === true || d.isSubscribed === true);
+        });
+
+        if (isClaimedByOther) {
+          return res.status(400).json({
+            error: `This Life Member ID (${normUniqueId}) has already been used to claim a 50% concession subscription.`
+          });
+        }
+
         const otpDocId = `${uid}_${normUniqueId}`;
         const otpDoc = await db.collection('life_member_otps').doc(otpDocId).get();
 
@@ -314,6 +527,10 @@ router.post(
             verifiedUniqueId = normUniqueId;
 
             await otpDoc.ref.update({ verified: true, usedAt: new Date() });
+          } else {
+            return res.status(400).json({
+              error: 'Invalid or expired OTP code for Life Member ID verification.'
+            });
           }
         }
       }
@@ -356,6 +573,9 @@ router.post(
         userName: name || userData?.name || 'Member',
         membershipType: membershipType,
         plan: membershipType,
+        verifiedUniqueId: verifiedUniqueId || null,
+        uniqueId: verifiedUniqueId || null,
+        membershipNumber: verifiedUniqueId || null,
         expectedAmount: expectedAmount,
         amount: expectedAmount,
         currency: 'INR',
@@ -470,7 +690,7 @@ router.get('/admin/pending', requireAuth, requireRole(['admin']), async (_req: A
         userName: data.userName || 'Member',
         userEmail: data.userEmail || '',
         membershipType: data.membershipType || data.plan || 'annual',
-        expectedAmount: data.expectedAmount || data.amount || 2000,
+        expectedAmount: data.expectedAmount !== undefined && data.expectedAmount !== null ? data.expectedAmount : (data.amount !== undefined && data.amount !== null ? data.amount : 2000),
         transactionRef: data.transactionReference || data.transactionRef || 'N/A',
         paymentDate: data.paymentDate || 'N/A',
         submissionDate: submittedAtDate.toISOString().split('T')[0],
@@ -620,6 +840,7 @@ router.post('/admin/upload-qr', requireAuth, requireRole(['admin']), proofUpload
       updatedAt: now,
       updatedBy: uid
     }, { merge: true });
+    invalidatePaymentSettingsCache();
 
     res.json({
       success: true,

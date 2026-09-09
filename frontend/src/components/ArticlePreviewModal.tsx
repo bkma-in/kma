@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   X,
   Download,
@@ -16,6 +17,9 @@ import {
 } from 'lucide-react';
 import { getPdfUrl, getPublicPdfUrl } from '../services/article.service';
 import { isLocalArticleSaved, saveLocalArticle, removeLocalSavedArticle } from '../pages/reader/ReaderSavedArticles';
+import { useAuth } from '../context/AuthContext';
+import { useSubscription } from '../utils/SubscriptionContext';
+import { useNotification } from '../utils/NotificationContext';
 
 interface Author {
   name: string;
@@ -39,6 +43,11 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
   onLoginRequired,
   onAuthorClick,
 }) => {
+  const { currentUser } = useAuth();
+  const { isSubscribed } = useSubscription();
+  const navigate = useNavigate();
+  const { showToast } = useNotification();
+
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState('');
 
@@ -96,10 +105,33 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
     : [];
 
   const handleReadPdf = async () => {
-    if (!isTribute && !isLoggedIn) {
-      onLoginRequired?.();
+    const userLoggedIn = isLoggedIn || !!currentUser;
+
+    if (!userLoggedIn && !isTribute) {
+      onClose();
+      if (onLoginRequired) {
+        onLoginRequired();
+      } else {
+        navigate('/auth');
+      }
       return;
     }
+
+    const isAdminOrDev = currentUser?.role === 'admin' || currentUser?.role === 'dev';
+    const isAuthorOrReviewer = currentUser?.role === 'author' || currentUser?.role === 'reviewer';
+    const canAccessWithoutSub = isTribute || isAdminOrDev || isAuthorOrReviewer;
+
+    if (!canAccessWithoutSub && !isSubscribed) {
+      showToast('Active subscription required to read or download full articles.', 'error');
+      onClose();
+      if (currentUser?.role === 'reader') {
+        navigate('/reader/get-subscription');
+      } else {
+        navigate('/pricing');
+      }
+      return;
+    }
+
     setPdfLoading(true);
     setPdfError('');
     try {
@@ -112,7 +144,14 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
         setPdfError('Could not load the PDF. Please try again.');
       }
     } catch (err: any) {
-      setPdfError(err?.response?.data?.error || 'Failed to retrieve PDF.');
+      const errorMsg = err?.response?.data?.error || 'Failed to retrieve PDF.';
+      if (err?.response?.status === 403 && (errorMsg.includes('Subscription') || errorMsg.includes('subscription'))) {
+        showToast(errorMsg, 'error');
+        onClose();
+        navigate('/reader/get-subscription');
+      } else {
+        setPdfError(errorMsg);
+      }
     } finally {
       setPdfLoading(false);
     }
@@ -312,28 +351,30 @@ const ArticlePreviewModal: React.FC<ArticlePreviewModalProps> = ({
 
         {/* Footer Actions */}
         <div className="px-8 py-6 border-t border-zinc-100 shrink-0 bg-white space-y-3">
-          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800">
-            <ShieldCheck size={18} className="shrink-0 text-amber-600" />
-            <p className="text-xs font-semibold leading-snug">
-              <strong>Module Under Active Development:</strong> Full PDF reading and manuscript downloads are temporarily restricted while system upgrades are in progress.
-            </p>
-          </div>
-
           {pdfError && (
             <p className="text-xs text-red-500 font-bold text-center">{pdfError}</p>
           )}
 
           <button
-            onClick={() => setPdfError('Full article reading and downloads are currently disabled for system maintenance and active development.')}
-            disabled={true}
-            className="w-full py-4 bg-zinc-200 text-zinc-500 rounded-[1rem] font-black text-sm tracking-[0.2em] uppercase flex items-center justify-center gap-3 cursor-not-allowed opacity-75 shadow-none"
+            onClick={handleReadPdf}
+            disabled={pdfLoading}
+            className="w-full py-4 bg-black hover:bg-zinc-800 text-white rounded-[1rem] font-black text-sm tracking-[0.2em] uppercase flex items-center justify-center gap-3 active:scale-[0.98] transition-all shadow-xl shadow-black/10 cursor-pointer disabled:opacity-50"
           >
-            <Download size={18} />
-            FULL ARTICLE READ / DOWNLOAD RESTRICTED
+            {pdfLoading ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                LOADING PDF...
+              </>
+            ) : (
+              <>
+                <Download size={18} />
+                READ / DOWNLOAD FULL ARTICLE
+              </>
+            )}
           </button>
           
           <p className="text-center text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
-            BKMA Archive · Feature Under Development
+            BKMA Archive · Peer-Reviewed Journal Publication
           </p>
         </div>
       </div>
