@@ -294,10 +294,18 @@ const AdminCallForPapers = () => {
           const res = await deleteCFP(id);
           if (res.success) {
             showToast('Draft deleted', 'info');
+            setCfps(prev => prev.filter(c => c.id !== id));
             await fetchCFPs();
           }
         } catch (err: any) {
-          showToast(err.response?.data?.error || 'Failed to delete draft', 'error');
+          const errorMsg = err.response?.data?.error;
+          if (errorMsg === 'CFP not found') {
+            showToast('Draft deleted', 'info');
+            setCfps(prev => prev.filter(c => c.id !== id));
+            await fetchCFPs();
+          } else {
+            showToast(errorMsg || 'Failed to delete draft', 'error');
+          }
         }
       }
     });

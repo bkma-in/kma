@@ -686,10 +686,6 @@ const AdminReadersList = () => {
                       </span>
                     </div>
                   </div>
-
-                  <p className="text-[10px] text-zinc-500 font-mono tracking-wider">
-                    USER ID: {selectedReader.id}
-                  </p>
                 </div>
               </div>
 

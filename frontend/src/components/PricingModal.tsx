@@ -8,9 +8,6 @@ interface PricingModalProps {
 }
 
 const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) => {
-  const { currentUser } = useAuth();
-  const isTestUser = (currentUser?.email || '').toLowerCase().trim() === 'reader1@gmail.com';
-
   if (!isOpen) return null;
 
   return (
@@ -44,7 +41,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) => {
               <div className="mt-1"><CheckCircle2 className="text-emerald-500" size={18} /></div>
               <div>
                 <p className="font-bold text-white mb-1">Annual Subscription</p>
-                <p>{isTestUser ? 'Rs. 10/- per year (Special test price for reader1@gmail.com).' : 'Rs. 2,000/- per year across India.'}</p>
+                <p>Rs. 2,000/- per year across India.</p>
               </div>
             </div>
 

@@ -6,9 +6,6 @@ import PublicFooter from '../components/PublicFooter';
 import { useAuth } from '../context/AuthContext';
 
 const PricingPage: React.FC = () => {
-  const { currentUser } = useAuth();
-  const isTestUser = (currentUser?.email || '').toLowerCase().trim() === 'reader1@gmail.com';
-
   return (
     <div className="min-h-screen bg-white font-sans text-black selection:bg-black selection:text-white flex flex-col">
       <PublicHeader />
@@ -44,18 +41,10 @@ const PricingPage: React.FC = () => {
             </p>
             <div className="border border-zinc-200 rounded-xl p-8 max-w-2xl">
               <p className="text-4xl font-black text-black mb-2">
-                {isTestUser ? '₹10 ' : '₹2,000 '}
-                <span className="text-lg font-normal text-zinc-400">/ Per Year</span>
-                {isTestUser && (
-                  <span className="ml-3 text-xs uppercase px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-full">
-                    Testing Rate (reader1@gmail.com)
-                  </span>
-                )}
+                ₹2,000 <span className="text-lg font-normal text-zinc-400">/ Per Year</span>
               </p>
               <p className="text-base text-zinc-500 mb-6">
-                {isTestUser
-                  ? 'Special payment testing rate configured for reader1@gmail.com.'
-                  : 'All-inclusive pricing covering printing, handling, and shipping charges.'}
+                All-inclusive pricing covering printing, handling, and shipping charges.
               </p>
               <ul className="space-y-4">
                 {[

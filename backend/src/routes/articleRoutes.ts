@@ -696,8 +696,20 @@ router.get('/:id/pdf', requireAuth, downloadRateLimiter, async (req: AuthRequest
         return res.status(403).json({ error: 'Article not published yet' });
       }
 
-      // Published articles are freely readable by any authenticated reader.
-      // Subscriptions / purchases are only required for premium gated content (future feature).
+      // Verify active subscription or life membership status
+      const subSnapshot = await db.collection('subscriptions')
+        .where('userId', '==', uid)
+        .where('status', '==', 'active')
+        .get();
+
+      const userDoc = await db.collection('users').doc(uid).get();
+      const userData = userDoc.exists ? userDoc.data() : null;
+      const isSubscribed = !subSnapshot.empty || userData?.isSubscribed === true || userData?.isLifeMember === true;
+
+      if (!isSubscribed) {
+        return res.status(403).json({ error: 'Subscription Required: You need an active subscription to read or download full articles.' });
+      }
+
       hasAccess = true;
     }
 
