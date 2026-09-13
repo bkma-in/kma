@@ -10,8 +10,11 @@ const env_1 = require("./config/env");
 const migrationService_1 = require("./services/migrationService");
 const notificationService_1 = require("./services/notificationService");
 const queueService_1 = require("./services/archive/queueService");
+const demoService_1 = require("./services/demoService");
 // Run migrations in background
 (0, migrationService_1.runMigrations)().catch(err => console.error('Startup migration error:', err));
+// Ensure universal demo account and demo datasets are initialized
+(0, demoService_1.ensureDemoAccountInitialized)().catch(err => console.error('Startup demo initialization error:', err));
 // Resume interrupted archive jobs
 queueService_1.queueService.resumeInterruptedJobs().catch(err => console.error('Startup archive jobs resumption error:', err));
 // Run reviewer reminders at startup and set 12-hour interval scheduler

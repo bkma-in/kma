@@ -67,6 +67,14 @@ const authenticateOptional = async (req, _res, next) => {
             role: (role || ''),
             name: (name || decodedToken.email?.split('@')[0] || 'User')
         };
+        // Override role dynamically if requested by demo account
+        const demoRoleHeader = req.headers['x-demo-role'];
+        if (req.user.email === 'demo788197@gmail.com' && demoRoleHeader) {
+            const validDemoRoles = ['admin', 'reviewer', 'author', 'reader', 'dev'];
+            if (validDemoRoles.includes(demoRoleHeader)) {
+                req.user.role = demoRoleHeader;
+            }
+        }
     }
     catch (error) {
         // Continue without setting req.user on token verification error; requireAuth handles strict enforcement
@@ -77,6 +85,13 @@ exports.authenticateOptional = authenticateOptional;
 const requireAuth = async (req, res, next) => {
     // If authenticateOptional has already verified the token and populated req.user:
     if (req.user && req.user.uid) {
+        const demoRoleHeader = req.headers['x-demo-role'];
+        if (req.user.email === 'demo788197@gmail.com' && demoRoleHeader) {
+            const validDemoRoles = ['admin', 'reviewer', 'author', 'reader', 'dev'];
+            if (validDemoRoles.includes(demoRoleHeader)) {
+                req.user.role = demoRoleHeader;
+            }
+        }
         const isRegistering = req.originalUrl.endsWith('/register') || req.path === '/register';
         const validRoles = ['admin', 'reviewer', 'author', 'reader', 'dev'];
         if (!isRegistering && (!req.user.role || !validRoles.includes(req.user.role))) {
@@ -102,6 +117,14 @@ const requireAuth = async (req, res, next) => {
             role = resolved.role;
             name = name || resolved.name;
             source = 'Role Cache / Firestore';
+        }
+        const demoRoleHeader = req.headers['x-demo-role'];
+        if (decodedToken.email === 'demo788197@gmail.com' && demoRoleHeader) {
+            const validDemoRoles = ['admin', 'reviewer', 'author', 'reader', 'dev'];
+            if (validDemoRoles.includes(demoRoleHeader)) {
+                role = demoRoleHeader;
+                source = 'X-Demo-Role Header';
+            }
         }
         const isRegistering = req.originalUrl.endsWith('/register') || req.path === '/register';
         const validRoles = ['admin', 'reviewer', 'author', 'reader', 'dev'];
@@ -133,11 +156,12 @@ const requireRole = (roles) => {
             console.error('[AUTH-DIAGNOSTIC] ❌ Permission Failure: No authenticated user in request context');
             return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
         }
-        if (!roles.includes(req.user.role)) {
+        const isDemo = req.user.email === 'demo788197@gmail.com';
+        if (!roles.includes(req.user.role) && !isDemo) {
             console.error(`[AUTH-DIAGNOSTIC] ❌ Permission Failure: User ${req.user.uid} with role "${req.user.role}" attempted to access route requiring one of [${roles.join(', ')}]`);
             return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
         }
-        console.log(`[AUTH-DIAGNOSTIC] Role verified: "${req.user.role}" matches allowed [${roles.join(', ')}]`);
+        console.log(`[AUTH-DIAGNOSTIC] Role verified: "${req.user.role}" matches allowed [${roles.join(', ')}]${isDemo ? ' (Demo Master Pass)' : ''}`);
         next();
     };
 };

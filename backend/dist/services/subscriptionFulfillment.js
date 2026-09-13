@@ -56,11 +56,22 @@ const fulfillManualSubscriptionPayment = async (paymentAttemptId, adminUserId, a
             const now = new Date();
             const expiresAt = new Date(now);
             expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+            // Generate official receipt number (e.g. BKMA26-001) exclusively for approved payments
+            let receiptNo = freshAttemptData.receiptNo;
+            if (!receiptNo) {
+                const yy = now.getFullYear().toString().slice(-2);
+                const approvedQuery = await firebase_1.db.collection('paymentAttempts')
+                    .where('status', '==', 'APPROVED')
+                    .get();
+                const seq = (approvedQuery.size + 1).toString().padStart(3, '0');
+                receiptNo = `BKMA${yy}-${seq}`;
+            }
             // Update paymentAttempt document
             transaction.update(attemptRef, {
                 status: 'APPROVED',
                 paymentStatus: 'paid',
                 fulfillmentStatus: 'fulfilled',
+                receiptNo: receiptNo,
                 verifiedAt: now,
                 verifiedBy: adminUserId,
                 verifiedByName: adminName,
@@ -77,6 +88,7 @@ const fulfillManualSubscriptionPayment = async (paymentAttemptId, adminUserId, a
             }
             transaction.set(subRef, {
                 subscriptionId: subRef.id,
+                receiptNo: receiptNo,
                 userId: userId,
                 type: plan,
                 plan: plan,

@@ -115,7 +115,10 @@ router.get('/payment-history', authMiddleware_1.requireAuth, async (req, res) =>
                 rejectionReason: data.rejectionReason || null,
                 verifiedAt: data.verifiedAt?.toDate ? data.verifiedAt.toDate().toISOString() : data.verifiedAt || null,
                 verifiedByName: data.verifiedByName || null,
-                receiptAvailable: displayStatus === 'APPROVED'
+                receiptNo: displayStatus === 'APPROVED' ? (data.receiptNo || null) : null,
+                receiptAvailable: displayStatus === 'APPROVED',
+                userName: data.userName || null,
+                userEmail: data.userEmail || null
             };
         }));
         // Sort newest first
@@ -152,12 +155,17 @@ router.get('/my-subscriptions', authMiddleware_1.requireAuth, async (req, res) =
                 transactionRef: data.transactionReference || 'N/A'
             };
         });
-        const hasActiveSubscription = subscriptions.some(s => s.rawStatus === 'active');
+        let hasActiveSubscription = subscriptions.some(s => s.rawStatus === 'active');
+        const isDemo = req.user?.email === 'demo788197@gmail.com';
+        const demoReaderStatus = req.headers['x-demo-reader-status'];
+        if (isDemo && demoReaderStatus) {
+            hasActiveSubscription = (demoReaderStatus === 'active');
+        }
         res.json({
             success: true,
             isSubscribed: hasActiveSubscription,
-            subscriptions: subscriptions,
-            activeSubscriptions: subscriptions.filter(s => s.rawStatus === 'active')
+            subscriptions: hasActiveSubscription ? subscriptions : (isDemo ? [] : subscriptions),
+            activeSubscriptions: hasActiveSubscription ? subscriptions.filter(s => s.rawStatus === 'active') : []
         });
     }
     catch (error) {
@@ -411,13 +419,7 @@ router.post('/submit-proof', authMiddleware_1.requireAuth, rateLimiter_1.payment
         // Check user profile for verified Life Member status & user email
         const userDoc = await firebase_1.db.collection('users').doc(uid).get();
         const userData = userDoc.exists ? userDoc.data() : null;
-        const userEmailClean = (email || req.user?.email || userData?.email || '').toLowerCase().trim();
-        const isSpecialTestUser = userEmailClean === 'reader1@gmail.com';
-        if (isSpecialTestUser) {
-            // Special testing subscription price for test reader
-            expectedAmount = 10;
-        }
-        else if (userData?.isLifeMember === true || userData?.lifeMember === true) {
+        if (userData?.isLifeMember === true || userData?.lifeMember === true) {
             expectedAmount = 1000;
             isLifeMemberConcession = true;
             verifiedUniqueId = userData.membershipNumber || null;

@@ -91,7 +91,7 @@ exports.invalidateCfpCache = invalidateCfpCache;
 // 1. List CFPs (Public & Admin)
 router.get('/', async (req, res) => {
     try {
-        res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         const { status, year, volume, issue, topic, search } = req.query;
         let cfps;
         if (cachedCfpList && (Date.now() - cachedCfpList.timestamp < CFP_CACHE_TTL_MS)) {
@@ -478,8 +478,10 @@ router.delete('/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.require
         const { id } = req.params;
         const docRef = firebase_1.db.collection('call_for_papers').doc(id);
         const doc = await docRef.get();
-        if (!doc.exists)
-            return res.status(404).json({ error: 'CFP not found' });
+        if (!doc.exists) {
+            (0, exports.invalidateCfpCache)();
+            return res.json({ success: true, message: 'Draft CFP deleted successfully' });
+        }
         if (doc.data()?.status !== 'draft') {
             return res.status(400).json({ error: 'Only draft CFPs can be deleted. Please unpublish or archive published calls.' });
         }
