@@ -181,13 +181,18 @@ router.get('/my-subscriptions', requireAuth, async (req: AuthRequest, res: Respo
       };
     });
 
-    const hasActiveSubscription = subscriptions.some(s => s.rawStatus === 'active');
+    let hasActiveSubscription = subscriptions.some(s => s.rawStatus === 'active');
+    const isDemo = req.user?.email === 'demo788197@gmail.com';
+    const demoReaderStatus = req.headers['x-demo-reader-status'] as string;
+    if (isDemo && demoReaderStatus) {
+      hasActiveSubscription = (demoReaderStatus === 'active');
+    }
 
     res.json({
       success: true,
       isSubscribed: hasActiveSubscription,
-      subscriptions: subscriptions,
-      activeSubscriptions: subscriptions.filter(s => s.rawStatus === 'active')
+      subscriptions: hasActiveSubscription ? subscriptions : (isDemo ? [] : subscriptions),
+      activeSubscriptions: hasActiveSubscription ? subscriptions.filter(s => s.rawStatus === 'active') : []
     });
   } catch (error) {
     console.error('List subscriptions error:', error);

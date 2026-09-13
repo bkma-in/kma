@@ -704,7 +704,12 @@ router.get('/:id/pdf', requireAuth, downloadRateLimiter, async (req: AuthRequest
 
       const userDoc = await db.collection('users').doc(uid).get();
       const userData = userDoc.exists ? userDoc.data() : null;
-      const isSubscribed = !subSnapshot.empty || userData?.isSubscribed === true || userData?.isLifeMember === true;
+      let isSubscribed = !subSnapshot.empty || userData?.isSubscribed === true || userData?.isLifeMember === true;
+      const isDemo = req.user?.email === 'demo788197@gmail.com';
+      const demoReaderStatus = req.headers['x-demo-reader-status'] as string;
+      if (isDemo && demoReaderStatus) {
+        isSubscribed = (demoReaderStatus === 'active');
+      }
 
       if (!isSubscribed) {
         return res.status(403).json({ error: 'Subscription Required: You need an active subscription to read or download full articles.' });
