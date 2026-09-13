@@ -14,14 +14,17 @@ const VALID_ROLES: Role[] = ['admin', 'reviewer', 'author', 'reader', 'dev'];
 
 // ─── Types ───────────────────────────────────────────────────────────
 interface AuthContextType {
-  currentUser: (User & { role: Role; name: string; mustChangePassword?: boolean }) | null;
+  currentUser: (User & { role: Role; name: string; mustChangePassword?: boolean; isDemoAccount?: boolean }) | null;
   loading: boolean;          // true until Firebase Auth SDK has initialized
   roleLoading: boolean;      // true while role is being verified from backend
   isRoleVerified: boolean;   // true ONLY AFTER backend /auth/verify confirms the user's role
   sessionExpired: boolean;   // true when auth is lost
   roleError: string | null;
+  isDemoUser: boolean;
+  demoReaderStatus: 'active' | 'inactive';
   logout: () => Promise<void>;
   refreshRole: () => Promise<void>;
+  switchDemoRole: (role: Role, readerStatus?: 'active' | 'inactive') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,12 +56,19 @@ async function fetchRoleFromBackend(retries = MAX_RETRY): Promise<{ role: Role; 
 
 // ─── Provider ────────────────────────────────────────────────────────
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<(User & { role: Role; name: string; mustChangePassword?: boolean }) | null>(null);
+  const [currentUser, setCurrentUser] = useState<(User & { role: Role; name: string; mustChangePassword?: boolean; isDemoAccount?: boolean }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [roleLoading, setRoleLoading] = useState(false);
   const [isRoleVerified, setIsRoleVerified] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [roleError, setRoleError] = useState<string | null>(null);
+  const [demoReaderStatus, setDemoReaderStatus] = useState<'active' | 'inactive'>(
+    (localStorage.getItem('__kma_demo_reader_status') as any) || 'active'
+  );
+
+  const isDemoUser = Boolean(
+    currentUser?.email === 'demo788197@gmail.com' || (currentUser as any)?.isDemoAccount
+  );
 
   const isInitialAuthCheck = useRef(true);
 
@@ -168,12 +178,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) await loadRole(user, false);
   }, [loadRole]);
 
+  // ─── Demo Role Switcher ────────────────────────────────────────────
+  const switchDemoRole = useCallback(async (newRole: Role, readerStatus: 'active' | 'inactive' = 'active') => {
+    try {
+      setRoleLoading(true);
+      localStorage.setItem('__kma_demo_active_role', newRole);
+      localStorage.setItem('__kma_demo_reader_status', readerStatus);
+      localStorage.setItem(ROLE_CACHE_KEY, newRole);
+      localStorage.setItem('role', newRole);
+      setDemoReaderStatus(readerStatus);
+
+      // Inform backend of the demo role switch
+      await api.post('/auth/demo-switch-role', {
+        role: newRole,
+        readerStatus
+      }).catch(err => console.warn('[AuthContext] Backend switch role warning:', err));
+
+      if (currentUser) {
+        setCurrentUser(prev => prev ? { ...prev, role: newRole } : null);
+      }
+      setIsRoleVerified(true);
+      window.dispatchEvent(new CustomEvent('kma_demo_role_changed', { detail: { role: newRole, readerStatus } }));
+    } catch (err: any) {
+      console.error('[AuthContext] Failed to switch demo role:', err);
+    } finally {
+      setRoleLoading(false);
+    }
+  }, [currentUser]);
+
   // ─── Logout ────────────────────────────────────────────────────────
   const logout = async () => {
     try {
       localStorage.setItem('manual_logout_active', 'true');
       await auth.signOut();
-      const authKeys = ['isLoggedIn', 'role', 'userEmail', 'userName', 'userId', 'is_temp_password', ROLE_CACHE_KEY, NAME_CACHE_KEY];
+      const authKeys = [
+        'isLoggedIn', 'role', 'userEmail', 'userName', 'userId', 'is_temp_password',
+        ROLE_CACHE_KEY, NAME_CACHE_KEY, '__kma_demo_active_role', '__kma_demo_reader_status',
+        '__demo_needs_role_selection'
+      ];
       authKeys.forEach(key => {
         localStorage.removeItem(key);
         sessionStorage.removeItem(key);
@@ -196,9 +238,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isRoleVerified,
     sessionExpired,
     roleError,
+    isDemoUser,
+    demoReaderStatus,
     logout,
-    refreshRole
-  }), [currentUser, loading, roleLoading, isRoleVerified, sessionExpired, roleError, refreshRole]);
+    refreshRole,
+    switchDemoRole
+  }), [currentUser, loading, roleLoading, isRoleVerified, sessionExpired, roleError, isDemoUser, demoReaderStatus, logout, refreshRole, switchDemoRole]);
 
   return (
     <AuthContext.Provider value={contextValue}>

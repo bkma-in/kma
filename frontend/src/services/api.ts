@@ -35,6 +35,16 @@ api.interceptors.request.use(async (config) => {
     // getIdToken() returns a cached token if still valid, or refreshes it automatically
     const token = await user.getIdToken();
     config.headers.Authorization = `Bearer ${token}`;
+
+    // Attach dynamic demo role headers for demo master account
+    const demoRole = localStorage.getItem('__kma_demo_active_role');
+    const demoReaderStatus = localStorage.getItem('__kma_demo_reader_status');
+    if (demoRole) {
+      config.headers['x-demo-role'] = demoRole;
+    }
+    if (demoReaderStatus) {
+      config.headers['x-demo-reader-status'] = demoReaderStatus;
+    }
   }
   return config;
 }, (error) => {
