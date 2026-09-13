@@ -8,7 +8,9 @@ import { useAuth } from '../context/AuthContext';
 const Auth: React.FC = () => {
   const [searchParams] = useSearchParams();
   // If ?mode=login, flip to login form. Otherwise show registration (default).
-  const [isFlipped, setIsFlipped] = useState(searchParams.get('mode') === 'login');
+  const [isFlipped, setIsFlipped] = useState(
+    searchParams.get('mode') === 'login'
+  );
   const [prefilledEmail, setPrefilledEmail] = useState('');
   const { loading } = useAuth();
 
