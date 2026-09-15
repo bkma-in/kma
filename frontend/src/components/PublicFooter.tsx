@@ -97,11 +97,11 @@ const PublicFooter: React.FC = () => {
               {/* Left Contact Details */}
               <div className="flex flex-col gap-3 text-left">
                 <a
-                  href="mailto:keralamathsasso@gmail.com"
+                  href="mailto:ktmsamuelms@gmail.com"
                   className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 hover:text-white transition-colors"
                 >
                   <Mail size={12} className="text-zinc-500 shrink-0" />
-                  keralamathsasso@gmail.com
+                  ktmsamuelms@gmail.com
                 </a>
                 <span className="flex items-center gap-2 text-[10px] font-bold text-zinc-400">
                   <MapPin size={12} className="text-zinc-500 shrink-0" />

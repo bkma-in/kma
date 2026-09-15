@@ -23,11 +23,11 @@ const GlobalFooter = ({
               <>
                 {/* Email */}
                 <a
-                  href="mailto:keralamathsasso@gmail.com"
+                  href="mailto:ktmsamuelms@gmail.com"
                   className="flex items-center gap-1.5 text-[11px] text-zinc-400 hover:text-white transition-colors group"
                 >
                   <Mail size={11} className="shrink-0 group-hover:scale-110 transition-transform" />
-                  keralamathsasso@gmail.com
+                  ktmsamuelms@gmail.com
                 </a>
                 {/* Location */}
                 <span className="flex items-center gap-1.5 text-[11px] text-zinc-400">
