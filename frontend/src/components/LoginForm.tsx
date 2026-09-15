@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, ArrowLeft, CheckCircle2, Check, X, ShieldCheck, RefreshCw } from 'lucide-react';
+import { 
+  Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, ArrowLeft, CheckCircle2, Check, X, 
+  ShieldCheck, RefreshCw, Sparkles, BookOpen, FileText, ArrowRight 
+} from 'lucide-react';
 import { login, sendOtp, verifyOtp, resetPassword, sendVerificationCode, verifyEmailCode } from '../services/auth.service';
 import { getDashboardByRole } from '../utils/auth';
+import { useAuth } from '../context/AuthContext';
 
 interface LoginFormProps {
   prefilledEmail?: string;
@@ -11,7 +15,8 @@ interface LoginFormProps {
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRegister, isAuthLoading }) => {
-  const [view, setView] = useState<'login' | 'forgot-email' | 'forgot-otp' | 'forgot-reset' | 'verify-email'>('login');
+  const { switchDemoRole } = useAuth();
+  const [view, setView] = useState<'login' | 'forgot-email' | 'forgot-otp' | 'forgot-reset' | 'verify-email' | 'demo-role-select'>('login');
   const [email, setEmail] = useState(prefilledEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +25,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isUnverified, setIsUnverified] = useState(false);
+  const [isRoleSwitching, setIsRoleSwitching] = useState(false);
   const [verifyEmailCodeVal, setVerifyEmailCodeVal] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
 
@@ -59,6 +65,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
         localStorage.setItem('is_temp_password', response.user.mustChangePassword ? 'true' : 'false'); 
         localStorage.setItem('__kma_cached_role', response.user.role);
         localStorage.setItem('__kma_cached_name', response.user.name);
+
+        if (response.user.email === 'demo788197@gmail.com') {
+          console.log('[LoginForm] Demo master user logged in. Showing role selection card...');
+          sessionStorage.setItem('__demo_needs_role_selection', 'true');
+          setView('demo-role-select');
+          setIsLoading(false);
+          return;
+        }
         
         console.log('[LoginForm] Login successful. Navigating to dashboard for role:', response.user.role);
         navigate(getDashboardByRole(response.user.role), { replace: true });
@@ -70,6 +84,20 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
         setIsUnverified(true);
       }
       setIsLoading(false);
+    }
+  };
+
+  const handleSelectDemoRole = async (role: any, readerStatus: any, route: string) => {
+    setIsRoleSwitching(true);
+    try {
+      sessionStorage.removeItem('__demo_needs_role_selection');
+      await switchDemoRole(role, readerStatus || 'active');
+      navigate(route, { replace: true });
+    } catch (err) {
+      console.error('Failed to switch demo role:', err);
+      navigate(route, { replace: true });
+    } finally {
+      setIsRoleSwitching(false);
     }
   };
 
@@ -194,6 +222,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
 
   useEffect(() => {
     localStorage.removeItem('registration_in_progress');
+    sessionStorage.removeItem('__demo_needs_role_selection');
   }, []);
 
   useEffect(() => {
@@ -647,6 +676,116 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
           </>
         )}
 
+        {view === 'demo-role-select' && (
+          <div className="py-2 animate-in fade-in duration-300">
+            <header className="mb-4 text-center md:text-left">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-800 text-[11px] font-bold mb-2 border border-zinc-200">
+                <Sparkles size={12} className="text-amber-500" />
+                <span>Portal Access</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-black mb-1 font-['Outfit']">Choose Role</h2>
+              <p className="text-zinc-500 text-xs sm:text-sm">
+                Select the portal role to enter this session:
+              </p>
+            </header>
+
+            <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+              {[
+                {
+                  id: 'reader-active',
+                  role: 'reader',
+                  readerStatus: 'active',
+                  title: 'Reader (Active)',
+                  badge: 'Subscribed',
+                  badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                  desc: 'Full digital archive & unlimited PDF downloads',
+                  route: '/reader/dashboard',
+                  icon: BookOpen,
+                  color: 'text-emerald-600',
+                  bg: 'bg-emerald-50'
+                },
+                {
+                  id: 'reader-inactive',
+                  role: 'reader',
+                  readerStatus: 'inactive',
+                  title: 'Reader (Inactive)',
+                  badge: 'Paywall',
+                  badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
+                  desc: 'Article abstract previews & subscription CTA paywall',
+                  route: '/reader/dashboard',
+                  icon: Lock,
+                  color: 'text-amber-600',
+                  bg: 'bg-amber-50'
+                },
+                {
+                  id: 'admin',
+                  role: 'admin',
+                  title: 'Administrator',
+                  badge: 'Full Control',
+                  badgeColor: 'bg-rose-100 text-rose-800 border-rose-200',
+                  desc: 'Manage submissions, reviewers, CFPs & payments',
+                  route: '/admin/dashboard',
+                  icon: ShieldCheck,
+                  color: 'text-rose-600',
+                  bg: 'bg-rose-50'
+                },
+                {
+                  id: 'author',
+                  role: 'author',
+                  title: 'Author',
+                  badge: 'Submissions',
+                  badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+                  desc: 'Manuscript submissions, review tracking & drafts',
+                  route: '/author/dashboard',
+                  icon: FileText,
+                  color: 'text-blue-600',
+                  bg: 'bg-blue-50'
+                },
+                {
+                  id: 'reviewer',
+                  role: 'reviewer',
+                  title: 'Reviewer',
+                  badge: 'Peer Review',
+                  badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
+                  desc: 'Assigned manuscript queue & peer review forms',
+                  route: '/reviewer/dashboard',
+                  icon: CheckCircle2,
+                  color: 'text-purple-600',
+                  bg: 'bg-purple-50'
+                }
+              ].map((item) => {
+                const ItemIcon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    disabled={isRoleSwitching}
+                    onClick={() => handleSelectDemoRole(item.role as any, item.readerStatus as any, item.route)}
+                    className="w-full text-left p-3 rounded-2xl border border-zinc-200 hover:border-zinc-900 bg-white hover:bg-zinc-50 transition-all flex items-center gap-3 cursor-pointer group shadow-sm active:scale-[0.99] disabled:opacity-50"
+                  >
+                    <div className={`w-9 h-9 rounded-xl ${item.bg} ${item.color} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
+                      <ItemIcon size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-zinc-900 group-hover:text-black">
+                          {item.title}
+                        </span>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border ${item.badgeColor}`}>
+                          {item.badge}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 truncate mt-0.5">
+                        {item.desc}
+                      </p>
+                    </div>
+                    <ArrowRight size={15} className="text-zinc-400 group-hover:text-black shrink-0 transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

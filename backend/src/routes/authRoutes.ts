@@ -7,6 +7,7 @@ import { config } from '../config/env';
 import { sendTransactionalEmail } from '../services/emailService';
 import { buildHtmlEmail } from '../services/notificationService';
 import { authRateLimiter, sendVerificationRateLimiter, verifyCodeRateLimiter } from '../middleware/rateLimiter';
+import { switchDemoRole, ensureDemoAccountInitialized, DEMO_USER_EMAIL } from '../services/demoService';
 
 const router = Router();
 
@@ -118,6 +119,8 @@ router.post('/verify', requireAuth, async (req: AuthRequest, res) => {
       mustChangePassword = true;
     }
 
+    const isDemo = email === DEMO_USER_EMAIL || userData?.isDemoAccount === true;
+
     res.json({
       success: true,
       user: {
@@ -126,7 +129,9 @@ router.post('/verify', requireAuth, async (req: AuthRequest, res) => {
         role,
         name,
         mustChangePassword,
-        emailVerified: userData?.emailVerified ?? true
+        emailVerified: userData?.emailVerified ?? true,
+        isDemoAccount: isDemo,
+        readerStatus: userData?.readerStatus || 'active'
       }
     });
   } catch (error) {
@@ -650,6 +655,44 @@ router.post('/forgot-password/reset', authRateLimiter, async (req, res) => {
   } catch (error: any) {
     console.error('Reset password error:', error);
     res.status(500).json({ error: error.message || 'Failed to reset password.' });
+  }
+});
+
+// Demo Account: Switch active role dynamically
+router.post('/demo-switch-role', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { uid, email } = req.user!;
+    if (email !== DEMO_USER_EMAIL) {
+      return res.status(403).json({ error: 'Role switching is reserved for the Demo Master account.' });
+    }
+
+    const { role, readerStatus = 'active' } = req.body;
+    const validRoles = ['admin', 'author', 'reviewer', 'reader', 'dev'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: `Invalid target role: ${role}` });
+    }
+
+    const result = await switchDemoRole(uid, { role, readerStatus });
+    res.json({
+      success: true,
+      message: `Demo account switched to ${role} (${readerStatus}) successfully.`,
+      role: result.role,
+      readerStatus: result.readerStatus
+    });
+  } catch (error: any) {
+    console.error('Demo switch role error:', error);
+    res.status(500).json({ error: error.message || 'Failed to switch demo role.' });
+  }
+});
+
+// Demo Account: Ensure initialized on demand
+router.post('/demo-setup', async (_req, res) => {
+  try {
+    const result = await ensureDemoAccountInitialized();
+    res.json({ success: true, message: 'Demo account provisioned successfully', user: result });
+  } catch (error: any) {
+    console.error('Demo setup error:', error);
+    res.status(500).json({ error: error.message || 'Failed to provision demo account.' });
   }
 });
 

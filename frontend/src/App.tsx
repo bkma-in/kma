@@ -14,6 +14,7 @@ import ReaderLayout from './layouts/ReaderLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import SessionOverlay from './components/SessionOverlay';
 import PageSkeletonFallback from './components/skeletons/PageSkeletonFallback';
+import DemoRoleSwitcherWidget from './components/DemoRoleSwitcherWidget';
 
 // Lazy-loaded pages
 const Auth = lazy(() => import('./pages/Auth'));
@@ -92,7 +93,8 @@ function App() {
   const navigate = useNavigate();
 
   const dashboardPath = currentUser ? getDashboardByRole(currentUser.role) : '';
-  const hasValidDashboard = !!currentUser && isRoleVerified && !dashboardPath.startsWith('/auth');
+  const isDemoRoleSelecting = (currentUser?.email === 'demo788197@gmail.com' || localStorage.getItem('userEmail') === 'demo788197@gmail.com') && sessionStorage.getItem('__demo_needs_role_selection') === 'true';
+  const hasValidDashboard = !!currentUser && isRoleVerified && !dashboardPath.startsWith('/auth') && !isDemoRoleSelecting;
 
   // Initial auth & role verification skeleton loading check
   if (loading || roleLoading || (currentUser && !isRoleVerified)) {
@@ -116,6 +118,9 @@ function App() {
 
     // If on /auth during credential verification / role loading, show target role's dashboard skeleton if role is known
     if (path === '/auth') {
+      if (isDemoRoleSelecting) {
+        return null;
+      }
       const userRole = currentUser?.role || (localStorage.getItem('role') as any) || (localStorage.getItem('__kma_cached_role') as any);
       if (userRole === 'admin') return <AdminLayout isLoadingSkeleton={true} />;
       if (userRole === 'author') return <AuthorLayout isLoadingSkeleton={true} />;
@@ -184,6 +189,7 @@ function App() {
       <SessionOverlay />
       <ToastContainer />
       <ConfirmModal />
+      <DemoRoleSwitcherWidget />
       <Routes>
           <Route path="/" element={lazyRoute(LandingPage)} />
           <Route path="/about-us" element={lazyRoute(AboutUs)} />

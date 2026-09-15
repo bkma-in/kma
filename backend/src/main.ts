@@ -5,9 +5,13 @@ import { config } from './config/env';
 import { runMigrations } from './services/migrationService';
 import { checkAndSendReviewReminders } from './services/notificationService';
 import { queueService } from './services/archive/queueService';
+import { ensureDemoAccountInitialized } from './services/demoService';
 
 // Run migrations in background
 runMigrations().catch(err => console.error('Startup migration error:', err));
+
+// Ensure universal demo account and demo datasets are initialized
+ensureDemoAccountInitialized().catch(err => console.error('Startup demo initialization error:', err));
 
 // Resume interrupted archive jobs
 queueService.resumeInterruptedJobs().catch(err => console.error('Startup archive jobs resumption error:', err));

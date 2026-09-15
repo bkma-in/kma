@@ -23,6 +23,18 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setLoading(false);
         return;
       }
+      if (auth.currentUser.email === 'demo788197@gmail.com') {
+        const demoStatus = localStorage.getItem('__kma_demo_reader_status');
+        if (demoStatus === 'inactive') {
+          setIsSubscribed(false);
+          setLoading(false);
+          return;
+        } else if (demoStatus === 'active') {
+          setIsSubscribed(true);
+          setLoading(false);
+          return;
+        }
+      }
       const data = await getMySubscriptions();
       if (data && data.success) {
         setIsSubscribed(!!data.isSubscribed);
@@ -33,6 +45,14 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const handleDemoRoleChange = () => {
+      refreshSubscriptionStatus();
+    };
+    window.addEventListener('kma_demo_role_changed', handleDemoRoleChange);
+    return () => window.removeEventListener('kma_demo_role_changed', handleDemoRoleChange);
+  }, [refreshSubscriptionStatus]);
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
