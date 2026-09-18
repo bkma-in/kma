@@ -7,7 +7,7 @@ const firebase_1 = require("../config/firebase");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 exports.DEMO_USER_EMAIL = 'demo788197@gmail.com';
 exports.DEMO_USER_PASSWORD = 'Demo@123';
-exports.DEMO_USER_NAME = 'Demo Account User';
+exports.DEMO_USER_NAME = 'Developer User';
 /**
  * Initializes or verifies the universal Demo Account.
  * Guarantees that demo788197@gmail.com exists with password Demo@123,
@@ -43,29 +43,30 @@ async function ensureDemoAccountInitialized() {
                 throw err;
             }
         }
-        // Set custom claims (default to admin)
-        await firebase_1.auth.setCustomUserClaims(uid, {
-            role: 'admin',
-            name: exports.DEMO_USER_NAME,
-            isDemo: true,
-        });
-        (0, authMiddleware_1.invalidateUserRoleCache)(uid);
         // Ensure Firestore user document exists and is configured
         const userRef = firebase_1.db.collection('users').doc(uid);
         const userDoc = await userRef.get();
         const now = new Date();
+        const activeRole = userDoc.exists && userDoc.data()?.role ? userDoc.data()?.role : 'dev';
+        // Set custom claims (default to dev / active role)
+        await firebase_1.auth.setCustomUserClaims(uid, {
+            role: activeRole,
+            name: exports.DEMO_USER_NAME,
+            isDemo: true,
+        });
+        (0, authMiddleware_1.invalidateUserRoleCache)(uid);
         const userData = {
             uid,
             email: exports.DEMO_USER_EMAIL,
             emailLower: exports.DEMO_USER_EMAIL.toLowerCase(),
             name: exports.DEMO_USER_NAME,
             nameLower: exports.DEMO_USER_NAME.toLowerCase(),
-            role: userDoc.exists && userDoc.data()?.role ? userDoc.data()?.role : 'admin',
+            role: activeRole,
             emailVerified: true,
             isDemoAccount: true,
             status: 'Approved',
-            qualification: 'PhD in Mathematical Sciences',
-            experience: '12+ years in Algebraic Geometry & Peer Review',
+            qualification: 'Software Engineering & Mathematical Systems',
+            experience: 'Developer Team',
             isSubscribed: true,
             updatedAt: now,
         };

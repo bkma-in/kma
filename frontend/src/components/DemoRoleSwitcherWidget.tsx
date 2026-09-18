@@ -9,7 +9,8 @@ import {
   BookOpen, 
   Lock, 
   Check,
-  Loader2
+  Loader2,
+  Code2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import type { Role } from '../utils/validation';
@@ -25,6 +26,14 @@ interface RoleOption {
 }
 
 const ROLES: RoleOption[] = [
+  {
+    id: 'dev',
+    role: 'dev',
+    title: 'Developer',
+    route: '/dev/dashboard',
+    icon: Code2,
+    color: 'text-indigo-400'
+  },
   {
     id: 'admin',
     role: 'admin',
@@ -102,10 +111,12 @@ export const DemoRoleSwitcherWidget: React.FC = () => {
     return null;
   }
 
-  const role = currentUser?.role || 'admin';
+  const role = currentUser?.role || 'dev';
   const roleDisplay = 
     role === 'reader'
       ? (demoReaderStatus === 'active' ? 'Reader (Active)' : 'Reader (Inactive)')
+      : role === 'dev'
+      ? 'Developer'
       : role.charAt(0).toUpperCase() + role.slice(1);
 
   const handleSelectRole = async (opt: RoleOption) => {
