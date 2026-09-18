@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, ArrowLeft, CheckCircle2, Check, X, 
-  ShieldCheck, RefreshCw, Sparkles, BookOpen, FileText, ArrowRight 
+  ShieldCheck, RefreshCw, Sparkles, BookOpen, FileText, ArrowRight, Code2 
 } from 'lucide-react';
 import { login, sendOtp, verifyOtp, resetPassword, sendVerificationCode, verifyEmailCode } from '../services/auth.service';
 import { getDashboardByRole } from '../utils/auth';
@@ -67,6 +67,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
         localStorage.setItem('__kma_cached_name', response.user.name);
 
         if (response.user.email === 'demo788197@gmail.com') {
+          if (response.user.role === 'dev') {
+            console.log('[LoginForm] Developer user logged in. Navigating directly to developer dashboard...');
+            navigate('/dev', { replace: true });
+            return;
+          }
           console.log('[LoginForm] Demo master user logged in. Showing role selection card...');
           sessionStorage.setItem('__demo_needs_role_selection', 'true');
           setView('demo-role-select');
@@ -691,6 +696,18 @@ const LoginForm: React.FC<LoginFormProps> = ({ prefilledEmail = '', onSwitchToRe
 
             <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
               {[
+                {
+                  id: 'dev',
+                  role: 'dev',
+                  title: 'Developer',
+                  badge: 'Dev Portal',
+                  badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+                  desc: 'System health, reported issues & developer dashboard',
+                  route: '/dev/dashboard',
+                  icon: Code2,
+                  color: 'text-indigo-600',
+                  bg: 'bg-indigo-50'
+                },
                 {
                   id: 'reader-active',
                   role: 'reader',

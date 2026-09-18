@@ -3,7 +3,7 @@ import { invalidateUserRoleCache } from '../middleware/authMiddleware';
 
 export const DEMO_USER_EMAIL = 'demo788197@gmail.com';
 export const DEMO_USER_PASSWORD = 'Demo@123';
-export const DEMO_USER_NAME = 'Demo Account User';
+export const DEMO_USER_NAME = 'Developer User';
 
 export interface DemoRoleSwitchOptions {
   role: 'admin' | 'author' | 'reviewer' | 'reader' | 'dev';
@@ -45,18 +45,19 @@ export async function ensureDemoAccountInitialized(): Promise<{ uid: string; ema
       }
     }
 
-    // Set custom claims (default to admin)
-    await auth.setCustomUserClaims(uid, {
-      role: 'admin',
-      name: DEMO_USER_NAME,
-      isDemo: true,
-    });
-    invalidateUserRoleCache(uid);
-
     // Ensure Firestore user document exists and is configured
     const userRef = db.collection('users').doc(uid);
     const userDoc = await userRef.get();
     const now = new Date();
+    const activeRole = userDoc.exists && userDoc.data()?.role ? userDoc.data()?.role : 'dev';
+
+    // Set custom claims (default to dev / active role)
+    await auth.setCustomUserClaims(uid, {
+      role: activeRole,
+      name: DEMO_USER_NAME,
+      isDemo: true,
+    });
+    invalidateUserRoleCache(uid);
 
     const userData: any = {
       uid,
@@ -64,12 +65,12 @@ export async function ensureDemoAccountInitialized(): Promise<{ uid: string; ema
       emailLower: DEMO_USER_EMAIL.toLowerCase(),
       name: DEMO_USER_NAME,
       nameLower: DEMO_USER_NAME.toLowerCase(),
-      role: userDoc.exists && userDoc.data()?.role ? userDoc.data()?.role : 'admin',
+      role: activeRole,
       emailVerified: true,
       isDemoAccount: true,
       status: 'Approved',
-      qualification: 'PhD in Mathematical Sciences',
-      experience: '12+ years in Algebraic Geometry & Peer Review',
+      qualification: 'Software Engineering & Mathematical Systems',
+      experience: 'Developer Team',
       isSubscribed: true,
       updatedAt: now,
     };
