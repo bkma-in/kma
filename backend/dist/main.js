@@ -31,6 +31,7 @@ const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const notificationRoutes_1 = __importDefault(require("./routes/notificationRoutes"));
 const archiveRoutes_1 = __importDefault(require("./routes/archiveRoutes"));
 const cfpRoutes_1 = __importDefault(require("./routes/cfpRoutes"));
+const editorialRoutes_1 = __importDefault(require("./routes/editorialRoutes"));
 // Import Auth Middleware
 const authMiddleware_1 = require("./middleware/authMiddleware");
 // Import Rate Limiters and IP Trust Validator
@@ -58,6 +59,7 @@ app.use('/api/users', userRoutes_1.default);
 app.use('/api/notifications', notificationRoutes_1.default);
 app.use('/api/archive', archiveRoutes_1.default);
 app.use('/api/cfp', cfpRoutes_1.default);
+app.use('/api/editorial', editorialRoutes_1.default);
 app.get('/', (_req, res) => {
     res.send({ status: 'ok', message: 'KMA Backend is running' });
 });
