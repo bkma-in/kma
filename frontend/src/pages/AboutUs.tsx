@@ -1,114 +1,199 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Mail, BookOpen, Users, ShieldCheck, Tag } from 'lucide-react';
 import PublicHeader from '../components/PublicHeader';
 import PublicFooter from '../components/PublicFooter';
+import { getEditorialBoard } from '../services/editorial.service';
+import type { EditorMember, EditorialPolicy } from '../types/editorial';
+
+// Default static fallback for instant loading & resilience
+const INITIAL_ASSOCIATE_EDITORS: EditorMember[] = [
+  {
+    name: 'K.T. Arasu',
+    category: 'associate',
+    affiliation: 'Department of Mathematics and Statistics, Wright State University, Dayton, OH 45435, U.S.A.',
+    email: 'karasu@wright.edu',
+    areas: 'Combinatorics, Graph Theory, Number Theory'
+  },
+  {
+    name: 'Bagheri Mohammad',
+    category: 'associate',
+    affiliation: 'P.O. Box 13145-1785, Tehran, Iran.',
+    email: 'mohammad_bagheri2006@gmail.com',
+    areas: 'History of Mathematics'
+  },
+  {
+    name: 'Bapat R.B.',
+    category: 'associate',
+    affiliation: 'Indian Statistical Institute, 7, SJS Marg, New Delhi - 110016, India.',
+    email: 'rbb@isid.ac.in',
+    areas: 'Non-negative Matrices, Generalized Inverses, Matrices and Graphs'
+  },
+  {
+    name: 'Choudum S.A.',
+    category: 'associate',
+    affiliation: 'Department of Mathematics, IIT Madras, Chennai - 600036, Tamil Nadu, India.',
+    email: 'sac@iitm.ac.in',
+    areas: 'Graph Theory, Combinatorics, Discrete Mathematics'
+  },
+  {
+    name: 'Comfort W.W.',
+    category: 'associate',
+    affiliation: 'Department of Mathematics, Wesleyan University, Middletown, CT 06459, U.S.A.',
+    email: 'wcomfort@wesleyan.edu',
+    areas: 'Set Theoretic Topology, Topological Groups'
+  },
+  {
+    name: 'Gupta R.C.',
+    category: 'associate',
+    affiliation: 'R-20, Ras Bahar Colony, Jhansi - 284003, Uttar Pradesh, India.',
+    email: '',
+    areas: 'History of Mathematics'
+  },
+  {
+    name: 'Jinnah M.I.',
+    category: 'associate',
+    affiliation: 'F2, Lavanya Flats, 4th Cross Street, Andal Nagar, Adambakkam, Chennai - 600088, Tamil Nadu, India.',
+    email: 'jinnahmi@yahoo.co.in, jinnahmi@hotmail.com',
+    areas: 'Commutative Algebra, Graph Theory'
+  },
+  {
+    name: 'Kaimal M.R.',
+    category: 'associate',
+    affiliation: 'Chairman, Department of Computer Science, Amrita Vishwa Vidyapeetham, Amritapuri, Kollam - 690525, Kerala, India.',
+    email: 'mrkaimal@yahoo.com',
+    areas: 'Computing Science, AI, Fuzzy Logic, Digital Image Processing, Algorithm Design, Software Metrics'
+  },
+  {
+    name: 'Kannan D.',
+    category: 'associate',
+    affiliation: 'Department of Mathematics, University of Georgia, Athens, Georgia 30602, U.S.A.',
+    email: 'kannan@uga.edu',
+    areas: 'Stochastic Equations, Bio-informatics, Engineering and Finances'
+  },
+  {
+    name: 'Kannan V.',
+    category: 'associate',
+    affiliation: 'Department of Mathematics & Statistics, University of Hyderabad, Hyderabad - 500046, Andhra Pradesh, India.',
+    email: 'vksm@uohyd.ernet.in',
+    areas: 'Analysis, Topology, Discrete Dynamical Systems'
+  },
+  {
+    name: 'Kesavan S.',
+    category: 'associate',
+    affiliation: 'The Institute of Mathematical Sciences, CIT Campus, Taramani, Chennai - 600113, Tamil Nadu, India.',
+    email: 'kesh@imsc.res.in',
+    areas: 'Analysis, Functional Analysis, Partial Differential Equations'
+  },
+  {
+    name: 'Nagabhushan P.',
+    category: 'associate',
+    affiliation: 'Bangalore Educational Society for Technology Advancement, Kodati, Off Sarjapur Road, Bengaluru, Karnataka, India.',
+    email: 'pnagabhushan@hotmail.com',
+    areas: 'Pattern Recognition, Image Processing, Remote Sensing, AI, Computer Vision'
+  },
+  {
+    name: 'Nambooripad K.S.S.',
+    category: 'associate',
+    affiliation: 'Komana, Thripadapuram, Kulathur, Thiruvananthapuram - 695583, Kerala, India.',
+    email: 'kssn@tug.org.in',
+    areas: 'Theory of Semigroups - Algebraic/Analytic, Semigroup Operators'
+  },
+  {
+    name: 'Rajagopalan M.',
+    category: 'associate',
+    affiliation: '10035, Woodland Grove Drive, Lakeland (TN) 38002, USA.',
+    email: 'mrajagopalan@juno.com',
+    areas: 'Topology, Functional Analysis'
+  },
+  {
+    name: 'Roychoudhury Rajkumar',
+    category: 'associate',
+    affiliation: 'Physics & Applied Mathematics Unit, ISI, Kolkata - 700108, West Bengal, India.',
+    email: 'raj@isical.ac.in',
+    areas: 'Quantum Mechanics, Solitary Waves, Non-linear Differential Equations, Theoretical Plasma Physics'
+  },
+  {
+    name: 'Srivastava A.K.',
+    category: 'associate',
+    affiliation: 'Department of Mathematics, Banaras Hindu University, Varanasi - 221005, Uttar Pradesh, India.',
+    email: 'aks@banaras.ernet.in, rekhasri@bhu.ac.in',
+    areas: 'Category Theory, Fuzzy Topology'
+  },
+  {
+    name: 'Stephen Watson',
+    category: 'associate',
+    affiliation: 'York University, Department of Mathematics & Statistics, 4700 Keele Street, Toronto, Ontario, Canada M3J1P3.',
+    email: 'mathstat@yorku.ca',
+    areas: 'Topology'
+  }
+];
+
+const INITIAL_CORE_EDITORS: EditorMember[] = [
+  {
+    name: 'Thrivikraman T.',
+    category: 'core',
+    role: 'Advisory Editor',
+    affiliation: 'Thekkedathu Mana,\nPerole-Palakkattu Link Road,\nNileshwar 671314, Kasaragod District, Kerala, India',
+    email: 'thekkedathumana@gmail.com',
+  },
+  {
+    name: 'Krishnamoorthy A.',
+    category: 'core',
+    role: 'Chief Editor',
+    affiliation: 'Department of Mathematics,\nCochin University of Science & Technology,\nCochin - 682 022, Kerala, India',
+    email: 'akc@cusat.ac.in, akcusat@yahoo.com',
+  },
+  {
+    name: 'Samuel M.S.',
+    category: 'core',
+    role: 'Executive Editor',
+    affiliation: 'Mattathil, 15/64, Powath Road, Muttambalm,\nKottayam - 686 004, Kerala, India',
+    email: 'ktmsamuelms@gmail.com',
+  }
+];
+
+const INITIAL_ACADEMIC_EDITORS: EditorMember[] = [
+  {
+    name: 'Manigalambalam N.R.',
+    category: 'academic',
+    role: 'Academic Editor',
+    affiliation: 'Department of Mathematics,\nSt. Joseph\'s College, Irinjalakuda - 680 121,\nKerala, India',
+    email: 'thottuvai@sancharnet.in',
+  },
+  {
+    name: 'Vinod Kumar P.B.',
+    category: 'academic',
+    role: 'Academic Editor',
+    affiliation: 'Department of Mathematics,\nRajagiri School of Engineering & Technology,\nRajagiri Valley, Kakkanad, Cochin - 682 039',
+    email: 'vinod_kumar@rajagiritech.ac.in',
+  }
+];
 
 const AboutUs: React.FC = () => {
-  const associateEditors = [
-    {
-      name: 'K.T. Arasu',
-      details: 'Department of Mathematics and Statistics, Wright State University, Dayton, OH 45435, U.S.A.',
-      email: 'karasu@wright.edu',
-      areas: 'Combinatorics, Graph Theory, Number Theory'
-    },
-    {
-      name: 'Bagheri Mohammad',
-      details: 'P.O. Box 13145-1785, Tehran, Iran.',
-      email: 'mohammad_bagheri2006@gmail.com',
-      areas: 'History of Mathematics'
-    },
-    {
-      name: 'Bapat R.B.',
-      details: 'Indian Statistical Institute, 7, SJS Marg, New Delhi - 110016, India.',
-      email: 'rbb@isid.ac.in',
-      areas: 'Non-negative Matrices, Generalized Inverses, Matrices and Graphs'
-    },
-    {
-      name: 'Choudum S.A.',
-      details: 'Department of Mathematics, IIT Madras, Chennai - 600036, Tamil Nadu, India.',
-      email: 'sac@iitm.ac.in',
-      areas: 'Graph Theory, Combinatorics, Discrete Mathematics'
-    },
-    {
-      name: 'Comfort W.W.',
-      details: 'Department of Mathematics, Wesleyan University, Middletown, CT 06459, U.S.A.',
-      email: 'wcomfort@wesleyan.edu',
-      areas: 'Set Theoretic Topology, Topological Groups'
-    },
-    {
-      name: 'Gupta R.C.',
-      details: 'R-20, Ras Bahar Colony, Jhansi - 284003, Uttar Pradesh, India.',
-      email: null,
-      areas: 'History of Mathematics'
-    },
-    {
-      name: 'Jinnah M.I.',
-      details: 'F2, Lavanya Flats, 4th Cross Street, Andal Nagar, Adambakkam, Chennai - 600088.',
-      email: 'jinnahmi@yahoo.co.in, jinnahmi@hotmail.com',
-      areas: 'Commutative Algebra, Graph Theory'
-    },
-    {
-      name: 'Kaimal M.R.',
-      details: 'Chairman, Department of Computer Science, Amrita Vishwa Vidyapeetham, Amritapuri, Kollam - 690525, Kerala, India.',
-      email: 'mrkaimal@yahoo.com',
-      areas: 'Computing Science, AI, Fuzzy Logic, Digital Image Processing, Algorithm Design, Software Metrics'
-    },
-    {
-      name: 'Kannan D.',
-      details: 'Department of Mathematics, University of Georgia, Athens, Georgia 30602, U.S.A.',
-      email: 'kannan@uga.edu',
-      areas: 'Stochastic Equations, Bio-informatics, Engineering and Finances'
-    },
-    {
-      name: 'Kannan V.',
-      details: 'Department of Mathematics & Statistics, University of Hyderabad, Hyderabad - 500046, Andhra Pradesh, India.',
-      email: 'vksm@uohyd.ernet.in',
-      areas: 'Analysis, Topology, Discrete Dynamical Systems'
-    },
-    {
-      name: 'Kesavan S.',
-      details: 'The Institute of Mathematical Sciences, CIT Campus, Taramani, Chennai - 600113, Tamil Nadu, India.',
-      email: 'kesh@imsc.res.in',
-      areas: 'Analysis, Functional Analysis, Partial Differential Equations'
-    },
-    {
-      name: 'Nagabhushan P.',
-      details: 'Bangalore Educational Society for Technology Advancement, Kodati, Off Sarjapur Road, Bengaluru, Karnataka, India.',
-      email: 'pnagabhushan@hotmail.com',
-      areas: 'Pattern Recognition, Image Processing, Remote Sensing, AI, Computer Vision'
-    },
-    {
-      name: 'Nambooripad K.S.S.',
-      details: 'Komana, Thripadapuram, Kulathur, Thiruvananthapuram - 695583, Kerala, India.',
-      email: 'kssn@tug.org.in',
-      areas: 'Theory of Semigroups - Algebraic/Analytic, Semigroup Operators'
-    },
-    {
-      name: 'Rajagopalan M.',
-      details: '10035, Woodland Grove Drive, Lakeland (TN) 38002, USA.',
-      email: 'mrajagopalan@juno.com',
-      areas: 'Topology, Functional Analysis'
-    },
-    {
-      name: 'Roychoudhury Rajkumar',
-      details: 'Physics & Applied Mathematics Unit, ISI, Kolkata - 700108, West Bengal, India.',
-      email: 'raj@isical.ac.in',
-      areas: 'Quantum Mechanics, Solitary Waves, Non-linear Differential Equations, Theoretical Plasma Physics'
-    },
-    {
-      name: 'Srivastava A.K.',
-      details: 'Department of Mathematics, Banaras Hindu University, Varanasi - 221005, Uttar Pradesh, India.',
-      email: 'aks@banaras.ernet.in, rekhasri@bhu.ac.in',
-      areas: 'Category Theory, Fuzzy Topology'
-    },
-    {
-      name: 'Stephen Watson',
-      details: 'York University, Department of Mathematics & Statistics, 4700 Keele Street, Toronto, Ontario, Canada M3J1P3.',
-      email: 'mathstat@yorku.ca',
-      areas: 'Topology'
-    }
-  ];
+  const [coreEditors, setCoreEditors] = useState<EditorMember[]>(INITIAL_CORE_EDITORS);
+  const [academicEditors, setAcademicEditors] = useState<EditorMember[]>(INITIAL_ACADEMIC_EDITORS);
+  const [associateEditors, setAssociateEditors] = useState<EditorMember[]>(INITIAL_ASSOCIATE_EDITORS);
+  const [customCategories, setCustomCategories] = useState<{ [key: string]: EditorMember[] }>({});
+  const [policy, setPolicy] = useState<EditorialPolicy | null>(null);
+
+  useEffect(() => {
+    const fetchBoard = async () => {
+      try {
+        const data = await getEditorialBoard();
+        if (data && data.success) {
+          if (data.grouped?.core?.length) setCoreEditors(data.grouped.core);
+          if (data.grouped?.academic?.length) setAcademicEditors(data.grouped.academic);
+          if (data.grouped?.associate?.length) setAssociateEditors(data.grouped.associate);
+          if (data.grouped?.custom) setCustomCategories(data.grouped.custom);
+          if (data.policy) setPolicy(data.policy);
+        }
+      } catch (err) {
+        console.error('Failed to load live editorial board:', err);
+      }
+    };
+    fetchBoard();
+  }, []);
 
   return (
     <div className="min-h-screen bg-white font-sans text-black selection:bg-black selection:text-white flex flex-col">
@@ -156,91 +241,141 @@ const AboutUs: React.FC = () => {
             <h2 className="text-2xl sm:text-3xl font-extrabold text-black mb-8 leading-tight">Editorial Board</h2>
             
             {/* Core Editorial Team */}
-            <div className="mb-10">
-              <h3 className="text-xl font-bold text-zinc-800 mb-6 pb-2 border-b border-zinc-100">Core Editorial Team</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50">
-                  <h4 className="text-sm font-black uppercase tracking-wider text-zinc-400 mb-2">Advisory Editor</h4>
-                  <p className="text-base text-zinc-800 font-semibold mb-2">Thrivikraman T.</p>
-                  <div className="text-sm text-zinc-600 space-y-1">
-                    <p>Thekkedathu Mana,</p>
-                    <p>Perole-Palakkattu Link Road,</p>
-                    <p>Nileshwar 671314, Kasaragod District, Kerala, India</p>
-                    <p className="text-black font-semibold pt-1">thekkedathumana@gmail.com</p>
-                  </div>
-                </div>
-
-                <div className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50">
-                  <h4 className="text-sm font-black uppercase tracking-wider text-zinc-400 mb-2">Chief Editor</h4>
-                  <p className="text-base text-zinc-800 font-semibold mb-2">Krishnamoorthy A.</p>
-                  <div className="text-sm text-zinc-600 space-y-1">
-                    <p>Department of Mathematics,</p>
-                    <p>Cochin University of Science &amp; Technology,</p>
-                    <p>Cochin - 682 022, Kerala, India</p>
-                    <p className="text-black font-semibold pt-1">akc@cusat.ac.in, akcusat@yahoo.com</p>
-                  </div>
-                </div>
-
-                <div className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50">
-                  <h4 className="text-sm font-black uppercase tracking-wider text-zinc-400 mb-2">Executive Editor</h4>
-                  <p className="text-base text-zinc-800 font-semibold mb-2">Samuel M.S.</p>
-                  <div className="text-sm text-zinc-600 space-y-1">
-                    <p>Mattathil, 15/64, Powath Road, Muttambalm,</p>
-                    <p>Kottayam - 686 004, Kerala, India</p>
-                    <p className="text-black font-semibold pt-1">ktmsamuelms@gmail.com</p>
-                  </div>
+            {coreEditors.length > 0 && (
+              <div className="mb-10">
+                <h3 className="text-xl font-bold text-zinc-800 mb-6 pb-2 border-b border-zinc-100 flex items-center gap-2">
+                  <span>Core Editorial Team</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {coreEditors.map((editor, idx) => (
+                    <div key={editor.id || idx} className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50 hover:border-black transition-all flex flex-col justify-between">
+                      <div>
+                        {editor.role && (
+                          <h4 className="text-sm font-black uppercase tracking-wider text-blue-600 mb-1">{editor.role}</h4>
+                        )}
+                        <p className="text-base text-zinc-900 font-bold mb-2">{editor.name}</p>
+                        {editor.affiliation && (
+                          <div className="text-sm text-zinc-600 whitespace-pre-line space-y-1 mb-3 leading-relaxed">
+                            {editor.affiliation}
+                          </div>
+                        )}
+                      </div>
+                      {editor.email && (
+                        <a href={`mailto:${editor.email}`} className="text-sm text-black font-semibold pt-2 border-t border-zinc-100 hover:text-blue-600 transition-colors truncate block">
+                          {editor.email}
+                        </a>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Academic Editors */}
-            <div className="mb-10">
-              <h3 className="text-xl font-bold text-zinc-800 mb-6 pb-2 border-b border-zinc-100">Academic Editors</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50">
-                  <p className="text-base text-zinc-800 font-semibold mb-2">Manigalambalam N.R.</p>
-                  <div className="text-sm text-zinc-600 space-y-1">
-                    <p>Department of Mathematics,</p>
-                    <p>St. Joseph's College, Irinjalakuda - 680 121,</p>
-                    <p>Kerala, India</p>
-                    <p className="text-black font-semibold pt-1">thottuvai@sancharnet.in</p>
-                  </div>
+            {academicEditors.length > 0 && (
+              <div className="mb-10">
+                <h3 className="text-xl font-bold text-zinc-800 mb-6 pb-2 border-b border-zinc-100">Academic Editors</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {academicEditors.map((editor, idx) => (
+                    <div key={editor.id || idx} className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50 hover:border-black transition-all flex flex-col justify-between">
+                      <div>
+                        <p className="text-base text-zinc-900 font-bold mb-2">{editor.name}</p>
+                        {editor.affiliation && (
+                          <div className="text-sm text-zinc-600 whitespace-pre-line space-y-1 mb-3 leading-relaxed">
+                            {editor.affiliation}
+                          </div>
+                        )}
+                        {editor.areas && (
+                          <div className="mb-3 pt-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">Areas of Interest</span>
+                            <p className="text-xs text-zinc-700 leading-relaxed font-medium">{editor.areas}</p>
+                          </div>
+                        )}
+                      </div>
+                      {editor.email && (
+                        <a href={`mailto:${editor.email}`} className="text-sm text-black font-semibold pt-2 border-t border-zinc-100 hover:text-blue-600 transition-colors truncate block">
+                          {editor.email}
+                        </a>
+                      )}
+                    </div>
+                  ))}
                 </div>
-
-                <div className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50">
-                  <p className="text-base text-zinc-800 font-semibold mb-2">Vinod Kumar P.B.</p>
-                  <div className="text-sm text-zinc-600 space-y-1">
-                    <p>Department of Mathematics,</p>
-                    <p>Rajagiri School of Engineering &amp; Technology,</p>
-                    <p>Rajagiri Valley, Kakkanad, Cochin - 682 039</p>
-                    <p className="text-black font-semibold pt-1">vinod_kumar@rajagiritech.ac.in</p>
-                  </div>
-                </div>
-
-                {/* Empty third column for alignment */}
-                <div className="hidden md:block"></div>
               </div>
-            </div>
+            )}
 
             {/* Associate Editors */}
-            <div className="mb-12">
-              <h3 className="text-xl font-bold text-zinc-800 mb-6 pb-2 border-b border-zinc-100">Associate Editors</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {associateEditors.map((editor, idx) => (
-                  <div key={idx} className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50">
-                    <p className="text-base text-zinc-800 font-semibold mb-2">{editor.name}</p>
-                    <div className="text-sm text-zinc-600 space-y-1 mb-2">
-                      <p>{editor.details}</p>
+            {associateEditors.length > 0 && (
+              <div className="mb-12">
+                <h3 className="text-xl font-bold text-zinc-800 mb-6 pb-2 border-b border-zinc-100">Associate Editors</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {associateEditors.map((editor, idx) => (
+                    <div key={editor.id || idx} className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50 hover:border-black transition-all flex flex-col justify-between">
+                      <div>
+                        <p className="text-base text-zinc-900 font-bold mb-2">{editor.name}</p>
+                        {editor.affiliation && (
+                          <div className="text-sm text-zinc-600 space-y-1 mb-2 leading-relaxed whitespace-pre-line">
+                            {editor.affiliation}
+                          </div>
+                        )}
+                        {editor.email && (
+                          <a href={`mailto:${editor.email}`} className="text-sm text-black font-semibold mb-3 truncate block hover:text-blue-600 transition-colors">
+                            {editor.email}
+                          </a>
+                        )}
+                      </div>
+                      {editor.areas && (
+                        <div className="pt-2.5 border-t border-zinc-200 mt-2">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-1">Areas of Interest</p>
+                          <p className="text-sm text-zinc-700 leading-relaxed font-medium">{editor.areas}</p>
+                        </div>
+                      )}
                     </div>
-                    {editor.email && <p className="text-sm text-black font-semibold mb-3 truncate">{editor.email}</p>}
-                    <div className="pt-2.5 border-t border-zinc-200">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-1">Areas of Interest</p>
-                      <p className="text-sm text-zinc-700 leading-relaxed font-medium">{editor.areas}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Custom Categories */}
+            {Object.keys(customCategories).length > 0 && (
+              <div className="space-y-10 mb-12">
+                {Object.entries(customCategories).map(([catKey, catEditors]) => {
+                  const title = catEditors[0]?.categoryTitle || (catKey.charAt(0).toUpperCase() + catKey.slice(1));
+                  return (
+                    <div key={catKey}>
+                      <h3 className="text-xl font-bold text-zinc-800 mb-6 pb-2 border-b border-zinc-100">{title}</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {catEditors.map((editor, idx) => (
+                          <div key={editor.id || idx} className="p-5 border border-zinc-200 rounded-xl bg-zinc-50/50 hover:border-black transition-all flex flex-col justify-between">
+                            <div>
+                              {editor.role && (
+                                <h4 className="text-xs font-black uppercase tracking-wider text-purple-600 mb-1">{editor.role}</h4>
+                              )}
+                              <p className="text-base text-zinc-900 font-bold mb-2">{editor.name}</p>
+                              {editor.affiliation && (
+                                <div className="text-sm text-zinc-600 space-y-1 mb-2 leading-relaxed whitespace-pre-line">
+                                  {editor.affiliation}
+                                </div>
+                              )}
+                              {editor.email && (
+                                <a href={`mailto:${editor.email}`} className="text-sm text-black font-semibold mb-3 truncate block hover:text-blue-600 transition-colors">
+                                  {editor.email}
+                                </a>
+                              )}
+                            </div>
+                            {editor.areas && (
+                              <div className="pt-2.5 border-t border-zinc-200 mt-2">
+                                <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-1">Areas of Interest</p>
+                                <p className="text-sm text-zinc-700 leading-relaxed font-medium">{editor.areas}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Editorial Policy & Guidelines */}
             <div>
@@ -248,7 +383,7 @@ const AboutUs: React.FC = () => {
               <div className="space-y-6 text-base text-zinc-700 leading-relaxed">
                 <div>
                   <h4 className="text-base font-bold text-black mb-1.5">Editorial Policy</h4>
-                  <p>The objective of the Bulletin is to publish original high quality and state of the art papers (in English language) in any area of Mathematical Sciences. Survey/Review articles are also welcome.</p>
+                  <p>{policy?.policyText || "The objective of the Bulletin is to publish original high quality and state of the art papers (in English language) in any area of Mathematical Sciences. Survey/Review articles are also welcome."}</p>
                 </div>
 
                 <div>
@@ -268,7 +403,19 @@ const AboutUs: React.FC = () => {
                   </ul>
                   <p className="mb-3">Photo-ready copies of figures and tables should be inserted in the main text at the appropriate places. Sections within the paper should be decimally numbered.</p>
                   <p className="mb-3">One copy of the particular issue of the Bulletin containing the paper and soft copy of the paper will be supplied to the author(s) free of charge.</p>
-                  <p className="italic font-semibold text-black">Copyright of the published papers is vested with the Kerala Mathematical Association.</p>
+                  <p className="italic font-semibold text-black mt-3">
+                    Copyright of the published papers is vested with the Kerala Mathematical Association.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-base font-bold text-black mb-1.5">Subscription Rates</h4>
+                  <p className="whitespace-pre-line leading-relaxed">
+                    Subscription rate per volume (two issues) including postage and handling charges:
+                    {'\n'}- Annual Subscription: Rs. 1000/- each in India.
+                    {'\n'}- Life members will receive 50% concession in the subscription charges.
+                    {'\n\n'}Subscription charges may be sent through Demand Draft / Online Transfer in favour of Bulletin of Kerala Mathematics Association, payable at Kottayam - 686 001. All correspondence including subscription orders and exchange proposals should be sent to the Executive Editor.
+                  </p>
                 </div>
               </div>
             </div>

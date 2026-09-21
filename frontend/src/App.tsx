@@ -52,6 +52,7 @@ const AdminLifeMembers = lazy(() => import('./pages/admin/AdminLifeMembers'));
 const AdminPublishedArticles = lazy(() => import('./pages/admin/AdminPublishedArticles'));
 const AdminCallForPapers = lazy(() => import('./pages/admin/AdminCallForPapers'));
 const AdminPayments = lazy(() => import('./pages/admin/AdminPayments'));
+const AdminEditorialBoard = lazy(() => import('./pages/admin/AdminEditorialBoard'));
 
 // Reviewer pages
 const ReviewerDashboard = lazy(() => import('./pages/reviewer/ReviewerDashboard'));
@@ -299,6 +300,9 @@ function AdminRoutes() {
         <Route path="life-members" element={lazyRoute(AdminLifeMembers)} />
         <Route path="payments" element={lazyRoute(AdminPayments)} />
         <Route path="payment-verification" element={<Navigate to="payments" replace />} />
+        <Route path="editorial-board" element={lazyRoute(AdminEditorialBoard)} />
+        <Route path="editorial board" element={<Navigate to="editorial-board" replace />} />
+        <Route path="editorial" element={<Navigate to="editorial-board" replace />} />
         <Route path="life-members-list" element={<Navigate to="life-members" replace />} />
         <Route path="life members" element={<Navigate to="life-members" replace />} />
         <Route path="lifemembers" element={<Navigate to="life-members" replace />} />
