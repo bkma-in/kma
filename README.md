@@ -19,6 +19,7 @@ The system features a role-based architecture with dedicated dashboards for Auth
 - 🏛️ **Admin Dashboard**
   - Full control over article lifecycle
   - Reviewer verification and publication management
+  - can edit editorial board
 
 - 🌐 **User Landing Page**
   - Browse and search research articles
